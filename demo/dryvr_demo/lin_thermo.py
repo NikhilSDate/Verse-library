@@ -95,28 +95,32 @@ if __name__ == "__main__":
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
 
-    # scenario.add_agent(Thermo) ### need to add breakpoint around here to check decision_logic of agents
+    scenario.add_agent(Thermo) ### need to add breakpoint around here to check decision_logic of agents
 
-    # init_bruss = [[68], [69]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
-    # # -----------------------------------------
+    init_bruss = [[68], [69]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
+    # -----------------------------------------
 
-    # scenario.set_init_single(
-    #     'thermo', init_bruss, (ThermoMode.Heat,)
-    # )
-
-    basis = np.array([1]) * np.diag([0.1]) # this doesn't actually make sense, but not sure how algorithm actually handles 1d polytopes
-    center = np.array([68.5])
-    C = np.transpose(np.array([1,-1]))
-    g = np.array([1,1])
-
-
-    Thermo.set_initial(
-        StarSet(center, basis, C, g)
-        , (ThermoMode.Heat,)
+    scenario.set_init_single(
+        'thermo', init_bruss, (ThermoMode.Heat,)
     )
 
-    scenario.config.reachability_method = ReachabilityMethod.STAR_SETS
-    scenario.set_sensor(BaseStarSensor())
+    # basis = np.array([1]) * np.diag([0.1]) # this doesn't actually make sense, but not sure how algorithm actually handles 1d polytopes
+    # center = np.array([68.5])
+    # C = np.transpose(np.array([1,-1]))
+    # g = np.array([1,1])
+
+
+    # Thermo.set_initial(
+    #     StarSet(center, basis, C, g)
+    #     , (ThermoMode.Heat,)
+    # )
+
+    # scenario.config.reachability_method = ReachabilityMethod.STAR_SETS
+    # scenario.set_sensor(BaseStarSensor())
     ### t=10 takes quite a long time to run, try t=4 like in c2e2 example
     ### seems to actually loop at t=4.14, not sure what that is about -- from first glance, reason seems to be hyperrectangles blowing up in size
-    trace = scenario.verify(4, 0.01)
+    traces = scenario.verify(4, 0.01)
+    fig = go.Figure() 
+    fig = reachtube_tree(traces, None, fig, 0, 1)
+    fig.show()
+

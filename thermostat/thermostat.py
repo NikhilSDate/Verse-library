@@ -20,8 +20,24 @@ from verse.stars.starset import *
 
 from verse.sensor.base_sensor_stars import *
 from verse.analysis.verifier import ReachabilityMethod
+import sys
+
+sys.path.insert(1, '/home/ndate/Research/insulin_pump/unicorn_analyzer')
+
+import thermostat as thermofw
+
 
 class ThermoAgent(BaseAgent):
+
+    # how quickly heat is lost to the ambient environment
+    heat_loss_rate = 0.015
+    # how quickly heat is gained with the heater
+    # this ratio is desired for similar behavior as the physical model
+    heat_gain_rate = heat_loss_rate * 100
+
+    ambient = 70
+    temp = 90
+
     def __init__(
         self, 
         id, 
@@ -31,35 +47,27 @@ class ThermoAgent(BaseAgent):
         super().__init__(id, code, file_name)
 
     @staticmethod
-    def dynamic_heat(t, state):
-        x = state[0]
-        x_dot = 40-0.5*x
-        return [x_dot, 1]
-    
-    @staticmethod
-    def dynamic_cool(t, state):
-        x = state[0]
-        x_dot = 30-0.5*x
-        return [x_dot, 1]
+    def dynamic_heat(t, state, heater):
+        T = state[0]
+        T_dot = heater * ThermoAgent.heat_gain_rate + (ThermoAgent.ambient - T) * ThermoAgent.heat_loss_rate
+        return [T_dot, 1]
     
     def TC_simulate(
         self, mode: List[str], init, time_bound, time_step, lane_map = None
     ) -> TraceType:
+        print('simulating', init, time_bound, time_step)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
+
+        az = thermofw.get_init_state(firmware_path='files/thermostat-0_1-0-0-P_ON_E.bin', addrs_path='files/addrs-0_1-0-0-P_ON_E.yaml')
         for i in range(num_points):
-            
             # control output goes here
-            if mode[0]=="Heat":
-                r = ode(self.dynamic_heat)
-            elif mode[0]=="Cool":
-                r = ode(self.dynamic_cool)
-            else:
-                raise ValueError
-            
+            temp = init[0]
+            control_output = thermofw.update(az, temp, time_step)
+            r = ode(lambda t, state: self.dynamic_heat(t, state, control_output))
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
             init = res.flatten()
@@ -68,13 +76,15 @@ class ThermoAgent(BaseAgent):
         return trace
 
 class ThermoMode(Enum):
-    Heat=auto()
-    Cool=auto()
+    Default = auto()
+
+class FlipMode(Enum):
+    F1 = auto()
+    F2 = auto()
 
 class State:
-    x: float
+    T: float
     time: float
-    var: dict
     agent_mode: ThermoMode 
 
     def __init__(self, x, time, agent_mode: ThermoMode):
@@ -82,33 +92,29 @@ class State:
 
 def decisionLogic(ego: State):
     output = copy.deepcopy(ego)
-
-    if ego.agent_mode == ThermoMode.Heat and ego.x>=75:
-        output.agent_mode = ThermoMode.Cool
-    if ego.agent_mode == ThermoMode.Cool and ego.x< 75:
-        output.agent_mode = ThermoMode.Heat
-
     return output 
 
 
-
 if __name__ == "__main__":
+
     import os 
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "thermostat.py")
-    print(input_code_name)
     Thermo = ThermoAgent('thermo', file_name=input_code_name)
 
     scenario = Scenario(ScenarioConfig(parallel=False))
 
     scenario.add_agent(Thermo) ### need to add breakpoint around here to check decision_logic of agents
 
-    init_state = [[80, {}, 0], [80, {}, 0]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
+    init_state = [[60, 0], [70, 0]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
     # -----------------------------------------
 
     scenario.set_init(
-        [init_state], [(ThermoMode.Cool,)]
+        [init_state], [(ThermoMode.Default,)]
     )
-    traces = scenario.simulate(50, 1)
-    fig = go.Figure()
-    fig = simulation_tree(traces, None, fig, 2, 1)
+    traces_veri = scenario.verify(60, 0.1)
+    # traces_simu = scenario.simulate_simple(180, 0.1)
+    fig = go.Figure() 
+    fig = reachtube_tree(traces_veri, None, fig, 2, 1)
+    # fig = simulation_tree(traces_simu, None, fig, 2, 1)
+    fig.show()
