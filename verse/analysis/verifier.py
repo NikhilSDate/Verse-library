@@ -914,6 +914,7 @@ class Verifier:
             paths = [
                 (agent, p) for agent in node.agent.values() for p in agent.decision_logic.paths
             ]
+            # breakpoint()
         else:
             # _transitions = [trans.transition for seg in cache.values() for trans in seg.transitions]
             _transitions = [
@@ -1002,7 +1003,7 @@ class Verifier:
             # TODO-PARSER: Get equivalent for this function
             # Construct the guard expression
             guard_expression = GuardExpressionAst([path.cond_veri])
-
+            # breakpoint()
             cont_var_updater = guard_expression.parse_any_all_new(
                 cont_var_dict_template, discrete_variable_dict, length_dict
             )
