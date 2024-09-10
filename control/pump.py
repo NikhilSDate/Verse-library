@@ -34,7 +34,7 @@ class Pump:
         self.iob = iob
     
     def dose(self, carbs, glucose):
-        amount = carbs / Pump.kCarbs + (glucose - Pump.kTarget) / Pump.kGlucose
+        amount = int(carbs / 5) * 5 / Pump.kCarbs + (int(glucose / 5) * 5 - Pump.kTarget) / Pump.kGlucose
         amount = min(max(amount, 0), Pump.kMaxBolus)
         self.iob += amount
         return amount
@@ -126,7 +126,7 @@ class PumpAgent(BaseAgent):
             init = res.flatten()
             pump.iob_update()
             init[2] = pump.iob
-            dose = 0
+            dose = 0.1 / 60
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = init
         return trace
@@ -152,8 +152,8 @@ def decisionLogic(ego: State):
 
 
 if __name__ == "__main__":
-    init = [[0, 120, 0, 50], [0, 140, 0, 70]]
-    result1, tree1 = PumpAgent.verify_bolus(init, 50, 70, duration=60)
+    init = [[0, 120, 0, 50], [0, 120, 0, 50]]
+    result1, tree1 = PumpAgent.verify_bolus(init, 50, 50, duration=60)
     result2, tree2 = PumpAgent.verify_bolus(copy.deepcopy(result1), 0, 0, duration=60)
     PumpAgent.link_nodes(tree1.root, tree2.root)
     result3, tree3 = PumpAgent.verify_bolus(copy.deepcopy(result2), 0, 0, duration=60)
