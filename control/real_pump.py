@@ -101,8 +101,9 @@ class PumpAgent(BaseAgent):
         carbs = init[2]
         iob_1 = init[3]
         elapsed_1 = init[4]
+        iob = init[5]
         # keep insulin duration constant at 4 hrs for now
-        iob_state = ([(iob_1, elapsed_1, 14400)], iob_1, 14400)
+        iob_state = ([(iob_1, elapsed_1, 14400)], iob, 14400)
         pump = Pump(iob_state)
         dose = pump.dose_simple(glucose, carbs)
         iob_array, iob, max_duration = pump.get_state()
@@ -150,9 +151,9 @@ def decisionLogic(ego: State):
 
 
 if __name__ == "__main__":
-    init = [[0, 140, 10, 0, 0, 0], [0, 150, 50, 0, 0, 0]]
-    result1, tree1 = PumpAgent.verify_bolus(init, 10, 10, duration=60)
-    result2, tree2 = PumpAgent.verify_bolus(result1, 20, 20, duration=60)
+    init = [[0, 125, 0, 0, 0, 0], [0, 130, 0, 0, 0, 0]]
+    result1, tree1 = PumpAgent.verify_bolus(init, 0, 0, duration=120)
+    result2, tree2 = PumpAgent.verify_bolus(result1, 10, 20, duration=120)
     PumpAgent.link_nodes(tree1.root, tree2.root)
     # result2, tree2 = PumpAgent.verify_bolus(copy.deepcopy(result1), 0, 0, duration=60)
     fig = go.Figure() 
