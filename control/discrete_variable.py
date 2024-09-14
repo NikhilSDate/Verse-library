@@ -43,15 +43,14 @@ class ThermoAgent(BaseAgent):
     @staticmethod
     def dynamic_heat(t, state):
         T = state[0]
-        heater = state[1]
         T_dot = 1 * ThermoAgent.heat_gain_rate + (ThermoAgent.ambient - T) * ThermoAgent.heat_loss_rate
-        return [T_dot, 0, 1]
+        return [T_dot]
     
     @staticmethod
     def dynamic_cool(t, state):
         T = state[0]
         T_dot = 0 * ThermoAgent.heat_gain_rate + (ThermoAgent.ambient - T) * ThermoAgent.heat_loss_rate
-        return [T_dot, 0, 1]
+        return [T_dot]
     
     def TC_simulate(
         self, mode: List[str], init, time_bound, time_step, lane_map = None
@@ -79,8 +78,6 @@ class ThermoMode(Enum):
 
 class State:
     x: float
-    heater_output: float
-    wait_time: float
     agent_mode: ThermoMode 
 
     def __init__(self, x, agent_mode: ThermoMode):
@@ -89,12 +86,10 @@ class State:
 def decisionLogic(ego: State):
     output = copy.deepcopy(ego)
     
-    if ego.x <= 80:
+    if ego.x <= 80 and ego.agent_mode != ThermoMode.Heat:
         output.agent_mode = ThermoMode.Heat
-        output.heater_output = 1
-    if  ego.x > 80:
+    if  ego.x > 80 and ego.agent_mode != ThermoMode.Idle:
         output.agent_mode = ThermoMode.Idle
-        output.heater_output = 0
     return output 
 
 
@@ -109,7 +104,7 @@ if __name__ == "__main__":
 
     scenario.add_agent(Thermo) ### need to add breakpoint around here to check decision_logic of agents
 
-    init_bruss = [[81, 0, 0], [82, 0, 0]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
+    init_bruss = [[100], [120]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
     # -----------------------------------------
 
     scenario.set_init_single(
@@ -131,7 +126,7 @@ if __name__ == "__main__":
     # scenario.set_sensor(BaseStarSensor())
     ### t=10 takes quite a long time to run, try t=4 like in c2e2 example
     ### seems to actually loop at t=4.14, not sure what that is about -- from first glance, reason seems to be hyperrectangles blowing up in size
-    traces = scenario.verify(2, 1)
+    traces = scenario.verify(60, 1)
     fig = go.Figure() 
     fig = reachtube_tree(traces, None, fig, 0, 1)
     fig.show()
