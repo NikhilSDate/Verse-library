@@ -28,7 +28,16 @@ sys.path.insert(1, '/home/ndate/Research/insulin_pump/unicorn_analyzer')
 from pump_wrapper import Pump
 
 class PumpAgent(BaseAgent):
-   
+    
+    state_indices = {
+    'body_insulin': 0,
+    'body_glucose': 1,
+    'body_carbs': 2,
+    'pump_iob_1': 3,
+    'pump_elapsed_1': 4,
+    'pump_iob': 5
+    }
+
     kI = 0.01
     kG = 0.05
     kIG = 0.1
@@ -57,8 +66,8 @@ class PumpAgent(BaseAgent):
     def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
         script_dir = os.path.realpath(os.path.dirname(__file__))
         input_code_name = os.path.join(script_dir, "real_pump.py")
-        init[0][2] = carbs_low
-        init[1][2] = carbs_high
+        init[0][PumpAgent.state_indices['body_carbs']] = carbs_low
+        init[1][PumpAgent.state_indices['body_carbs']] = carbs_high
         agent = PumpAgent('pump', file_name=input_code_name)
         scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
 
@@ -90,29 +99,30 @@ class PumpAgent(BaseAgent):
     def TC_simulate(
         self, mode: List[str], init, time_bound, time_step, lane_map = None
     ) -> TraceType:
-        print('simulating', init)
+        print('tracing', init, time_bound)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
 
-        glucose = init[1]
-        carbs = init[2]
-        iob_1 = init[3]
-        elapsed_1 = init[4]
-        iob = init[5]
+        glucose = init[PumpAgent.state_indices['body_glucose']] # THIS NEEDS TO BE CHANGED DEPENDING ON BODY MODEL
+        carbs = init[PumpAgent.state_indices['body_carbs']] # THIS NEEDS TO BE CHANGED DEPENDING ON BODY MODEL
+        
+        iob_1 = init[PumpAgent.state_indices['pump_iob_1']]
+        elapsed_1 = init[PumpAgent.state_indices['pump_elapsed_1']]
+        iob = init[PumpAgent.state_indices['pump_iob']]
         # keep insulin duration constant at 4 hrs for now
         iob_state = ([(iob_1, elapsed_1, 14400)], iob, 14400)
         pump = Pump(iob_state)
         dose = pump.dose_simple(glucose, carbs)
         iob_array, iob, max_duration = pump.get_state()
         iob_1, elapsed_1 = iob_array[0][0], iob_array[0][1]
-        init[3] = iob_1
-        init[4] = elapsed_1
-        init[5] = iob
+        init[PumpAgent.state_indices['pump_iob_1']] = iob_1
+        init[PumpAgent.state_indices['pump_elapsed_1']] = elapsed_1
+        init[PumpAgent.state_indices['pump_iob']] = iob
         for i in range(0, num_points):
-            init[0] += dose
+            init[PumpAgent.state_indices['body_insulin']] += dose
             r = ode(lambda t, state: self.insulin_glucose_model(t, state))
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
@@ -120,9 +130,9 @@ class PumpAgent(BaseAgent):
             pump.delay()
             iob_array, iob, max_duration = pump.get_state()
             iob_1, elapsed_1 = iob_array[0][0], iob_array[0][1]
-            init[3] = iob_1
-            init[4] = elapsed_1
-            init[5] = iob
+            init[PumpAgent.state_indices['pump_iob_1']] = iob_1
+            init[PumpAgent.state_indices['pump_elapsed_1']] = elapsed_1
+            init[PumpAgent.state_indices['pump_iob']] = iob
             dose = 0.5 / 60
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = init
@@ -133,12 +143,16 @@ class ThermoMode(Enum):
     B=auto()
 
 class State:
-    insulin: float
-    glucose: float
-    carbs: float
-    iob_1: float
-    elapsed_1: int
-    iob: float
+    # body model
+    body_insulin: float
+    body_glucose: float
+    body_carbs: float
+    
+    # pump model
+    pump_iob_1: float
+    pump_elapsed_1: int
+    pump_iob: float
+
     agent_mode: ThermoMode 
 
     def __init__(self, x, agent_mode: ThermoMode):
@@ -157,7 +171,7 @@ if __name__ == "__main__":
     PumpAgent.link_nodes(tree1.root, tree2.root)
     # result2, tree2 = PumpAgent.verify_bolus(copy.deepcopy(result1), 0, 0, duration=60)
     fig = go.Figure() 
-    fig = reachtube_tree(tree1, None, fig, 0, 2)
+    fig = reachtube_tree(tree1, None, fig, 0, 6)
     fig.show()
     breakpoint()
 
