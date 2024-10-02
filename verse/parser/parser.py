@@ -395,6 +395,7 @@ class ControllerIR:
         assert isinstance(controller, Lambda)
         paths = []
         if not isinstance(controller.body, dict):
+            print(controller.body)
             raise NotImplementedError("non-object return")
         for var, val in controller.body.items():
             if not isinstance(val, CondVal):
