@@ -102,41 +102,6 @@ class PumpAgent(BaseAgent):
         body_derivatives = [Gs_dot, X_dot, Isc1_dot, Isc2_dot, Gt_dot, Gp_dot, Il_dot, Ip_dot, I1_dot, Id_dot]
         pump_derivatives = [0 for i in range(num_continuous_variables - len(body_derivatives))]
         return body_derivatives + pump_derivatives
-        
-    @staticmethod
-    def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
-        script_dir = os.path.realpath(os.path.dirname(__file__))
-        input_code_name = os.path.join(script_dir, "real_pump_model.py")
-        # will need to figure out how to incorporate carbs into this later
-        # init[0][state_indices['body_carbs']] = carbs_low
-        # init[1][state_indices['body_carbs']] = carbs_high
-        agent = PumpAgent('pump', file_name=input_code_name)
-        scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
-
-        scenario.add_agent(agent) ### need to add breakpoint around here to check decision_logic of agents
-        # -----------------------------------------
-
-        scenario.set_init_single(
-            'pump', init, (ThermoMode.A,)
-        )
-
-        # assumption: meal every 12 hours
-
-        traces = scenario.verify(duration, time_step)
-        end_low = traces.root.trace['pump'][-2]
-        end_high = traces.root.trace['pump'][-1]
-        return [end_low[1:], end_high[1:]], traces
-    
-    @staticmethod
-    def link_nodes(node1, node2):
-        agent = list(node1.trace.keys())[0]
-        trace1_end = node1.trace[agent][-1][0]
-        trace2_len = len(node2.trace[agent])
-        for i in range(trace2_len):
-            node2.trace[agent][i][0] += trace1_end
-        node2.height = node1.height + 1
-        node2.id = node1.id + 1
-        node1.child.append(node2)
 
     def TC_simulate(
         self, mode: List[str], init, time_bound, time_step, lane_map = None
@@ -183,14 +148,58 @@ class PumpAgent(BaseAgent):
         glucose = state[state_indices['Gp']] / PumpAgent.body_params['VG']
         return (glucose,)
 
+def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
+    script_dir = os.path.realpath(os.path.dirname(__file__))
+    input_code_name = os.path.join(script_dir, "real_pump_model.py")
+    # will need to figure out how to incorporate carbs into this later
+    # init[0][state_indices['body_carbs']] = carbs_low
+    # init[1][state_indices['body_carbs']] = carbs_high
+    agent = PumpAgent('pump', file_name=input_code_name)
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+
+    scenario.add_agent(agent) ### need to add breakpoint around here to check decision_logic of agents
+    # -----------------------------------------
+
+    scenario.set_init_single(
+        'pump', init, (ThermoMode.A,)
+    )
+
+    # assumption: meal every 12 hours
+
+    traces = scenario.verify(duration, time_step)
+    end_low = traces.root.trace['pump'][-2]
+    end_high = traces.root.trace['pump'][-1]
+    return [end_low[1:], end_high[1:]], traces
+
+def link_nodes(node1, node2):
+    agent = list(node1.trace.keys())[0]
+    trace1_end = node1.trace[agent][-1][0]
+    trace2_len = len(node2.trace[agent])
+    for i in range(trace2_len):
+        node2.trace[agent][i][0] += trace1_end
+    node2.height = node1.height + 1
+    node2.id = node1.id + 1
+    node1.child.append(node2)
+
+# boluses is time, [carbs_low, carbs_high]
+def verify_boluses(init, boluses):
+    result1, tree1 = verify_bolus(init, boluses[0][1][0], boluses[0][1][1], 120)
+    prev_result, prev_tree = result1, tree1
+    for i in range(1, len(boluses)):
+        result, tree = verify_bolus(copy.deepcopy(prev_result), boluses[i][1][0], boluses[i][1][1], 120)
+        link_nodes(prev_tree.root, tree.root)
+        prev_result, prev_tree = result, tree
+    return result1, tree1
+
 if __name__ == "__main__":
-    init = [PumpAgent.get_init_state(130), PumpAgent.get_init_state(130)]
-    result1, tree1 = PumpAgent.verify_bolus(init, 0, 0, duration=120)
+    init = [PumpAgent.get_init_state(120), PumpAgent.get_init_state(140)]
+    result, tree = verify_boluses(init, [[0, [50, 70]], [120, [50, 70]], [240, [50, 70]], [360, [50, 70]]])
+    # result1, tree1 = verify_bolus(init, 50, 70, duration=120)
     # result2, tree2 = PumpAgent.verify_bolus(result1, 10, 20, duration=120)
     # PumpAgent.link_nodes(tree1.root, tree2.root)
     # result2, tree2 = PumpAgent.verify_bolus(copy.deepcopy(result1), 0, 0, duration=60)
     fig = go.Figure() 
-    fig = reachtube_tree(tree1, None, fig, 0, 5)
+    fig = reachtube_tree(tree, None, fig, 0, 6)
     fig.show()
     breakpoint()
 
