@@ -4,8 +4,10 @@ state_indices = {variable: i for i, variable in enumerate(State.__annotations__.
 num_discrete_variables = 1
 num_continuous_variables = len(state_indices) - num_discrete_variables
 
+
 def set(init, field, value):
     init[state_indices[field]] = value
-    
+
+
 def get(init, field):
     return init[state_indices[field]]
