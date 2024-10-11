@@ -25,6 +25,8 @@ class State:
     pump_elapsed_1: float
     pump_iob_2: float
     pump_elapsed_2: float
+    pump_iob_3: float
+    pump_elapsed_3: float
     pump_iob: float
 
     agent_mode: ThermoMode 

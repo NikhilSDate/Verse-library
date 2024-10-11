@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # scenario.set_sensor(BaseStarSensor())
     ### t=10 takes quite a long time to run, try t=4 like in c2e2 example
     ### seems to actually loop at t=4.14, not sure what that is about -- from first glance, reason seems to be hyperrectangles blowing up in size
-    traces = scenario.verify(8, 0.1)
+    traces = scenario.verify(20, 0.1)
     fig = go.Figure() 
     fig = reachtube_tree(traces, None, fig, 0, 1)
     fig.show()
