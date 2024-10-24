@@ -1,0 +1,12 @@
+- My current understanding of how the black box reachable set computation works in the absence of discrete state is that given some hyperrectangular range of starting continuous states, Verse will run simulations starting at various points within this range and get a set of simulation traces. Then Verse will do some probabilistic estimation of the trace sensitivity based on the sample traces to produce the reachable sets. Is this understanding correct?
+
+- We are modeling insulin doses from the pump as instantaneously changing the subcutaneous insulin in the body. The way we are currently handling this in Verse is to include the pump dose in the black box simulation. So what happens is that at t = 0 in the simulation, we get the glucose and carbs from the continuous state and have the pump calculate a dose. This value is directly added to the subcutaneous insulin variable. The consequence of this is that the subcutaneous insulin trace abruptly jumps at t = 0, then decays slowly (I can show a graph showing for this during the meeting). The reachable sets we are seeing from Verse look pretty reasonable, but I don't know if this actually breaks any assumptions in Verse. We are fairly confident that the *amount* of insulin delivered by the pump is a continuous function of the inputs (glucose and carbs), so even though the trace has that abrupt jump, the sensitivity of the trace to different inputs is relatively small. 
+
+- More generally, when Verse runs a black box simulation (assume we have no discrete state at all), it gets a trace sampled at some time interval. What conditions is this sampled trace expected to satisfy (for instance, is it assumed that the underlying continuous trace that is sampled is smooth in some way, has no sudden jumps, etc.). From informal experimentation I can see that if the trace has high sensitivity to the inputs then Verse's black box simulation doesn't work well unless you introduce discrete state, but I don't know if there are any other assumptions made on the trace. 
+
+- If the only assumption on the trace is some kind of bounded sensitivity and our use case has this bounded sensitivity, is it reasonable to run the whole verification with no discrete state at all?
+
+- If the bounded sensitivity assumption is broken, are the reachable sets going to be just worse (bigger) or wrong?
+
+Q. Non-smooth control output
+Q. Hiding the pump dosing within TC_simulate
