@@ -44,7 +44,7 @@ class PumpAgent(BaseAgent):
 
     body_params = {
         "BW": 78,  # weight of person in kg
-        "Gb": 110 # match pump's target BG with basal BG
+        "Gb": 130 # match pump's target BG with basal BG
     }
 
 
@@ -80,14 +80,14 @@ class PumpAgent(BaseAgent):
             init = res.flatten()
             
             # SCENARIO: DOSE FOR EVERY MEAL
-            if current_time in time_to_carbs.keys():
-                glucose = get_visible(init)[0]
-                carbs = time_to_carbs[current_time]
-                pump.dose_extended(glucose, carbs, 50, 120)
-                print(f't = {current_time}, glucose = {glucose}, carbs = {carbs}, dose = {dose}')
-            else:
-                # dose = 0.5 / 60 # basal rate = 0.5u/ (add in pumping task modeling TODO)
-                dose = pump.delay_minute()
+            # if current_time in time_to_carbs.keys():
+            #     glucose = get_visible(init)[0]
+            #     carbs = time_to_carbs[current_time]
+            #     pump.dose_extended(glucose, carbs, 50, 120)
+            #     print(f't = {current_time}, glucose = {glucose}, carbs = {carbs}, dose = {dose}')
+            # else:
+            #     # dose = 0.5 / 60 # basal rate = 0.5u/ (add in pumping task modeling TODO)
+            #     dose = pump.delay_minute()
             extract_pump_state(init, pump)
             # pump.delay()
             trace[i + 1, 0] = time_step * (i + 1)
@@ -140,6 +140,7 @@ def get_meals_from_state(state):
 def get_init_state(init_bg, doses):
     (Gb,Gpb,Gtb,Ilb,Ipb,Ipob,Ib,IIRb,Isc1ss,Isc2ss,kp1,Km0,Hb,SRHb,Gth,SRsHb, XHb,Ith,IGRb,Hsc1ss,Hsc2ss) = basal_states(init_bg)
     body_init_state = [0, Gpb,Gtb,Ilb,Ipb,Ib,Ib,0,0,0,0,SRsHb,Hb,XHb,Isc1ss,Isc2ss,Hsc1ss,Hsc2ss]
+    print(body_init_state)
     scenario_state = []
     for i in range(num_meals):
         scenario_state.append(doses[i][0] * 1000) # convert g to mg
@@ -230,7 +231,7 @@ def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='verify'):
 
 
 if __name__ == "__main__":
-    init = [get_init_state(180, [(50, 0), (1e-9, 120)]), get_init_state(220, [(80, 0), (1e-9, 120)])] # carbs in grams
+    init = [get_init_state(130, [(50, 0), (100, 240), (100, 660)]), get_init_state(130, [(50, 0), (100, 240), (100, 660)])] # carbs in grams
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "real_pump_matlab_model.py")
     agent = PumpAgent("pump", file_name=input_code_name)
@@ -241,13 +242,14 @@ if __name__ == "__main__":
     )
     scenario.set_init_single("pump", init, (ThermoMode.A,))
 
-    duration = 500
+    duration = 1200
     time_step = 1
-    traces = scenario.verify(duration, time_step)
+    traces = scenario.simulate(duration, time_step)
     #traces = scenario.verify(duration, time_step)
 
     fig = go.Figure()
-    fig = reachtube_tree(traces, None, fig, 0, 2)
+    fig = simulation_tree(traces, None, fig, 0, 2)
     # fig = simulation_tree(traces, None, fig, 0, 2)
     fig.show()
+    # fig.write_image('verify_2.png')
     breakpoint()

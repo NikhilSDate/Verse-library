@@ -28,6 +28,7 @@ class State:
     Isc2: float # subcutaneous insulin concentration 2: don't touch directly
     Hsc1: float
     Hsc2: float
+    G: float
     
     
     # scenario model
@@ -36,6 +37,8 @@ class State:
     t_1: float # time of first meal (minutes)
     D_2: float # carbs in second meal (in mg)
     t_2: float # time of second meal (minutes)
+    D_3: float
+    t_3: float
 
     # pump model
     pump_iob_0: float

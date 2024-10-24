@@ -93,7 +93,6 @@ def model(t,x,type,BW,Gb,carb_doses,uI,uG,t0):
     else:
         t = t - carb_doses[idx][1]
         D = carb_doses[idx][0]
-
     # [Ib,IIRb,kp1,Km0,Hb,SRHb,Gth,Ith,IGRb]
         
     # define the state variables and all the (state dependent) functions
