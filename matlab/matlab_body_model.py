@@ -94,7 +94,7 @@ def model(t,x,type,BW,Gb,carb_doses,uI,uG,t0):
         t = t - carb_doses[idx][1]
         D = carb_doses[idx][0]
     # [Ib,IIRb,kp1,Km0,Hb,SRHb,Gth,Ith,IGRb]
-        
+    # print(carb_doses)
     # define the state variables and all the (state dependent) functions
     # Glucose subsystem
     Gp=x[1];Gt=x[2]; G=Gp/Vg; 

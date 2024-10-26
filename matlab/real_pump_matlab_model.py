@@ -27,9 +27,7 @@ class State:
     Isc1: float # subcutaneous insulin concentration; this needs to be touched directly
     Isc2: float # subcutaneous insulin concentration 2: don't touch directly
     Hsc1: float
-    Hsc2: float
-    G: float
-    
+    Hsc2: float    
     
     # scenario model
     # TODO: this should really not even be in the continuous state since these values are never going to change, but I don't know if there is a better way to model this
