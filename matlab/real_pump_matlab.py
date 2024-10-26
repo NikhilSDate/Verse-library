@@ -32,6 +32,8 @@ from matlab_stateutils import (
     num_meals
 )  # work toward removing the state_indices import
 
+from scenario import SimulationScenario, Bolus, BolusType
+
 sys.path.insert(1, "/home/ndate/Research/insulin_pump/unicorn_analyzer")
 
 from pump_wrapper import Pump
@@ -46,11 +48,12 @@ class PumpAgent(BaseAgent):
         "BW": 78,  # weight of person in kg
         "Gb": 130 # match pump's target BG with basal BG
     }
+    
 
 
-
-    def __init__(self, id, code=None, file_name=None):
+    def __init__(self, id, simulation_scenario, code=None, file_name=None):
         super().__init__(id, code, file_name)
+        self.scenario:SimulationScenario = simulation_scenario
 
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
         print("tracing", init, time_bound)
@@ -60,14 +63,11 @@ class PumpAgent(BaseAgent):
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
 
-        glucose = get_visible(init)[0]  # THIS NEEDS TO BE CHANGED DEPENDING ON BODY MODEL
-        # carbs = init[state_indices['body_carbs']] # THIS NEEDS TO BE CHANGED DEPENDING ON BODY MODEL
-
         # keep insulin duration constant at 4 hrs for now
         
         pump = get_initialized_pump(init)
         meals = get_meals_from_state(init)
-        time_to_carbs = {meal[1]: meal[0] / 1000 for meal in meals[:1]} # convert carbs (meal[0]) from mg to g
+        time_to_carbs = {meal[1]: meal[0] / 1000 for meal in meals} # convert carbs (meal[0]) from mg to g
         dose = 0
         for i in range(0, num_points):
             if i % 10 == 0:
@@ -78,16 +78,16 @@ class PumpAgent(BaseAgent):
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
             init = res.flatten()
-            
-            # SCENARIO: DOSE FOR EVERY MEAL
-            # if current_time in time_to_carbs.keys():
-            #     glucose = get_visible(init)[0]
-            #     carbs = time_to_carbs[current_time]
-            #     pump.dose_extended(glucose, carbs, 50, 120)
-            #     print(f't = {current_time}, glucose = {glucose}, carbs = {carbs}, dose = {dose}')
-            # else:
-            #     # dose = 0.5 / 60 # basal rate = 0.5u/ (add in pumping task modeling TODO)
-            #     dose = pump.delay_minute()
+            bolus = self.scenario.get_bolus(current_time)
+            if bolus:                
+                dose = handle_bolus(pump, init, bolus)
+                print(dose)
+            elif current_time % 5 == 0:
+                # TODO: need to actually model basal deliveries
+                dose = self.scenario.basal_rate / 60  * 5 # basal rate = 0.5u/hr
+            else:
+                dose = 0
+            pump.delay()
             extract_pump_state(init, pump)
             # pump.delay()
             trace[i + 1, 0] = time_step * (i + 1)
@@ -137,14 +137,15 @@ def get_meals_from_state(state):
         result.append((Di, ti))
     return result
 
-def get_init_state(init_bg, doses):
+def get_init_state(init_bg, meals):
     (Gb,Gpb,Gtb,Ilb,Ipb,Ipob,Ib,IIRb,Isc1ss,Isc2ss,kp1,Km0,Hb,SRHb,Gth,SRsHb, XHb,Ith,IGRb,Hsc1ss,Hsc2ss) = basal_states(init_bg)
     body_init_state = [0, Gpb,Gtb,Ilb,Ipb,Ib,Ib,0,0,0,0,SRsHb,Hb,XHb,Isc1ss,Isc2ss,Hsc1ss,Hsc2ss]
     print(body_init_state)
     scenario_state = []
     for i in range(num_meals):
-        scenario_state.append(doses[i][0] * 1000) # convert g to mg
-        scenario_state.append(doses[i][1])
+        scenario_state.append(meals[i][0] * 1000) # convert g to mg
+        scenario_state.append(meals[i][1])
+    print(scenario_state)
     pump_init_state = [0 for i in range(num_continuous_variables - len(body_init_state) - len(scenario_state))] # exclude D
     return body_init_state + scenario_state + pump_init_state
 
@@ -154,16 +155,16 @@ def print_state(state):
     for var in a:
         print(f"\t{var}: {state[state_indices[var]]}")
 
-def get_visible(state):
+def get_bg(state):
     glucose = state[state_indices["Gp"]] / Vg
-    return (glucose,)
+    return glucose
 
 
 def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "real_pump_model.py")
     agent = PumpAgent("pump", file_name=input_code_name)
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario = SimulationScenario(ScenarioConfig(init_seg_length=1, parallel=False))
 
     scenario.add_agent(
         agent
@@ -179,7 +180,7 @@ def simulate_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "real_pump_model.py")
     agent = PumpAgent('pump', file_name=input_code_name)
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario = SimulationScenario(ScenarioConfig(init_seg_length=1, parallel=False))
 
     scenario.add_agent(agent)
 
@@ -211,7 +212,7 @@ def verify_boluses(init, boluses, duration=120):
         prev_result, prev_tree = result, tree
     return result1, tree1
 
-def simulate_boluses(init, boluses, duration=120):
+def simulate_boluses(init, scenario):
     result1, tree1 = simulate_bolus(init, boluses[0][1], boluses[0][1], duration)
     prev_result, prev_tree = result1, tree1
     for i in range(1, len(boluses)):
@@ -219,6 +220,18 @@ def simulate_boluses(init, boluses, duration=120):
         link_nodes(prev_tree.root, tree.root)
         prev_result, prev_tree = result, tree
     return result1, tree1
+
+def handle_bolus(pump, state, bolus: Bolus) -> float:
+    if bolus.type == BolusType.Simple:
+        bg = get_bg(state)
+        dose = pump.dose_simple(bg, bolus.carbs)
+        return dose
+    else:
+        # glucose = get_visible(init)[0]
+        # carbs = time_to_carbs[current_time]
+        # pump.dose_extended(glucose, carbs, 50, 120)
+        # print('dosing')
+        raise NotImplementedError()
 
 def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='verify'):
     idx = state_indices[var] + 1 # time is 0, so 1-index
@@ -228,25 +241,40 @@ def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='verify'):
         fig = simulation_tree(tree, None, fig, 0, idx)
     fig.show()
     
-
-
-if __name__ == "__main__":
-    init = [get_init_state(130, [(50, 0), (100, 240), (100, 660)]), get_init_state(130, [(50, 0), (100, 240), (100, 660)])] # carbs in grams
+def simulate_simple_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
+    # start simulation at 12 AM
+    meals = [(breakfast_carbs, 0), (lunch_carbs, 240), (dinner_carbs, 660)]
+    init_state = get_init_state(init_bg, meals)
+    init = [init_state, init_state]
+    simulation_scenario = SimulationScenario(meals, basal_rate)
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "real_pump_matlab_model.py")
-    agent = PumpAgent("pump", file_name=input_code_name)
+    agent = PumpAgent("pump", simulation_scenario=simulation_scenario, file_name=input_code_name)
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
-
-    scenario.add_agent(
-        agent
-    )
+    scenario.add_agent(agent)
     scenario.set_init_single("pump", init, (ThermoMode.A,))
-
-    duration = 1200
+    duration = simulation_scenario.simulation_duration
     time_step = 1
     traces = scenario.simulate(duration, time_step)
-    #traces = scenario.verify(duration, time_step)
+    return traces
 
+if __name__ == "__main__":
+    # init = [get_init_state(130, [(50, 0), (100, 240), (100, 660)]), get_init_state(130, [(50, 0), (100, 240), (100, 660)])] # carbs in grams
+    # script_dir = os.path.realpath(os.path.dirname(__file__))
+    # input_code_name = os.path.join(script_dir, "real_pump_matlab_model.py")
+    # agent = PumpAgent("pump", file_name=input_code_name)
+    # scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+
+    # scenario.add_agent(
+    #     agent
+    # )
+    # scenario.set_init_single("pump", init, (ThermoMode.A,))
+
+    # duration = 1200
+    # time_step = 1
+    # traces = scenario.simulate(duration, time_step)
+    #traces = scenario.verify(duration, time_step)
+    traces = simulate_simple_scenario(130, 0.2, 50, 100, 100)
     fig = go.Figure()
     fig = simulation_tree(traces, None, fig, 0, 2)
     # fig = simulation_tree(traces, None, fig, 0, 2)
