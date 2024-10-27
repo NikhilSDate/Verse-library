@@ -10,7 +10,7 @@ class ThermoMode(Enum):
 class State:
 
     # body model
-    IGNORE: float # used to make the body model 1-indexed (should be fixed later)
+    G: float # used to make the body model 1-indexed (should be fixed later)
     Gp: float
     Gt: float
     Il: float

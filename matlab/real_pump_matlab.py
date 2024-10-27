@@ -78,6 +78,7 @@ class PumpAgent(BaseAgent):
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
             init = res.flatten()
+            init[0] = get(init, 'Gp') / Vg
             bolus = self.scenario.get_bolus(current_time)
             if bolus:                
                 dose = handle_bolus(pump, init, bolus)
@@ -139,8 +140,7 @@ def get_meals_from_state(state):
 
 def get_init_state(init_bg, meals):
     (Gb,Gpb,Gtb,Ilb,Ipb,Ipob,Ib,IIRb,Isc1ss,Isc2ss,kp1,Km0,Hb,SRHb,Gth,SRsHb, XHb,Ith,IGRb,Hsc1ss,Hsc2ss) = basal_states(init_bg)
-    body_init_state = [0, Gpb,Gtb,Ilb,Ipb,Ib,Ib,0,0,0,0,SRsHb,Hb,XHb,Isc1ss,Isc2ss,Hsc1ss,Hsc2ss]
-    print(body_init_state)
+    body_init_state = [init_bg, Gpb,Gtb,Ilb,Ipb,Ib,Ib,0,0,0,0,SRsHb,Hb,XHb,Isc1ss,Isc2ss,Hsc1ss,Hsc2ss]
     scenario_state = []
     for i in range(num_meals):
         scenario_state.append(meals[i][0] * 1000) # convert g to mg
@@ -274,9 +274,9 @@ if __name__ == "__main__":
     # time_step = 1
     # traces = scenario.simulate(duration, time_step)
     #traces = scenario.verify(duration, time_step)
-    traces = simulate_simple_scenario(130, 0.2, 50, 100, 100)
+    traces = simulate_simple_scenario(130, 0.2, 50, 5, 5)
     fig = go.Figure()
-    fig = simulation_tree(traces, None, fig, 0, 2)
+    fig = simulation_tree(traces, None, fig, 0, 1)
     # fig = simulation_tree(traces, None, fig, 0, 2)
     fig.show()
     # fig.write_image('verify_2.png')
