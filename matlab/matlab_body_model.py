@@ -86,13 +86,13 @@ def basal_states(Gb):
 def model(t,x,type,BW,Gb,carb_doses,uI,uG,t0):
     diractime=1e-3; # time to approximate the dirac delta
     [_,_,_,_,_,_,Ib,IIRb,_,_,kp1,Km0,Hb,SRHb,Gth,_, _, Ith,IGRb,_,_]=basal_states(Gb)
+    D = 1e-9
+    for i in range(len(carb_doses) - 1, -1, -1):
+        if t >= carb_doses[i][1] and carb_doses[i][0] > 0:
+            t = t - carb_doses[i][1]
+            D = carb_doses[i][0]
+            break
 
-    idx = bisect_right(carb_doses, t, key=lambda dose: dose[1]) - 1
-    if idx < 0:
-        D = 1e-9 # avoid zero divison errors by setting D really low
-    else:
-        t = t - carb_doses[idx][1]
-        D = carb_doses[idx][0]
     # [Ib,IIRb,kp1,Km0,Hb,SRHb,Gth,Ith,IGRb]
     # print(carb_doses)
     # define the state variables and all the (state dependent) functions
