@@ -29,10 +29,16 @@ from matlab_stateutils import (
     get,
     state_indices,
     num_continuous_variables,
-    num_meals
+    num_meals,
+    state_variable_names
 )  # work toward removing the state_indices import
 
+import pandas as pd
+from tqdm import tqdm
+
 from scenario import SimulationScenario, Bolus, BolusType
+
+
 
 sys.path.insert(1, "/home/ndate/Research/insulin_pump/unicorn_analyzer")
 
@@ -56,7 +62,6 @@ class PumpAgent(BaseAgent):
         self.scenario:SimulationScenario = simulation_scenario
 
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
-        print("tracing", init, time_bound)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
         trace = np.zeros((num_points + 1, 1 + len(init)))
@@ -69,9 +74,7 @@ class PumpAgent(BaseAgent):
         meals = get_meals_from_state(init)
         time_to_carbs = {meal[1]: meal[0] / 1000 for meal in meals} # convert carbs (meal[0]) from mg to g
         dose = 0
-        for i in range(0, num_points):
-            if i % 10 == 0:
-                print(i)
+        for i in tqdm(range(0, num_points)):
             current_time = i * time_step
             init[state_indices["Isc1"]] += units_to_pmol_per_kg(dose)
             r = ode(lambda t, state: insulin_glucose_model(current_time + t, state, meals))
@@ -82,7 +85,7 @@ class PumpAgent(BaseAgent):
             bolus = self.scenario.get_bolus(current_time)
             if bolus:                
                 dose = handle_bolus(pump, init, bolus)
-                print(dose)
+                tqdm.write(str(dose))
             elif current_time % 5 == 0:
                 # TODO: need to actually model basal deliveries
                 dose = self.scenario.basal_rate / 60  * 5 # basal rate = 0.5u/hr
@@ -142,8 +145,9 @@ def get_init_state(init_bg, meals):
     (Gb,Gpb,Gtb,Ilb,Ipb,Ipob,Ib,IIRb,Isc1ss,Isc2ss,kp1,Km0,Hb,SRHb,Gth,SRsHb, XHb,Ith,IGRb,Hsc1ss,Hsc2ss) = basal_states(init_bg)
     body_init_state = [init_bg, Gpb,Gtb,Ilb,Ipb,Ib,Ib,0,0,0,0,SRsHb,Hb,XHb,Isc1ss,Isc2ss,Hsc1ss,Hsc2ss]
     scenario_state = []
-    for i in range(num_meals):
-        scenario_state.append(meals[i][0] * 1000) # convert g to mg
+    for i in range(len(meals)):
+        carbs = meals[i][0] * 1000 # convert g to mg
+        scenario_state.append(carbs) 
         scenario_state.append(meals[i][1])
     print(scenario_state)
     pump_init_state = [0 for i in range(num_continuous_variables - len(body_init_state) - len(scenario_state))] # exclude D
@@ -241,8 +245,8 @@ def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='verify'):
         fig = simulation_tree(tree, None, fig, 0, idx)
     fig.show()
     
-def simulate_simple_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
-    # start simulation at 12 AM
+def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
+    # start simulation at 8 AM
     meals = [(breakfast_carbs, 0), (lunch_carbs, 240), (dinner_carbs, 660)]
     init_state = get_init_state(init_bg, meals)
     init = [init_state, init_state]
@@ -258,26 +262,42 @@ def simulate_simple_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, 
     traces = scenario.simulate(duration, time_step)
     return traces
 
-if __name__ == "__main__":
-    # init = [get_init_state(130, [(50, 0), (100, 240), (100, 660)]), get_init_state(130, [(50, 0), (100, 240), (100, 660)])] # carbs in grams
-    # script_dir = os.path.realpath(os.path.dirname(__file__))
-    # input_code_name = os.path.join(script_dir, "real_pump_matlab_model.py")
-    # agent = PumpAgent("pump", file_name=input_code_name)
-    # scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
-
-    # scenario.add_agent(
-    #     agent
-    # )
-    # scenario.set_init_single("pump", init, (ThermoMode.A,))
-
-    # duration = 1200
-    # time_step = 1
-    # traces = scenario.simulate(duration, time_step)
-    #traces = scenario.verify(duration, time_step)
-    traces = simulate_simple_scenario(130, 0.2, 50, 5, 5)
+def generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory='traces/'):
+    all_combinations = np.array(np.meshgrid(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)).T.reshape(-1, 5)
+    existing_files = os.listdir(trace_directory)
+    for i in tqdm(range(len(all_combinations))):
+        combination = all_combinations[i]
+        bg, br, bc, lc, dc = combination
+        filename = f'trace_{bg}_{br}_{bc}_{lc}_{dc}.csv'
+        if filename in existing_files:
+            continue
+        traces = simulate_three_meal_scenario(bg, br, bc, lc, dc)
+        plot_variable(go.Figure(), traces, 'G', 'simulate')
+        save_traces(traces, os.path.join(trace_directory, filename))
+        
+def plot_trace(filename, variable, trace_directory='traces/'):
+    path = os.path.join(trace_directory, filename)
+    df = pd.read_csv(path)
     fig = go.Figure()
-    fig = simulation_tree(traces, None, fig, 0, 1)
-    # fig = simulation_tree(traces, None, fig, 0, 2)
-    fig.show()
-    # fig.write_image('verify_2.png')
-    breakpoint()
+    fig.add_trace(go.Scatter(x=df['t'], y=df[variable]))
+    fig.update_layout(dict(xaxis_title='t', yaxis_title=variable))
+    fig.show()        
+
+def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
+    pass
+
+
+def save_traces(traces: AnalysisTree, filename):
+    data = np.array(list(traces.root.trace.values())[0]) # we only have one agent
+    cols = ['t'] + state_variable_names[:-1] # drop the discrete state
+    df = pd.DataFrame(data, columns=cols)
+    df.to_csv(filename)
+    print(data.shape)    
+
+if __name__ == "__main__":
+    # init_bg = [100, 120, 140]
+    # breakfast_carbs = [30, 50, 70]
+    # lunch_carbs = [60, 80, 100]
+    # dinner_carbs = [60, 80, 100]
+    # traces = generate_all_three_meal_traces(init_bg, [0], breakfast_carbs, lunch_carbs, dinner_carbs)
+    plot_trace('trace_100_0_30_60_60.csv', 'G')

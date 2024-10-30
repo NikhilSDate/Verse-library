@@ -63,15 +63,16 @@ if __name__ == "__main__":
     bouncingBall.add_agent(myball1)
     bouncingBall.add_agent(myball2)
     bouncingBall.set_init(
-        [[[5, 10, 2, 2], [5, 10, 2, 2]], [[15, 1, 1, -2], [15, 1, 1, -2]]],
+        [[[5, 10, 2, 2], [5, 10, 3, 3]], [[15, 1, 1, -2], [15, 1, 2, -4]]],
         [(BallMode.NORMAL,), (BallMode.NORMAL,)],
     )
     # TODO: We should be able to initialize each of the balls separately
     # this may be the cause for the VisibleDeprecationWarning
     # TODO: Longer term: We should initialize by writing expressions like "-2 \leq myball1.x \leq 5"
     # "-2 \leq myball1.x + myball2.x \leq 5"
-    traces = bouncingBall.simulate_simple(40, 0.01, 6)
+    traces = bouncingBall.verify(40, 0.01, 6)
     # TODO: There should be a print({traces}) function
     fig = go.Figure()
-    fig = simulation_tree(traces, None, fig, 1, 2, [1, 2], "fill", "trace")
+    fig = reachtube_tree(traces, None, fig, 1, 2, [1, 2], "fill", "trace")
+    fig.write_image('ball_bounces.png')
     fig.show()
