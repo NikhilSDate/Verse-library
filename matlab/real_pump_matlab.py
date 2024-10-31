@@ -52,7 +52,7 @@ class PumpAgent(BaseAgent):
 
     body_params = {
         "BW": 78,  # weight of person in kg
-        "Gb": 130 # match pump's target BG with basal BG
+        "Gb": 110 # match pump's target BG with basal BG
     }
     
 
@@ -228,7 +228,7 @@ def simulate_boluses(init, scenario):
 def handle_bolus(pump, state, bolus: Bolus) -> float:
     if bolus.type == BolusType.Simple:
         bg = get_bg(state)
-        dose = pump.dose_simple(bg, bolus.carbs)
+        dose = pump.dose_simple(bg + 30, bolus.carbs)
         return dose
     else:
         # glucose = get_visible(init)[0]
@@ -237,7 +237,7 @@ def handle_bolus(pump, state, bolus: Bolus) -> float:
         # print('dosing')
         raise NotImplementedError()
 
-def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='verify'):
+def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='simulate'):
     idx = state_indices[var] + 1 # time is 0, so 1-index
     if mode == 'verify':
         fig = reachtube_tree(tree, None, fig, 0, idx)
@@ -263,16 +263,17 @@ def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_car
     return traces
 
 def generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory='traces/'):
+    
     all_combinations = np.array(np.meshgrid(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)).T.reshape(-1, 5)
     existing_files = os.listdir(trace_directory)
     for i in tqdm(range(len(all_combinations))):
         combination = all_combinations[i]
+        tqdm.write(f'Simulating with init state {combination}')
         bg, br, bc, lc, dc = combination
         filename = f'trace_{bg}_{br}_{bc}_{lc}_{dc}.csv'
         if filename in existing_files:
             continue
         traces = simulate_three_meal_scenario(bg, br, bc, lc, dc)
-        plot_variable(go.Figure(), traces, 'G', 'simulate')
         save_traces(traces, os.path.join(trace_directory, filename))
         
 def plot_trace(filename, variable, trace_directory='traces/'):
@@ -295,9 +296,14 @@ def save_traces(traces: AnalysisTree, filename):
     print(data.shape)    
 
 if __name__ == "__main__":
-    # init_bg = [100, 120, 140]
+    init_bg = [100, 120, 140]
+    # basal_rate = [0]
     # breakfast_carbs = [30, 50, 70]
     # lunch_carbs = [60, 80, 100]
     # dinner_carbs = [60, 80, 100]
-    # traces = generate_all_three_meal_traces(init_bg, [0], breakfast_carbs, lunch_carbs, dinner_carbs)
+    # # traces = generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)
+    # traces = simulate_three_meal_scenario(120, 0, 60, 100, 100)
+    # plot_variable(go.Figure(), traces, 'G', 'simulate')
+    # breakpoint()
+    # plot_trace('trace_100_0_30_60_60.csv', 'Qgut')
     plot_trace('trace_100_0_30_60_60.csv', 'G')

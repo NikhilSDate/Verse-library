@@ -39,6 +39,8 @@ Zeta = 0.009; Rho = 0.57; kH = 0.16; Hb = 93
 # Subcatenuous Glucagon
 kh1 = 0.0164; kh2 = 0.0018; kh3 = 0.0182
 
+# want to make the D delta function integrate to 1
+D_delta_correction = 1 / 0.982013790038
 
 def basal_states(Gb):
     Sb= 0; # (m6-HEb)/m5; 
@@ -142,9 +144,9 @@ def model(t,x,type,BW,Gb,carb_doses,uI,uG,t0):
     kempt = kmin+(kmax-kmin)/2*(np.tanh(5/(2*D*(1-b))*(Qsto-b*D))-np.tanh(5/(2*D*c)*(Qsto-c*D))+2); 
     
     # come up with a better way to model this
-    xdot[7]=-kgri*Qsto1+ D*delta(t,1,1,4);# 1/diractime*D*((t-t0)<diractime)
+    xdot[7]=-kgri*Qsto1 + D_delta_correction * D*delta(t,1,1,4);# 1/diractime*D*((t-t0)<diractime)
     xdot[8]=-kempt*Qsto2+kgri*Qsto1
-    xdot[9]=-kabs*Qgut+kempt*Qsto2
+    xdot[9]=-kabs*Qgut+kempt * Qsto2
     # Glucose utilization
     xdot[10]=-P2u*(X-I+Ib)
     # Insuline secretion
