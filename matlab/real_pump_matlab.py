@@ -38,6 +38,8 @@ from tqdm import tqdm
 
 from scenario import SimulationScenario, Bolus, BolusType
 
+import pickle
+
 
 
 sys.path.insert(1, "/home/ndate/Research/insulin_pump/unicorn_analyzer")
@@ -72,7 +74,6 @@ class PumpAgent(BaseAgent):
         
         pump = get_initialized_pump(init)
         meals = get_meals_from_state(init)
-        time_to_carbs = {meal[1]: meal[0] / 1000 for meal in meals} # convert carbs (meal[0]) from mg to g
         dose = 0
         for i in tqdm(range(0, num_points)):
             current_time = i * time_step
@@ -237,13 +238,15 @@ def handle_bolus(pump, state, bolus: Bolus) -> float:
         # print('dosing')
         raise NotImplementedError()
 
-def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='simulate'):
+def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='simulate', show=True):
     idx = state_indices[var] + 1 # time is 0, so 1-index
     if mode == 'verify':
         fig = reachtube_tree(tree, None, fig, 0, idx)
     else:
         fig = simulation_tree(tree, None, fig, 0, idx)
-    fig.show()
+    if show:
+        fig.show()
+    return fig
     
 def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
     # start simulation at 8 AM
@@ -285,7 +288,22 @@ def plot_trace(filename, variable, trace_directory='traces/'):
     fig.show()        
 
 def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
-    pass
+    meals_low = [(breakfast_carbs[0], 0), (lunch_carbs[0], 240), (dinner_carbs[0], 660)]
+    meals_high = [(breakfast_carbs[1], 0), (lunch_carbs[1], 240), (dinner_carbs[1], 660)]
+    init_state_low = get_init_state(init_bg[0], meals_low)
+    init_state_high = get_init_state(init_bg[1], meals_high)
+    init = [init_state_low, init_state_high]
+    simulation_scenario = SimulationScenario(meals_low, basal_rate)
+    script_dir = os.path.realpath(os.path.dirname(__file__))
+    input_code_name = os.path.join(script_dir, "real_pump_matlab_model.py")
+    agent = PumpAgent("pump", simulation_scenario=simulation_scenario, file_name=input_code_name)
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario.add_agent(agent)
+    scenario.set_init_single("pump", init, (ThermoMode.A,))
+    duration = simulation_scenario.simulation_duration
+    time_step = 1
+    traces = scenario.verify(duration, time_step)
+    return traces
 
 
 def save_traces(traces: AnalysisTree, filename):
@@ -296,7 +314,13 @@ def save_traces(traces: AnalysisTree, filename):
     print(data.shape)    
 
 if __name__ == "__main__":
-    init_bg = [100, 120, 140]
+    # traces = verify_three_meal_scenario([100, 130], 0, [50, 50], [100, 100], [100, 100])
+    # breakpoint()
+    # # fig = plot_variable(go.Figure(), traces, 'G', 'verify', show=False)
+    # # fig.write_image('three_meals_verify.png')
+    # # fig.show()
+    # with open('three_meal_traces.pickle', 'wb') as f:
+    #     pickle.dump(traces, f)
     # basal_rate = [0]
     # breakfast_carbs = [30, 50, 70]
     # lunch_carbs = [60, 80, 100]
