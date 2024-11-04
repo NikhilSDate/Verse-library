@@ -61,7 +61,7 @@ class PumpAgent(BaseAgent):
 
     def __init__(self, id, simulation_scenario, code=None, file_name=None):
         super().__init__(id, code, file_name)
-        self.scenario:SimulationScenario = simulation_scenario
+        self.scenario: SimulationScenario = simulation_scenario
 
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
         time_bound = float(time_bound)
@@ -73,6 +73,11 @@ class PumpAgent(BaseAgent):
         # keep insulin duration constant at 4 hrs for now
         
         pump = get_initialized_pump(init)
+        
+        # this is a hack: make the pump's internal time 8 AM
+        if self.scenario.basal_rate:
+            pump.delay_time(8 * 60)
+        
         meals = get_meals_from_state(init)
         dose = 0
         for i in tqdm(range(0, num_points)):
@@ -84,15 +89,19 @@ class PumpAgent(BaseAgent):
             init = res.flatten()
             init[0] = get(init, 'Gp') / Vg
             bolus = self.scenario.get_bolus(current_time)
+            dose = 0
             if bolus:                
                 dose = handle_bolus(pump, init, bolus)
                 tqdm.write(str(dose))
-            elif current_time % 5 == 0:
-                # TODO: need to actually model basal deliveries
-                dose = self.scenario.basal_rate / 60  * 5 # basal rate = 0.5u/hr
-            else:
-                dose = 0
-            pump.delay()
+            # elif current_time % 5 == 0:
+            #     # TODO: need to actually model basal deliveries
+            #     dose = self.scenario.basal_rate / 60  * 5 # basal rate = 0.5u/hr
+            # else:
+            #     dose = 0
+            basal = pump.delay_minute()
+            if self.scenario.basal_rate != 0:
+                dose += basal
+            # pump.delay()
             extract_pump_state(init, pump)
             # pump.delay()
             trace[i + 1, 0] = time_step * (i + 1)
@@ -229,7 +238,8 @@ def simulate_boluses(init, scenario):
 def handle_bolus(pump, state, bolus: Bolus) -> float:
     if bolus.type == BolusType.Simple:
         bg = get_bg(state)
-        dose = pump.dose_simple(bg + 30, bolus.carbs)
+        tqdm.write(str(bg))
+        dose = pump.dose_simple(bg, bolus.carbs)
         return dose
     else:
         # glucose = get_visible(init)[0]
@@ -248,12 +258,12 @@ def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='simulate', 
         fig.show()
     return fig
     
-def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
-    # start simulation at 8 AM
-    meals = [(breakfast_carbs, 0), (lunch_carbs, 240), (dinner_carbs, 660)]
+def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, simulation_duration=24 * 60):
+    # start simulation at 12 AM
+    meals = [(breakfast_carbs, 0), (lunch_carbs, 4 * 60), (dinner_carbs, 11 * 60)]
     init_state = get_init_state(init_bg, meals)
     init = [init_state, init_state]
-    simulation_scenario = SimulationScenario(meals, basal_rate)
+    simulation_scenario = SimulationScenario(meals, basal_rate, simulation_duration=simulation_duration)
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "real_pump_matlab_model.py")
     agent = PumpAgent("pump", simulation_scenario=simulation_scenario, file_name=input_code_name)
@@ -265,7 +275,7 @@ def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_car
     traces = scenario.simulate(duration, time_step)
     return traces
 
-def generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory='traces/'):
+def generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory='traces_basal/'):
     
     all_combinations = np.array(np.meshgrid(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)).T.reshape(-1, 5)
     existing_files = os.listdir(trace_directory)
@@ -279,7 +289,7 @@ def generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_c
         traces = simulate_three_meal_scenario(bg, br, bc, lc, dc)
         save_traces(traces, os.path.join(trace_directory, filename))
         
-def plot_trace(filename, variable, trace_directory='traces/'):
+def plot_trace(filename, variable, trace_directory='traces_basal/'):
     path = os.path.join(trace_directory, filename)
     df = pd.read_csv(path)
     fig = go.Figure()
@@ -321,13 +331,16 @@ if __name__ == "__main__":
     # # fig.show()
     # with open('three_meal_traces.pickle', 'wb') as f:
     #     pickle.dump(traces, f)
-    # basal_rate = [0]
+    # init_bg = [100, 120, 140]
+    # basal_rate = [1]
     # breakfast_carbs = [30, 50, 70]
     # lunch_carbs = [60, 80, 100]
     # dinner_carbs = [60, 80, 100]
-    # # traces = generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)
-    # traces = simulate_three_meal_scenario(120, 0, 60, 100, 100)
+    # traces = generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)
+    
+    # traces = simulate_three_meal_scenario(100, 0, 70, 100, 100, simulation_duration=24*60)
     # plot_variable(go.Figure(), traces, 'G', 'simulate')
+    plot_trace('trace_100_1_70_100_100.csv', 'Ip', trace_directory='traces_basal/')
     # breakpoint()
     # plot_trace('trace_100_0_30_60_60.csv', 'Qgut')
-    plot_trace('trace_100_0_30_60_60.csv', 'G')
+    
