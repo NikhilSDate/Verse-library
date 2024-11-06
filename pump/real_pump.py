@@ -180,6 +180,11 @@ class PumpAgent(BaseAgent):
         # keep insulin duration constant at 4 hrs for now
         
         pump = PumpAgent.get_initialized_pump(init)
+        print("glucose", glucose)
+        dose = pump.dose_simple(glucose, 0)  # hardcode carbs to 20 for now
+        print("dose", dose)
+        
+        pump = PumpAgent.get_initialized_pump(init)
         PumpAgent.extract_pump_state(init, pump)
         dose = 0
         print('num_points', num_points)
