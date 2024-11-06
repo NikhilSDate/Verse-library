@@ -123,6 +123,7 @@ class PumpAgent(BaseAgent):
         um_dot = f * kabs * qgut  # TODO should i use this or um in the insulin calculations
         uI = 0  # uI(t) (maybe pmol/kg/min???)
 
+
         X_dot = -0.0278 * X + 0.0278 * (18.2129 * Ip - 100.25)
         Isc1_dot = 0.0142 * Isc1 - 0.0078 * Isc2 + uI
         Isc2_dot = 0.0152 * Isc1 - 0.0078 * Isc2
@@ -163,8 +164,10 @@ class PumpAgent(BaseAgent):
         pump_derivatives = [0 for i in range(num_continuous_variables - len(body_derivatives))]
         return body_derivatives + pump_derivatives
 
-    def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
-        print("tracing", init, time_bound)
+    def TC_simulate(
+        self, mode: List[str], init, time_bound, time_step, lane_map = None
+    ) -> TraceType:
+        print('tracing', init, time_bound, time_step)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
         trace = np.zeros((num_points + 1, 1 + len(init)))
@@ -175,21 +178,26 @@ class PumpAgent(BaseAgent):
         # carbs = init[state_indices['body_carbs']] # THIS NEEDS TO BE CHANGED DEPENDING ON BODY MODEL
 
         # keep insulin duration constant at 4 hrs for now
-        pump = PumpAgent.get_initialized_pump(init)
-        print("glucose", glucose)
-        dose = pump.dose_simple(glucose, 0)  # hardcode carbs to 20 for now
-        print("dose", dose)
         
+        pump = PumpAgent.get_initialized_pump(init)
         PumpAgent.extract_pump_state(init, pump)
+        dose = 0
+        print('num_points', num_points)
         for i in range(0, num_points):
             #init[state_indices["Isc1"]] += PumpAgent.units_to_pmol_per_kg(dose)
             r = ode(lambda t, state: self.insulin_glucose_model(t, state))
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
             init = res.flatten()
-            pump.delay()
+            if i * time_step in [0]:
+                glucose = PumpAgent.get_visible(init)[0]
+                print('glucose', glucose)
+                dose = pump.dose_simple(glucose, 0)
+                print('dose', dose)
+            else:
+                dose = 0
             PumpAgent.extract_pump_state(init, pump)
-            dose = 0
+            pump.delay()
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = init
         return trace
@@ -197,11 +205,9 @@ class PumpAgent(BaseAgent):
     @staticmethod
     def get_init_state(init_bg, pump_state=[0, 0, 0]):
         state = [0 for i in range(num_continuous_variables)]
-
-        # TODO get all the other init state vars
-        state[state_indices["Gp"]] = init_bg * PumpAgent.body_params["VG"]
-        state[state_indices["Gt"]] = 141
-        PumpAgent.print_state(state)
+        state[state_indices['Gp']] = init_bg * PumpAgent.body_params['VG']
+        # set(state, 'Gt', 141)
+        # set(state, 'Ip', 5.5043)
         return state
 
     @staticmethod # TODO should this be in the utils file instead?
@@ -239,6 +245,27 @@ def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
     end_high = traces.root.trace["pump"][-1]
     return [end_low[1:], end_high[1:]], traces
 
+def simulate_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
+    script_dir = os.path.realpath(os.path.dirname(__file__))
+    input_code_name = os.path.join(script_dir, "real_pump_model.py")
+    # will need to figure out how to incorporate carbs into this later
+    # init[0][state_indices['body_carbs']] = carbs_low
+    # init[1][state_indices['body_carbs']] = carbs_high
+    agent = PumpAgent('pump', file_name=input_code_name)
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+
+    scenario.add_agent(agent) ### need to add breakpoint around here to check decision_logic of agents
+    # -----------------------------------------
+
+    scenario.set_init_single(
+        'pump', init, (ThermoMode.A,)
+    )
+
+    # assumption: meal every 12 hours
+
+    traces = scenario.simulate(duration, time_step)
+    end = traces.root.trace['pump'][-1]
+    return [end[1:], end[1:]], traces
 
 def link_nodes(node1, node2):
     agent = list(node1.trace.keys())[0]
@@ -252,28 +279,39 @@ def link_nodes(node1, node2):
 
 
 # boluses is time, [carbs_low, carbs_high]
-def verify_boluses(init, boluses):
-    result1, tree1 = verify_bolus(init, boluses[0][1][0], boluses[0][1][1], 120)
+def verify_boluses(init, boluses, duration=120):
+    result1, tree1 = verify_bolus(init, boluses[0][1][0], boluses[0][1][1], duration)
     prev_result, prev_tree = result1, tree1
     for i in range(1, len(boluses)):
-        result, tree = verify_bolus(
-            copy.deepcopy(prev_result), boluses[i][1][0], boluses[i][1][1], 120
-        )
+        result, tree = verify_bolus(copy.deepcopy(prev_result), boluses[i][1][0], boluses[i][1][1], duration)
         link_nodes(prev_tree.root, tree.root)
         prev_result, prev_tree = result, tree
     return result1, tree1
 
+def simulate_boluses(init, boluses, duration=120):
+    result1, tree1 = simulate_bolus(init, boluses[0][1], boluses[0][1], duration)
+    prev_result, prev_tree = result1, tree1
+    for i in range(1, len(boluses)):
+        result, tree = simulate_bolus(copy.deepcopy(prev_result), boluses[i][1], boluses[i][1], duration)
+        link_nodes(prev_tree.root, tree.root)
+        prev_result, prev_tree = result, tree
+    return result1, tree1
+
+def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='verify'):
+    idx = state_indices[var] + 1 # time is 0, so 1-index
+    if mode == 'verify':
+        fig = reachtube_tree(tree, None, fig, 0, idx)
+    else:
+        fig = simulation_tree(tree, None, fig, 0, idx)
+    fig.show()
 
 if __name__ == "__main__":
-    init = [PumpAgent.get_init_state(120), PumpAgent.get_init_state(140)]
-
-    #result, tree = verify_boluses(
-    #    init, [[0, [50, 70]], [120, [50, 70]], [240, [50, 70]], [360, [50, 70]]]
-    #)
-    # result1, tree1 = verify_bolus(init, 50, 70, duration=120)
-    # result2, tree2 = PumpAgent.verify_bolus(result1, 10, 20, duration=120)
-    # PumpAgent.link_nodes(tree1.root, tree2.root)
-    # result2, tree2 = PumpAgent.verify_bolus(copy.deepcopy(result1), 0, 0, duration=60)
+    init = [PumpAgent.get_init_state(140), PumpAgent.get_init_state(150)]
+    result, tree = verify_boluses(init, [[0, [50, 70]], [0, [50, 70]], [0, [50, 70]], [0, [50, 70]]], duration=120)
+    # result, tree = simulate_boluses(init, [[0, 50], [120, 10]])
+    fig = go.Figure()
+    plot_variable(fig, tree, 'Gp', mode='verify')
+    breakpoint()
 
     
     script_dir = os.path.realpath(os.path.dirname(__file__))
