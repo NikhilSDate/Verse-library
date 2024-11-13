@@ -30,7 +30,7 @@ from matlab_stateutils import (
     state_indices,
     num_continuous_variables,
     num_meals,
-    state_variable_names
+    state_variable_names,
 )  # work toward removing the state_indices import
 
 import pandas as pd
@@ -41,27 +41,25 @@ from scenario import SimulationScenario, Bolus, BolusType
 import pickle
 
 
-
-sys.path.insert(1, "/home/ndate/Research/insulin_pump/unicorn_analyzer")
+sys.path.insert(1, "/home/alex/git/InsulinPump")
 
 from pump_wrapper import Pump
 
-'''
+"""
 SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
-'''
+"""
+
 
 class PumpAgent(BaseAgent):
 
     body_params = {
         "BW": 78,  # weight of person in kg
-        "Gb": 110 # match pump's target BG with basal BG
+        "Gb": 130,  # match pump's target BG with basal BG
     }
-    
-
 
     def __init__(self, id, simulation_scenario, code=None, file_name=None):
         super().__init__(id, code, file_name)
-        self.scenario:SimulationScenario = simulation_scenario
+        self.scenario: SimulationScenario = simulation_scenario
 
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
         time_bound = float(time_bound)
@@ -71,25 +69,25 @@ class PumpAgent(BaseAgent):
         trace[0, 1:] = init
 
         # keep insulin duration constant at 4 hrs for now
-        
+
         pump = get_initialized_pump(init)
         meals = get_meals_from_state(init)
         dose = 0
         for i in tqdm(range(0, num_points)):
             current_time = i * time_step
-            init[state_indices["Isc1"]] += units_to_pmol_per_kg(dose)
+            # init[state_indices["Isc1"]] += units_to_pmol_per_kg(dose)
             r = ode(lambda t, state: insulin_glucose_model(current_time + t, state, meals))
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
             init = res.flatten()
-            init[0] = get(init, 'Gp') / Vg
+            init[0] = get(init, "Gp") / Vg
             bolus = self.scenario.get_bolus(current_time)
-            if bolus:                
+            if bolus:
                 dose = handle_bolus(pump, init, bolus)
                 tqdm.write(str(dose))
             elif current_time % 5 == 0:
                 # TODO: need to actually model basal deliveries
-                dose = self.scenario.basal_rate / 60  * 5 # basal rate = 0.5u/hr
+                dose = self.scenario.basal_rate / 60 * 5  # basal rate = 0.5u/hr
             else:
                 dose = 0
             pump.delay()
@@ -99,14 +97,16 @@ class PumpAgent(BaseAgent):
             trace[i + 1, 1:] = init
         return trace
 
+
 def units_to_pmol_per_kg(units):
     # use factor 1 milliunit = 6 pmol
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6501531/
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2769591/pdf/dst-01-0323.pdf says insulin infusion rate is pmol/kg/min
-    
+
     # but it looks like the matlab model uses 1 milliunit = 6.9444 pmol
-    
+
     return units * 6944.4 / PumpAgent.body_params["BW"]
+
 
 def extract_pump_state(init, pump, events=3):
     iob_array, iob, max_duration = pump.get_state()
@@ -114,6 +114,7 @@ def extract_pump_state(init, pump, events=3):
     for i in range(events):
         set(init, f"pump_iob_{i}", iob_array[i][0])
         set(init, f"pump_elapsed_{i}", iob_array[i][1])
+
 
 def get_initialized_pump(init, events=3, duration=4):
     # assume same duration for every item
@@ -126,39 +127,88 @@ def get_initialized_pump(init, events=3, duration=4):
     pump = Pump((iob_items, iob, duration))
     return pump
 
+
 def insulin_glucose_model(t, state, meals):
-    body_vars = state[:18] # have 17 variables plus one ignore variable
-    body_derivatives = model(t, body_vars, '', PumpAgent.body_params['BW'], PumpAgent.body_params['Gb'], 
-                                meals, 0, 0, 0)
+    body_vars = state[:18]  # have 17 variables plus one ignore variable
+    body_derivatives = model(
+        t, body_vars, "", PumpAgent.body_params["BW"], PumpAgent.body_params["Gb"], meals, 0, 0, 0
+    )
 
     pump_derivatives = np.zeros((num_continuous_variables - len(body_derivatives),))
     return np.concatenate([body_derivatives, pump_derivatives])
 
+
 def get_meals_from_state(state):
     result = []
     for i in range(1, num_meals + 1):
-        Di = get(state, f'D_{i}')
-        ti = get(state, f't_{i}')
+        Di = get(state, f"D_{i}")
+        ti = get(state, f"t_{i}")
         result.append((Di, ti))
     return result
 
+
 def get_init_state(init_bg, meals):
-    (Gb,Gpb,Gtb,Ilb,Ipb,Ipob,Ib,IIRb,Isc1ss,Isc2ss,kp1,Km0,Hb,SRHb,Gth,SRsHb, XHb,Ith,IGRb,Hsc1ss,Hsc2ss) = basal_states(init_bg)
-    body_init_state = [init_bg, Gpb,Gtb,Ilb,Ipb,Ib,Ib,0,0,0,0,SRsHb,Hb,XHb,Isc1ss,Isc2ss,Hsc1ss,Hsc2ss]
+    (
+        Gb,
+        Gpb,
+        Gtb,
+        Ilb,
+        Ipb,
+        Ipob,
+        Ib,
+        IIRb,
+        Isc1ss,
+        Isc2ss,
+        kp1,
+        Km0,
+        Hb,
+        SRHb,
+        Gth,
+        SRsHb,
+        XHb,
+        Ith,
+        IGRb,
+        Hsc1ss,
+        Hsc2ss,
+    ) = basal_states(init_bg)
+    body_init_state = [
+        init_bg,
+        Gpb,
+        Gtb,
+        Ilb,
+        Ipb,
+        Ib,
+        Ib,
+        0,
+        0,
+        0,
+        0,
+        SRsHb,
+        Hb,
+        XHb,
+        Isc1ss,
+        Isc2ss,
+        Hsc1ss,
+        Hsc2ss,
+    ]
     scenario_state = []
     for i in range(len(meals)):
-        carbs = meals[i][0] * 1000 # convert g to mg
-        scenario_state.append(carbs) 
+        carbs = meals[i][0] * 1000  # convert g to mg
+        scenario_state.append(carbs)
         scenario_state.append(meals[i][1])
     print(scenario_state)
-    pump_init_state = [0 for i in range(num_continuous_variables - len(body_init_state) - len(scenario_state))] # exclude D
+    pump_init_state = [
+        0 for i in range(num_continuous_variables - len(body_init_state) - len(scenario_state))
+    ]  # exclude D
     return body_init_state + scenario_state + pump_init_state
+
 
 # TODO should this be in the utils file instead?
 def print_state(state):
     a = list(state_indices.keys())[:14]
     for var in a:
         print(f"\t{var}: {state[state_indices[var]]}")
+
 
 def get_bg(state):
     glucose = state[state_indices["Gp"]] / Vg
@@ -171,30 +221,28 @@ def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
     agent = PumpAgent("pump", file_name=input_code_name)
     scenario = SimulationScenario(ScenarioConfig(init_seg_length=1, parallel=False))
 
-    scenario.add_agent(
-        agent
-    )
+    scenario.add_agent(agent)
 
-    scenario.set_init_single("pump", init, (ThermoMode.A,))
+    scenario.set_init_single("pump", init, (PumpMode.default,))
     traces = scenario.verify(duration, time_step)
     end_low = traces.root.trace["pump"][-2]
     end_high = traces.root.trace["pump"][-1]
     return [end_low[1:], end_high[1:]], traces
 
+
 def simulate_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
     script_dir = os.path.realpath(os.path.dirname(__file__))
     input_code_name = os.path.join(script_dir, "real_pump_model.py")
-    agent = PumpAgent('pump', file_name=input_code_name)
+    agent = PumpAgent("pump", file_name=input_code_name)
     scenario = SimulationScenario(ScenarioConfig(init_seg_length=1, parallel=False))
 
     scenario.add_agent(agent)
 
-    scenario.set_init_single(
-        'pump', init, (ThermoMode.A,)
-    )
+    scenario.set_init_single("pump", init, (PumpMode.default,))
     traces = scenario.simulate(duration, time_step)
-    end = traces.root.trace['pump'][-1]
+    end = traces.root.trace["pump"][-1]
     return [end[1:], end[1:]], traces
+
 
 def link_nodes(node1, node2):
     agent = list(node1.trace.keys())[0]
@@ -212,19 +260,25 @@ def verify_boluses(init, boluses, duration=120):
     result1, tree1 = verify_bolus(init, boluses[0][1][0], boluses[0][1][1], duration)
     prev_result, prev_tree = result1, tree1
     for i in range(1, len(boluses)):
-        result, tree = verify_bolus(copy.deepcopy(prev_result), boluses[i][1][0], boluses[i][1][1], duration)
+        result, tree = verify_bolus(
+            copy.deepcopy(prev_result), boluses[i][1][0], boluses[i][1][1], duration
+        )
         link_nodes(prev_tree.root, tree.root)
         prev_result, prev_tree = result, tree
     return result1, tree1
+
 
 def simulate_boluses(init, scenario):
     result1, tree1 = simulate_bolus(init, boluses[0][1], boluses[0][1], duration)
     prev_result, prev_tree = result1, tree1
     for i in range(1, len(boluses)):
-        result, tree = simulate_bolus(copy.deepcopy(prev_result), boluses[i][1], boluses[i][1], duration)
+        result, tree = simulate_bolus(
+            copy.deepcopy(prev_result), boluses[i][1], boluses[i][1], duration
+        )
         link_nodes(prev_tree.root, tree.root)
         prev_result, prev_tree = result, tree
     return result1, tree1
+
 
 def handle_bolus(pump, state, bolus: Bolus) -> float:
     if bolus.type == BolusType.Simple:
@@ -238,16 +292,18 @@ def handle_bolus(pump, state, bolus: Bolus) -> float:
         # print('dosing')
         raise NotImplementedError()
 
-def plot_variable(fig, tree, var, mode: Union['simulate', 'verify']='simulate', show=True):
-    idx = state_indices[var] + 1 # time is 0, so 1-index
-    if mode == 'verify':
+
+def plot_variable(fig, tree, var, mode: Union["simulate", "verify"] = "simulate", show=True):
+    idx = state_indices[var] + 1  # time is 0, so 1-index
+    if mode == "verify":
         fig = reachtube_tree(tree, None, fig, 0, idx)
     else:
         fig = simulation_tree(tree, None, fig, 0, idx)
     if show:
         fig.show()
     return fig
-    
+
+
 def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
     # start simulation at 8 AM
     meals = [(breakfast_carbs, 0), (lunch_carbs, 240), (dinner_carbs, 660)]
@@ -259,33 +315,40 @@ def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_car
     agent = PumpAgent("pump", simulation_scenario=simulation_scenario, file_name=input_code_name)
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
-    scenario.set_init_single("pump", init, (ThermoMode.A,))
+    scenario.set_init_single("pump", init, (PumpMode.default,))
     duration = simulation_scenario.simulation_duration
     time_step = 1
     traces = scenario.simulate(duration, time_step)
     return traces
 
-def generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory='traces/'):
-    
-    all_combinations = np.array(np.meshgrid(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)).T.reshape(-1, 5)
+
+def generate_all_three_meal_traces(
+    init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory="traces/"
+):
+
+    all_combinations = np.array(
+        np.meshgrid(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)
+    ).T.reshape(-1, 5)
     existing_files = os.listdir(trace_directory)
     for i in tqdm(range(len(all_combinations))):
         combination = all_combinations[i]
-        tqdm.write(f'Simulating with init state {combination}')
+        tqdm.write(f"Simulating with init state {combination}")
         bg, br, bc, lc, dc = combination
-        filename = f'trace_{bg}_{br}_{bc}_{lc}_{dc}.csv'
+        filename = f"trace_{bg}_{br}_{bc}_{lc}_{dc}.csv"
         if filename in existing_files:
             continue
         traces = simulate_three_meal_scenario(bg, br, bc, lc, dc)
         save_traces(traces, os.path.join(trace_directory, filename))
-        
-def plot_trace(filename, variable, trace_directory='traces/'):
+
+
+def plot_trace(filename, variable, trace_directory="traces/"):
     path = os.path.join(trace_directory, filename)
     df = pd.read_csv(path)
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['t'], y=df[variable]))
-    fig.update_layout(dict(xaxis_title='t', yaxis_title=variable))
-    fig.show()        
+    fig.add_trace(go.Scatter(x=df["t"], y=df[variable]))
+    fig.update_layout(dict(xaxis_title="t", yaxis_title=variable))
+    fig.show()
+
 
 def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
     meals_low = [(breakfast_carbs[0], 0), (lunch_carbs[0], 240), (dinner_carbs[0], 660)]
@@ -299,7 +362,7 @@ def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs
     agent = PumpAgent("pump", simulation_scenario=simulation_scenario, file_name=input_code_name)
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
-    scenario.set_init_single("pump", init, (ThermoMode.A,))
+    scenario.set_init_single("pump", init, (PumpMode.default,))
     duration = simulation_scenario.simulation_duration
     time_step = 1
     traces = scenario.verify(duration, time_step)
@@ -307,11 +370,12 @@ def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs
 
 
 def save_traces(traces: AnalysisTree, filename):
-    data = np.array(list(traces.root.trace.values())[0]) # we only have one agent
-    cols = ['t'] + state_variable_names[:-1] # drop the discrete state
+    data = np.array(list(traces.root.trace.values())[0])  # we only have one agent
+    cols = ["t"] + state_variable_names[:-1]  # drop the discrete state
     df = pd.DataFrame(data, columns=cols)
     df.to_csv(filename)
-    print(data.shape)    
+    print(data.shape)
+
 
 if __name__ == "__main__":
     # traces = verify_three_meal_scenario([100, 130], 0, [50, 50], [100, 100], [100, 100])
@@ -321,13 +385,17 @@ if __name__ == "__main__":
     # # fig.show()
     # with open('three_meal_traces.pickle', 'wb') as f:
     #     pickle.dump(traces, f)
-    # basal_rate = [0]
+    basal_rate = [0]
     # breakfast_carbs = [30, 50, 70]
     # lunch_carbs = [60, 80, 100]
     # dinner_carbs = [60, 80, 100]
     # # traces = generate_all_three_meal_traces(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs)
-    # traces = simulate_three_meal_scenario(120, 0, 60, 100, 100)
+    traces = simulate_three_meal_scenario(130, 0, 60, 0, 0)
+    save_traces(traces, "traces/trace_130_0_60_0_0.csv")
     # plot_variable(go.Figure(), traces, 'G', 'simulate')
     # breakpoint()
     # plot_trace('trace_100_0_30_60_60.csv', 'Qgut')
-    plot_trace('trace_100_0_30_60_60.csv', 'G')
+    plot_trace("trace_130_0_60_0_0.csv", "G")
+
+# TODO plot traces only takes in a file right now-- make it support a trace object
+# TODO you have to pass the traces dir into save_traces

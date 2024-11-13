@@ -2,15 +2,14 @@ from enum import Enum, auto
 import copy
 
 
-class ThermoMode(Enum):
-    A = auto()
-    B = auto()
+class PumpMode(Enum):
+    default = auto()
 
 
 class State:
 
-    # body model
-    G: float # used to make the body model 1-indexed (should be fixed later)
+    # Body model
+    G: float  # used to make the body model 1-indexed (should be fixed later)
     Gp: float
     Gt: float
     Il: float
@@ -24,21 +23,21 @@ class State:
     SRsH: float
     H: float
     XH: float
-    Isc1: float # subcutaneous insulin concentration; this needs to be touched directly
-    Isc2: float # subcutaneous insulin concentration 2: don't touch directly
+    Isc1: float  # Insert insulin here when acting as insulin pump
+    Isc2: float
     Hsc1: float
-    Hsc2: float    
-    
-    # scenario model
+    Hsc2: float
+
+    # Scenario model
     # TODO: this should really not even be in the continuous state since these values are never going to change, but I don't know if there is a better way to model this
-    D_1: float # carbs in first meal (in mg)
-    t_1: float # time of first meal (minutes)
-    D_2: float # carbs in second meal (in mg)
-    t_2: float # time of second meal (minutes)
+    D_1: float  # carbs in first meal (in mg)
+    t_1: float  # time of first meal (minutes)
+    D_2: float  # carbs in second meal (in mg)
+    t_2: float  # time of second meal (minutes)
     D_3: float
     t_3: float
 
-    # pump model
+    # Pump model
     pump_iob_0: float
     pump_elapsed_0: int
     pump_iob_1: float
@@ -49,16 +48,12 @@ class State:
     pump_elapsed_3: float
     pump_iob: float
 
-    agent_mode: ThermoMode
+    agent_mode: PumpMode
 
-    def __init__(self, x, agent_mode: ThermoMode):
+    def __init__(self, x, agent_mode: PumpMode):
         pass
 
 
 def decisionLogic(ego: State):
     output = copy.deepcopy(ego)
     return output
-
-
-if __name__ == "__main__":
-    pass
