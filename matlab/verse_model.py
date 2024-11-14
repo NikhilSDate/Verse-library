@@ -1,11 +1,12 @@
-from enum import Enum, auto
 import copy
 
+from enum import Enum, auto
+from body_model import BodyModel
 
 class PumpMode(Enum):
     default = auto()
 
-
+# TODO split into 3 subvectors -- body, scenario, pump
 class State:
 
     # Body model

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List
 from enum import Enum
 
 BolusType = Enum("BolusType", ["Simple", "Extended"])
@@ -19,6 +19,7 @@ class Bolus:
 
 
 class SimulationScenario:
+#    def __init__(self, meals, basal_rate, rule="simple", simulation_duration=24):
     def __init__(self, meals, basal_rate, rule="simple", simulation_duration=24 * 60):
         # eventually we can define some logic for when we should request a bolus
         # meals is array of (time, carbs)
