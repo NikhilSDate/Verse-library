@@ -112,7 +112,7 @@ class BodyModel:
         return k * Hval * (1 - Hval / A)
 
     def set_basal_states(self):
-        Sb = 0  # TODO is this even used?
+        Sb = 0
         self.IIRb = 0
         self.m3 = self.HEb * self.m1 / (1 - self.HEb)
         self.Ipb = self.IIRb / (self.m2 + self.m4 - (self.m1 * self.m2) / (self.m1 + self.m3))
@@ -135,25 +135,18 @@ class BodyModel:
         self.Hsc1ss = self.IGRb / (self.kh1 + self.kh2)
         self.Hsc2ss = self.kh1 * self.Hsc1ss / self.kh3
 
-    def model(self, t, x, carb_doses, uI=0.0, uG=0.0):
+    def model(self, t, x, carbs, uI=0.0, uG=0.0):
 
-        D = 1e-9
+        if carbs:
+            D = carbs * 1000  # g to mg
+        else:
+            D = 1e-9
+        # TODO should we manually deduct from t?
 
-        # carb_doses is an array of (dose, time) tuples, sorted by time
-        for i in range(len(carb_doses) - 1, -1, -1):
-            if t >= carb_doses[i][1] and carb_doses[i][0] > 0:
-
-                # TODO: could mess with k_empt
-                t = t - carb_doses[i][1]
-
-                D = carb_doses[i][0]
-                break
-
-        # TODO make sure I didn't 'self' anything that shouldn't be
         # Load previous vector values
+        G = x[0]
         Gp = x[1]
         Gt = x[2]
-        G = Gp / self.Vg
         Il = x[3]
         Ip = x[4]
         I = Ip / self.VI
@@ -183,6 +176,7 @@ class BodyModel:
         xdot[1] = EGP + Ra - Uii - E - self.k1 * Gp + self.k2 * Gt
         xdot[2] = -Uid + self.k1 * Gp - self.k2 * Gt
         Gdot = xdot[1] / self.Vg
+        xdot[0] = Gdot
         HE = self.HEb
         self.m3 = HE * self.m1 / (1 - HE)
         xdot[3] = -(self.m1 + self.m3) * Il + self.m2 * Ip
@@ -204,16 +198,21 @@ class BodyModel:
         xdot[11] = -self.Rho * (
             SRsH
             - self.maxfunc(
-                (self.Sigma * (self.Gth - G) / (self.maxfunc(I - self.Ith, 0, 0.0001) + 1)) + self.SRHb,
+                (self.Sigma * (self.Gth - G) / (self.maxfunc(I - self.Ith, 0, 0.0001) + 1))
+                + self.SRHb,
                 0,
                 0.0001,
             )
         )
         xdot[12] = -self.n * H + SRH + Rah
         xdot[13] = -self.kH * XH + self.kH * self.maxfunc(H - self.Hb, 0, 0.0001)
-        xdot[14] = -(self.kd + self.ka1) * Isc1 + self.IIRb + (1/78) * uI * 6944.4 * self.delta(t,30,1,4)
+        xdot[14] = (
+            -(self.kd + self.ka1) * Isc1
+            + self.IIRb
+            + (1 / 78) * uI * 6944.4 * self.delta(t, 30, 1, 4)
+        )
         xdot[15] = self.kd * Isc1 - self.ka2 * Isc2
-        xdot[16] = -(self.kh1 + self.kh2) * Hsc1 + (1/78) * uG * 1e6 * self.delta(t,150,1,4)
+        xdot[16] = -(self.kh1 + self.kh2) * Hsc1 + (1 / 78) * uG * 1e6 * self.delta(t, 150, 1, 4)
         xdot[17] = self.kh1 * Hsc1 - self.kh3 * Hsc2
 
         return xdot

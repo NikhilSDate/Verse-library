@@ -10,7 +10,8 @@ from verse import BaseAgent, Scenario, ScenarioConfig
 from verse.analysis import AnalysisTreeNode, AnalysisTree, AnalysisTreeNodeType
 
 from verse_model import *
-from pump_agent import *
+from artificial_pancreas_agent import *
+from pump_model import *
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -20,10 +21,13 @@ TRACES_PATH = os.environ["TRACES_PATH"]
 SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 """
 
+# TODO translate verify() methods
+# TODO make sure multiple meal/bolus work
+
 
 def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
 
-    agent = PumpAgent("pump", file_name="verse_model.py")
+    agent = ArtificialPancreasAgent("pump", file_name="verse_model.py")
     scenario = SimulationScenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
     scenario.set_init_single("pump", init, (PumpMode.default,))
@@ -35,7 +39,7 @@ def verify_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
 
 def simulate_bolus(init, carbs_low, carbs_high, duration=360, time_step=1):
 
-    agent = PumpAgent("pump", file_name="verse_model.py")
+    agent = ArtificialPancreasAgent("pump", file_name="verse_model.py")
     scenario = SimulationScenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
     scenario.set_init_single("pump", init, (PumpMode.default,))
@@ -68,19 +72,6 @@ def verify_boluses(init, boluses, duration=120):
     return result1, tree1
 
 
-def simulate_boluses(init, scenario):
-    result1, tree1 = simulate_bolus(init, boluses[0][1], boluses[0][1], duration)
-    prev_result, prev_tree = result1, tree1
-    for i in range(1, len(boluses)):
-        result, tree = simulate_bolus(
-            copy.deepcopy(prev_result), boluses[i][1], boluses[i][1], duration
-        )
-        link_nodes(prev_tree.root, tree.root)
-        prev_result, prev_tree = result, tree
-    return result1, tree1
-
-
-# TODO should this be an enum
 def plot_variable(fig, tree, var, mode: Union["simulate", "verify"] = "simulate", show=True):
     idx = state_indices[var] + 1  # time is 0, so 1-index
     if mode == "verify":
@@ -90,24 +81,6 @@ def plot_variable(fig, tree, var, mode: Union["simulate", "verify"] = "simulate"
     if show:
         fig.show()
     return fig
-
-
-def simulate_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
-    # start simulation at 8 AM
-    meals = [(breakfast_carbs, 0), (lunch_carbs, 240), (dinner_carbs, 660)]
-    body, init_state = get_init_state(init_bg, meals)
-    init = [init_state, init_state] # TODO why twice
-    simulation_scenario = SimulationScenario(meals, basal_rate)
-    agent = PumpAgent(
-        "pump", body, simulation_scenario=simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
-    )
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
-    scenario.add_agent(agent)
-    scenario.set_init_single("pump", init, (PumpMode.default,))
-    duration = simulation_scenario.simulation_duration
-    time_step = 1
-    traces = scenario.simulate(duration, time_step)
-    return traces
 
 
 def generate_all_three_meal_traces(
@@ -129,23 +102,14 @@ def generate_all_three_meal_traces(
         save_traces(traces, os.path.join(trace_directory, filename))
 
 
-def plot_trace(filename, variable, trace_directory=TRACES_PATH):
-    path = os.path.join(trace_directory, filename)
-    df = pd.read_csv(path)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df["t"], y=df[variable]))
-    fig.update_layout(dict(xaxis_title="t", yaxis_title=variable))
-    fig.show()
-
-
-def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
+def verify_three_meal_scenario(init_bg, BW, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs):
     meals_low = [(breakfast_carbs[0], 0), (lunch_carbs[0], 240), (dinner_carbs[0], 660)]
     meals_high = [(breakfast_carbs[1], 0), (lunch_carbs[1], 240), (dinner_carbs[1], 660)]
-    init_state_low = get_init_state(init_bg[0], meals_low)
-    init_state_high = get_init_state(init_bg[1], meals_high)
+    init_state_low = get_init_state(init_bg[0], BW, meals_low)
+    init_state_high = get_init_state(init_bg[1], BW, meals_high)
     init = [init_state_low, init_state_high]
     simulation_scenario = SimulationScenario(meals_low, basal_rate)
-    agent = PumpAgent(
+    agent = ArtificialPancreasAgent(
         "pump", simulation_scenario=simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -157,20 +121,86 @@ def verify_three_meal_scenario(init_bg, basal_rate, breakfast_carbs, lunch_carbs
     return traces
 
 
-def save_traces(traces: AnalysisTree, filename):
+##############
+##############
+##############
+
+
+def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals):
+
+    simulation_scenario = SimulationScenario(basal_rate, boluses, meals)
+    pump = InsulinPumpModel(simulation_scenario)
+    body = BodyModel(BW, init_bg)
+
+    agent = ArtificialPancreasAgent(
+        "pump", body, pump, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
+    )
+    init_state = agent.get_init_state()
+
+    init = [init_state, init_state]  # TODO why twice?
+
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario.add_agent(agent)
+    scenario.set_init_single(
+        "pump", init, (PumpMode.default,)
+    )  # TODO what's the other half of the tuple?
+
+    time_step = 1
+    traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
+
+    return traces
+
+
+def save_traces(traces: AnalysisTree, filename, trace_directory=TRACES_PATH):
     data = np.array(list(traces.root.trace.values())[0])  # we only have one agent
-    cols = ["t"] + state_variable_names[:-1]  # drop the discrete state
+
+    # TODO better way to get var_names
+    var_names = [
+        "G",
+        "Gp",
+        "Gt",
+        "Il",
+        "Ip",
+        "I1",
+        "Id",
+        "Qsto1",
+        "Qsto2",
+        "Qgut",
+        "X",
+        "SRsH",
+        "H",
+        "XH",
+        "Isc1",
+        "Isc2",
+        "Hsc1",
+        "Hsc2",
+    ]
+    cols = ["t"] + var_names
     df = pd.DataFrame(data, columns=cols)
-    df.to_csv(filename)
-    print(data.shape)
+    df.to_csv(trace_directory + filename)
+
+
+def plot_trace(filename, variable, trace_directory=TRACES_PATH):
+    path = os.path.join(trace_directory, filename)
+    df = pd.read_csv(path)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df["t"], y=df[variable]))
+    fig.update_layout(dict(xaxis_title="t", yaxis_title=variable))
+    fig.show()
 
 
 if __name__ == "__main__":
-    basal_rate = [0]
 
-    traces = simulate_three_meal_scenario(130, 0, 60, 0, 0)
-    print(TRACES_PATH)
-    save_traces(traces, TRACES_PATH + "trace_130_0_60_0_0.csv")
-    plot_trace("trace_130_0_60_0_0.csv", "G")
+    # TODO allow these to be passed in
+    BW = 78  # kg
+    Gb = 130  # mg/dL
+    basal = 0  # units
+    boluses = []
+    meals = [Meal(0, 60)]
 
-# TODO plot traces only takes in a file right now-- make it support a trace object
+    meal_strings = "_".join([str(m.carbs) for m in meals])
+    trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
+
+    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals)
+    save_traces(traces, trace_filename)
+    plot_trace(trace_filename, "G")
