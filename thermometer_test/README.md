@@ -15,3 +15,7 @@ To view images externally, spin up a local `python3 -m http.server 8000` and for
 ```sh
 ssh -N -L 8000:localhost:8000 vector0.sprai.org
 ```
+
+## Images in headless environments
+
+Instead of `fig.show()`, use `fig.write_image('out.png')` in headless environments.

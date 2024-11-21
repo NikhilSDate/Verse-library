@@ -21,3 +21,6 @@ COPY requirements.txt /opt/verse/requirements.txt
 COPY setup.py /opt/verse/setup.py
 COPY verse /opt/verse/verse
 RUN pip install /opt/verse
+
+# install angr for symbex
+RUN pip install angr
