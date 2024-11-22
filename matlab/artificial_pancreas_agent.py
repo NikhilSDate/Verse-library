@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 EMULATOR_PATH = os.environ["EMULATOR_PATH"]
-
+print(EMULATOR_PATH)
 sys.path.insert(1, EMULATOR_PATH)
 from pump_wrapper import Pump
 
@@ -85,6 +85,8 @@ class ArtificialPancreasAgent(BaseAgent):
             current_time = i * time_step
             bolus, meal = self.scenario.get_events(current_time)
 
+            
+            dose = 0
             if bolus:
                 dose = send_bolus_command(bolus)
                 # state_vec["Isc1"] += units_to_pmol_per_kg(dose)
@@ -92,10 +94,8 @@ class ArtificialPancreasAgent(BaseAgent):
             if meal:
                 carbs = meal.carbs
                 # TODO make sure this handles multiple carb inputs correctly
-
-            if current_time % 5 == 0:  # basal
-                dose = self.scenario.basal_rate / 60 * 5  # basal rate = 0.5u/hr
-                # state_vec["Isc1"] += units_to_pmol_per_kg(dose)
+            
+            state_vec[state_indices] += units_to_pmol_per_kg(dose)
 
             r = ode(lambda t, state: self.body.model(current_time + t, state, carbs))
             r.set_initial_value(state_vec)
