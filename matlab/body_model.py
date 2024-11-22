@@ -3,8 +3,8 @@ import numpy as np
 
 class BodyModel:
 
-    BW = None
-    Gb = None
+    BW = 78
+    Gb = 130
 
     # Glucose subsystem
     Vg = 1.49

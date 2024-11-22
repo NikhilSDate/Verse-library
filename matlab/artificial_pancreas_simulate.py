@@ -195,8 +195,8 @@ if __name__ == "__main__":
     BW = 78  # kg
     Gb = 130  # mg/dL
     basal = 0  # units
-    boluses = []
-    meals = [Meal(0, 60)]
+    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(240, 100, BolusType.Simple, None), Bolus(660, 100, BolusType.Simple, None)]
+    meals = [Meal(0, 60), Meal(240, 100), Meal(660, 100)]
 
     meal_strings = "_".join([str(m.carbs) for m in meals])
     trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
@@ -204,3 +204,4 @@ if __name__ == "__main__":
     traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals)
     save_traces(traces, trace_filename)
     plot_trace(trace_filename, "G")
+    breakpoint()

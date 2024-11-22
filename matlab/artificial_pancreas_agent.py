@@ -19,6 +19,7 @@ from verse.analysis.analysis_tree import TraceType, AnalysisTree
 from artificial_pancreas_scenario import *
 from body_model import BodyModel
 from pump_model import *
+from state_utils import state_indices
 
 
 # Combined human body system + insulin pump + scenario system
@@ -88,21 +89,25 @@ class ArtificialPancreasAgent(BaseAgent):
             
             dose = 0
             if bolus:
-                dose = send_bolus_command(bolus)
+                bg = state_vec[state_indices['G']]
+                dose = self.pump.send_bolus_command(bg, bolus)
+                print(dose)
                 # state_vec["Isc1"] += units_to_pmol_per_kg(dose)
 
             if meal:
                 carbs = meal.carbs
                 # TODO make sure this handles multiple carb inputs correctly
             
-            state_vec[state_indices] += units_to_pmol_per_kg(dose)
+            self.pump.pump_emulator.delay()
+            
+            state_vec[state_indices['Isc1']] += units_to_pmol_per_kg(dose)
+
 
             r = ode(lambda t, state: self.body.model(current_time + t, state, carbs))
             r.set_initial_value(state_vec)
             res: np.ndarray = r.integrate(r.t + time_step)
             state_vec = res.flatten()
 
-            self.pump.pump_emulator.delay()
 
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
