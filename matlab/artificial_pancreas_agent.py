@@ -17,7 +17,7 @@ from verse import BaseAgent, Scenario, ScenarioConfig
 from verse.analysis.analysis_tree import TraceType, AnalysisTree
 
 from artificial_pancreas_scenario import *
-from body_model import BodyModel
+from hovorka_model import HovorkaModel
 from pump_model import *
 from state_utils import state_indices
 
@@ -30,7 +30,7 @@ class ArtificialPancreasAgent(BaseAgent):
     def __init__(
         self,
         id,
-        body: BodyModel,
+        body: HovorkaModel,
         pump: InsulinPumpModel,
         simulation_scenario: SimulationScenario,
         code=None,
@@ -45,28 +45,7 @@ class ArtificialPancreasAgent(BaseAgent):
 
     def get_init_state(self):
 
-        init_state = [
-            self.body.Gb,
-            self.body.Gpb,
-            self.body.Gtb,
-            self.body.Ilb,
-            self.body.Ipb,
-            self.body.Ib,
-            self.body.Ib,
-            0,
-            0,
-            0,
-            0,
-            self.body.SRsHb,
-            self.body.Hb,
-            self.body.XHb,
-            self.body.Isc1ss,
-            self.body.Isc2ss,
-            self.body.Hsc1ss,
-            self.body.Hsc2ss,
-        ]
-
-        return init_state
+        return self.body.get_init_state()
 
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
@@ -83,27 +62,24 @@ class ArtificialPancreasAgent(BaseAgent):
 
         for i in tqdm(range(0, num_points)):
 
+            state_vec[state_indices["G"]] = state_vec[state_indices["C"]] * 18
+
             current_time = i * time_step
             bolus, meal = self.scenario.get_events(current_time)
 
             
             dose = 0
+            carbs = 0
             if bolus:
-                bg = state_vec[state_indices['G']]
+                bg = state_vec[state_indices['C']] * 18
                 dose = self.pump.send_bolus_command(bg, bolus)
-                print(dose)
-                # state_vec["Isc1"] += units_to_pmol_per_kg(dose)
 
             if meal:
                 carbs = meal.carbs
                 # TODO make sure this handles multiple carb inputs correctly
             
-            self.pump.pump_emulator.delay()
-            
-            state_vec[state_indices['Isc1']] += units_to_pmol_per_kg(dose)
-
-
-            r = ode(lambda t, state: self.body.model(current_time + t, state, carbs))
+            dose += (0.025 / 5)
+            r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
             r.set_initial_value(state_vec)
             res: np.ndarray = r.integrate(r.t + time_step)
             state_vec = res.flatten()
@@ -111,5 +87,7 @@ class ArtificialPancreasAgent(BaseAgent):
 
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
+            
+            
 
         return trace

@@ -12,6 +12,7 @@ from verse.analysis import AnalysisTreeNode, AnalysisTree, AnalysisTreeNodeType
 from verse_model import *
 from artificial_pancreas_agent import *
 from pump_model import *
+from hovorka_model import HovorkaModel
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -130,13 +131,12 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals):
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals)
     pump = InsulinPumpModel(simulation_scenario)
-    body = BodyModel(BW, init_bg)
+    body = HovorkaModel(BW, init_bg)
 
     agent = ArtificialPancreasAgent(
         "pump", body, pump, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
     init_state = agent.get_init_state()
-
     init = [init_state, init_state]  # TODO why twice?
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -156,24 +156,18 @@ def save_traces(traces: AnalysisTree, filename, trace_directory=TRACES_PATH):
 
     # TODO better way to get var_names
     var_names = [
-        "G",
-        "Gp",
-        "Gt",
-        "Il",
-        "Ip",
-        "I1",
-        "Id",
-        "Qsto1",
-        "Qsto2",
-        "Qgut",
-        "X",
-        "SRsH",
-        "H",
-        "XH",
-        "Isc1",
-        "Isc2",
-        "Hsc1",
-        "Hsc2",
+        "D1",
+        "D2",
+        "S1",
+        "S2",
+        "Q1",
+        "Q2",
+        "I" ,
+        "x1",
+        "x2",
+        "x3",
+        "C",
+        "G"
     ]
     cols = ["t"] + var_names
     df = pd.DataFrame(data, columns=cols)
@@ -192,11 +186,11 @@ def plot_trace(filename, variable, trace_directory=TRACES_PATH):
 if __name__ == "__main__":
 
     # TODO allow these to be passed in
-    BW = 78  # kg
-    Gb = 130  # mg/dL
+    BW = 70  # kg
+    Gb = 105.18020892  # mg/dL
     basal = 0  # units
-    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(240, 100, BolusType.Simple, None), Bolus(660, 100, BolusType.Simple, None)]
-    meals = [Meal(0, 60), Meal(240, 100), Meal(660, 100)]
+    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(240, 100, BolusType.Simple, None)]
+    meals = [Meal(0, 60), Meal(240, 100)]
 
     meal_strings = "_".join([str(m.carbs) for m in meals])
     trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
