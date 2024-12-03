@@ -67,17 +67,15 @@ class ArtificialPancreasAgent(BaseAgent):
             current_time = i * time_step
             bolus, meal = self.scenario.get_events(current_time)
 
-            
-            dose = 0
+            bg = int(state_vec[state_indices['C']] * 18)
             carbs = 0
             if bolus:
-                bg = state_vec[state_indices['C']] * 18
-                dose = self.pump.send_bolus_command(bg, bolus)
+                self.pump.send_bolus_command(bg, bolus)
 
             if meal:
                 carbs = meal.carbs
                 # TODO make sure this handles multiple carb inputs correctly
-            dose += self.pump.pump_emulator.delay_minute()
+            dose = self.pump.pump_emulator.delay_minute(bg=bg)
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
             r.set_initial_value(state_vec)
             res: np.ndarray = r.integrate(r.t + time_step)

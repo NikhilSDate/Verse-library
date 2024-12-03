@@ -21,26 +21,20 @@ class InsulinPumpEvent:
 
 class InsulinPumpModel:
 
-    def __init__(self, sim_scenario):
+    def __init__(self, sim_scenario, basal_iq=False):
 
         self.current_iob = sim_scenario.iob
         self.basal_rate = sim_scenario.basal_rate
 
-        pump = Pump()
+        pump = Pump(basal_iq=basal_iq)
         self.pump_emulator = pump
 
     def send_bolus_command(self, bg, bolus: Bolus):
         if bolus.type == BolusType.Simple:
             # TODO why is this +30?
-            dose = self.pump_emulator.dose_extended(bg, bolus.carbs, 0, 120)
-            return 0
+            self.pump_emulator.dose_simple(bg, bolus.carbs)
         else:
-            # TODO implement extended bolus
-            # glucose = get_visible(init)[0]
-            # carbs = time_to_carbs[current_time]
-            # pump.dose_extended(glucose, carbs, 50, 120)
-            # print('dosing')
-            raise NotImplementedError()
+            self.pump_emulator.dose_extended(bg, bolus.carbs, 0, 120)
 
 
 ###################################

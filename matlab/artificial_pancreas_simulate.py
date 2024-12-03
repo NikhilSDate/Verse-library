@@ -127,10 +127,10 @@ def verify_three_meal_scenario(init_bg, BW, basal_rate, breakfast_carbs, lunch_c
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals):
+def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60):
 
-    simulation_scenario = SimulationScenario(basal_rate, boluses, meals)
-    pump = InsulinPumpModel(simulation_scenario)
+    simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=True)
     pump.pump_emulator.set_settings(correction_factor=100, carb_ratio=25,target_bg=110, max_bolus=15)
     body = HovorkaModel(BW, init_bg)
 
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     meal_strings = "_".join([str(m.carbs) for m in meals])
     trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
 
-    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals)
+    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals, duration=24*60)
     save_traces(traces, trace_filename)
     plot_trace(trace_filename, "G")
     breakpoint()
