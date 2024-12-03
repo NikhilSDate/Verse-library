@@ -32,8 +32,8 @@ class InsulinPumpModel:
     def send_bolus_command(self, bg, bolus: Bolus):
         if bolus.type == BolusType.Simple:
             # TODO why is this +30?
-            dose = self.pump_emulator.dose_simple(bg, bolus.carbs)
-            return dose
+            dose = self.pump_emulator.dose_extended(bg, bolus.carbs, 0, 120)
+            return 0
         else:
             # TODO implement extended bolus
             # glucose = get_visible(init)[0]

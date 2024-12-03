@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
+from tqdm import tqdm
 
 # implementation from https://github.com/jonasnm/svelte-flask-hovorka-simulator/blob/master/hovorka_simulator.py
 
@@ -13,7 +14,6 @@ class HovorkaModel:
     def __init__(self, BW, Gb):
         self.BW = BW
         self.Gb = Gb / 18 # TODO: this ratio is copied from the svelte-flask-hovokra-simulator. Check if this is actually correct
-        print(self.Gb)
         self.P = self.hovorka_parameters()
         self.init_state = self._get_init_state()[0]
     
@@ -70,7 +70,7 @@ class HovorkaModel:
         
         P = self.P
         
-        # some unit conversions
+        # some unit conversions so that externally we can use grams and u
         # TODO: dig more into these
         ############################
         u *= 1000
@@ -274,7 +274,6 @@ class HovorkaModel:
     def _get_init_state(self):
         sol = fsolve(self.solve_model, np.zeros(12))
         ideal_basal = sol[4]
-        print('ideal basal', ideal_basal)
         sol[4] = self.Gb * self.P[12]
         sol[11] = sol[10] * 18
         return sol, ideal_basal
