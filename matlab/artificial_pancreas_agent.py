@@ -67,7 +67,7 @@ class ArtificialPancreasAgent(BaseAgent):
             current_time = i * time_step
             bolus, meal = self.scenario.get_events(current_time)
 
-            bg = int(state_vec[state_indices['C']] * 18)
+            bg = int(state_vec[state_indices['C']] * 18) + int(30 * np.random.normal())
             carbs = 0
             if bolus:
                 self.pump.send_bolus_command(bg, bolus)
