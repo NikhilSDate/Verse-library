@@ -12,6 +12,7 @@ from verse.analysis import AnalysisTreeNode, AnalysisTree, AnalysisTreeNodeType
 from verse_model import *
 from artificial_pancreas_agent import *
 from pump_model import *
+from cgm import *
 from hovorka_model import HovorkaModel
 
 load_dotenv()
@@ -133,7 +134,7 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
     pump = InsulinPumpModel(simulation_scenario, basal_iq=True)
     pump.pump_emulator.set_settings(correction_factor=100, carb_ratio=25,target_bg=110, max_bolus=15)
     body = HovorkaModel(BW, init_bg)
-    cgm = CGM()
+    cgm = BasalAttackCGM()
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
@@ -190,13 +191,13 @@ if __name__ == "__main__":
     BW = 70  # kg
     Gb = 105.18020892  # mg/dL
     basal = 0  # units
-    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(120, 100, BolusType.Simple, None)]
-    meals = [Meal(0, 60), Meal(120, 100)]
+    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(180, 100, BolusType.Simple, None)]
+    meals = [Meal(0, 60), Meal(180, 100)]
 
     meal_strings = "_".join([str(m.carbs) for m in meals])
     trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
 
-    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals, duration=8*60)
+    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals, duration=12*60)
     save_traces(traces, trace_filename)
-    plot_trace(trace_filename, "S1")
+    plot_trace(trace_filename, "G")
     breakpoint()
