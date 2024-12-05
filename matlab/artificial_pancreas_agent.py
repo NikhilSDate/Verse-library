@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from scipy.integrate import ode
 from dotenv import load_dotenv
+from cgm import CGM
 
 load_dotenv()
 EMULATOR_PATH = os.environ["EMULATOR_PATH"]
@@ -32,6 +33,7 @@ class ArtificialPancreasAgent(BaseAgent):
         id,
         body: HovorkaModel,
         pump: InsulinPumpModel,
+        cgm: CGM,
         simulation_scenario: SimulationScenario,
         code=None,
         file_name=None,
@@ -41,11 +43,16 @@ class ArtificialPancreasAgent(BaseAgent):
 
         self.body = body
         self.pump = pump
+        self.cgm = cgm
         self.scenario = simulation_scenario
+        
 
     def get_init_state(self):
 
         return self.body.get_init_state()
+    
+    def get_bg(self, Q1):
+        return Q1 / self.body.hovorka_parameters()[12] * 18
 
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
@@ -62,12 +69,14 @@ class ArtificialPancreasAgent(BaseAgent):
 
         for i in tqdm(range(0, num_points)):
 
-            state_vec[state_indices["G"]] = state_vec[state_indices["C"]] * 18
+            state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
 
             current_time = i * time_step
             bolus, meal = self.scenario.get_events(current_time)
 
-            bg = int(state_vec[state_indices['C']] * 18) + int(30 * np.random.normal())
+            bg = int(state_vec[state_indices['C']] * 18)
+            self.cgm.post_reading(bg, current_time)
+            bg = self.cgm.get_reading(current_time)
             carbs = 0
             if bolus:
                 self.pump.send_bolus_command(bg, bolus)

@@ -133,9 +133,9 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
     pump = InsulinPumpModel(simulation_scenario, basal_iq=True)
     pump.pump_emulator.set_settings(correction_factor=100, carb_ratio=25,target_bg=110, max_bolus=15)
     body = HovorkaModel(BW, init_bg)
-
+    cgm = CGM()
     agent = ArtificialPancreasAgent(
-        "pump", body, pump, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
+        "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
     init_state = agent.get_init_state()
     init = [init_state, init_state]  # TODO why twice?
@@ -190,13 +190,13 @@ if __name__ == "__main__":
     BW = 70  # kg
     Gb = 105.18020892  # mg/dL
     basal = 0  # units
-    boluses = [Bolus(0, 60, BolusType.Simple, None)]
-    meals = [Meal(0, 60)]
+    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(120, 100, BolusType.Simple, None)]
+    meals = [Meal(0, 60), Meal(120, 100)]
 
     meal_strings = "_".join([str(m.carbs) for m in meals])
     trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
 
-    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals, duration=24*60)
+    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals, duration=8*60)
     save_traces(traces, trace_filename)
-    plot_trace(trace_filename, "G")
+    plot_trace(trace_filename, "S1")
     breakpoint()
