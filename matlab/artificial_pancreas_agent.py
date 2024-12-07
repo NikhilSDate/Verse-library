@@ -47,16 +47,22 @@ class ArtificialPancreasAgent(BaseAgent):
         self.scenario = simulation_scenario
         
 
-    def get_init_state(self):
-
-        return self.body.get_init_state()
+    def get_init_state(self, G):
+        return self.body.get_init_state(G)
     
+    def get_init_range(self, Gl, Gh):
+        lo, hi = self.body.get_init_range(Gl, Gh)
+        real_lo = np.minimum(lo, hi)
+        real_hi = np.maximum(lo, hi)
+        return [real_lo, real_hi]
+        
     def get_bg(self, Q1):
         return Q1 / self.body.hovorka_parameters()[12] * 18
 
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
-
+        init = np.abs(init)
+        print('simulating', init)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
 
@@ -83,7 +89,7 @@ class ArtificialPancreasAgent(BaseAgent):
 
             if meal:
                 carbs = meal.carbs
-                # TODO make sure this handles multiple carb inputs correctly
+            #     # TODO make sure this handles multiple carb inputs correctly
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
             r.set_initial_value(state_vec)
@@ -95,5 +101,5 @@ class ArtificialPancreasAgent(BaseAgent):
             trace[i + 1, 1:] = state_vec
             
             
-
+        print('end', state_vec)
         return trace

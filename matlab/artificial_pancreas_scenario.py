@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union, Tuple
 from enum import Enum
 
 BolusType = Enum("BolusType", ["Simple", "Extended"])
@@ -13,7 +13,7 @@ class ExtendedBolusConfig:
 
 
 class Bolus:
-    def __init__(self, time: int, carbs: int, bolus_type: BolusType, config: ExtendedBolusConfig):
+    def __init__(self, time: int, carbs: Union[int, Tuple[int, int]], bolus_type: BolusType, config: ExtendedBolusConfig):
         self.time = time
         self.carbs = carbs
         self.type = bolus_type
@@ -22,7 +22,7 @@ class Bolus:
 
 class Meal:
 
-    def __init__(self, time: int, carbs: int):
+    def __init__(self, time: int, carbs: Union[int, Tuple[int, int]]):
         self.time = time  # minutes
         self.carbs = carbs  # grams
 

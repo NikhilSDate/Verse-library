@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import plotly.graph_objects as go
 from verse import BaseAgent, Scenario, ScenarioConfig
 from verse.analysis import AnalysisTreeNode, AnalysisTree, AnalysisTreeNodeType
+from verse.plotter.plotter2D import reachtube_tree, simulation_tree
 
 from verse_model import *
 from artificial_pancreas_agent import *
@@ -73,18 +74,6 @@ def verify_boluses(init, boluses, duration=120):
         prev_result, prev_tree = result, tree
     return result1, tree1
 
-
-def plot_variable(fig, tree, var, mode: Union["simulate", "verify"] = "simulate", show=True):
-    idx = state_indices[var] + 1  # time is 0, so 1-index
-    if mode == "verify":
-        fig = reachtube_tree(tree, None, fig, 0, idx)
-    else:
-        fig = simulation_tree(tree, None, fig, 0, idx)
-    if show:
-        fig.show()
-    return fig
-
-
 def generate_all_three_meal_traces(
     init_bg, basal_rate, breakfast_carbs, lunch_carbs, dinner_carbs, trace_directory=TRACES_PATH
 ):
@@ -132,13 +121,12 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=True)
-    pump.pump_emulator.set_settings(correction_factor=100, carb_ratio=25,target_bg=110, max_bolus=15)
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_state()
+    init_state = agent.get_init_state(init_bg)
     init = [init_state, init_state]  # TODO why twice?
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -156,14 +144,14 @@ def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=False) # we don't have state stuff working yet, so disable basal IQ
-    pump.pump_emulator.set_settings(correction_factor=100, carb_ratio=25,target_bg=110, max_bolus=15)
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_state()
-    init = [init_state, init_state]  # TODO why twice?
+    init_state = agent.get_init_range(init_bg[0], init_bg[1])
+    print(init_state)
+    init = init_state
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
@@ -172,8 +160,7 @@ def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration
     )  # TODO what's the other half of the tuple?
 
     time_step = 1
-    traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
-
+    traces = scenario.verify(simulation_scenario.sim_duration, time_step)
     return traces
 
 
@@ -207,21 +194,28 @@ def plot_trace(filename, variable, trace_directory=TRACES_PATH):
     fig.add_trace(go.Scatter(x=df["t"], y=df[variable]))
     fig.update_layout(dict(xaxis_title="t", yaxis_title=variable))
     fig.show()
+    
+def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", show=True):
+    fig = go.Figure()
+    idx = state_indices[var] + 1  # time is 0, so 1-index
+    if mode == "verify":
+        fig = reachtube_tree(tree, None, fig, 0, idx)
+    else:
+        fig = simulation_tree(tree, None, fig, 0, idx)
+    if show:
+        fig.show()
+    return fig
 
 
 if __name__ == "__main__":
 
     # TODO allow these to be passed in
     BW = 70  # kg
-    Gb = 105.18020892  # mg/dL
     basal = 0  # units
     boluses = [Bolus(0, 60, BolusType.Simple, None)]
     meals = [Meal(0, 60)]
-
-    meal_strings = "_".join([str(m.carbs) for m in meals])
-    trace_filename = f"trace_{Gb}_{basal}_{meal_strings}.csv"
-
-    traces = simulate_multi_meal_scenario(Gb, BW, basal, boluses, meals, duration=24 * 60)
-    save_traces(traces, trace_filename)
-    plot_trace(trace_filename, "G")
+    traces = verify_multi_meal_scenario([105, 120], BW, basal, boluses, meals, duration=24 * 60)
     breakpoint()
+    plot_variable(traces, 'Q1', 'verify')
+    breakpoint()
+

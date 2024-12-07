@@ -11,7 +11,7 @@ class CGM:
     
     def get_reading(self, t):
         time = max(filter(lambda s: s % 5 == 0 and s <= t, self.history.keys()))
-        return int(self.history[time] + np.random.normal() * 30)
+        return self.history[time]
                 
     def post_reading(self, bg, t):
         self.history[t] = bg

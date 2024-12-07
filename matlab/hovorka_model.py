@@ -13,9 +13,7 @@ class HovorkaModel:
     '''
     def __init__(self, BW, Gb):
         self.BW = BW
-        self.Gb = Gb / 18 # TODO: this ratio is copied from the svelte-flask-hovokra-simulator. Check if this is actually correct
         self.P = self.hovorka_parameters()
-        self.init_state = self._get_init_state()[0]
     
     def hovorka_parameters(self):
         """
@@ -173,8 +171,9 @@ class HovorkaModel:
     # TODO: values don't 100% line up with values from simulator, try to find out why
     # instead of solving for the glucose value that will give us a steady state with a fixed  basal rate, 
     # we solve for the basal rate that will give us a steady state with basal glucose level fixed
-    def solve_model(self, x):
-        Gb = self.Gb
+    def solve_model(self, x, *args):
+        Gb = args[0]
+        
         D = 0
         P = self.P
 
@@ -271,15 +270,21 @@ class HovorkaModel:
 
         return xdot
     
-    def _get_init_state(self):
-        sol = fsolve(self.solve_model, np.zeros(12))
+    def _get_init_state(self, Gb):
+        Gb = Gb / 18
+        sol = fsolve(self.solve_model, np.zeros(12), args=(Gb,))
         ideal_basal = sol[4]
-        sol[4] = self.Gb * self.P[12]
+        sol[4] = Gb * self.P[12]
         sol[11] = sol[10] * 18
         return sol, ideal_basal
     
-    def get_init_state(self):
-        return self.init_state
+    def get_init_state(self, G):
+        return self._get_init_state(G)[0]
+    
+    def get_init_range(self, Gl, Gh):
+        return [self._get_init_state(Gl)[0], self._get_init_state(Gh)[0]]
+    
+    
         
     
     
