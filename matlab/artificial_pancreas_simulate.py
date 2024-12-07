@@ -152,6 +152,30 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
 
     return traces
 
+def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60):
+
+    simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=False) # we don't have state stuff working yet, so disable basal IQ
+    pump.pump_emulator.set_settings(correction_factor=100, carb_ratio=25,target_bg=110, max_bolus=15)
+    body = HovorkaModel(BW, init_bg)
+    cgm = CGM()
+    agent = ArtificialPancreasAgent(
+        "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
+    )
+    init_state = agent.get_init_state()
+    init = [init_state, init_state]  # TODO why twice?
+
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario.add_agent(agent)
+    scenario.set_init_single(
+        "pump", init, (PumpMode.default,)
+    )  # TODO what's the other half of the tuple?
+
+    time_step = 1
+    traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
+
+    return traces
+
 
 def save_traces(traces: AnalysisTree, filename, trace_directory=TRACES_PATH):
     data = np.array(list(traces.root.trace.values())[0])  # we only have one agent
