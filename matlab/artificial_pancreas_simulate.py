@@ -117,10 +117,10 @@ def verify_three_meal_scenario(init_bg, BW, basal_rate, breakfast_carbs, lunch_c
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60):
+def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=True)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=True, settings=settings)
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     agent = ArtificialPancreasAgent(
@@ -212,10 +212,17 @@ if __name__ == "__main__":
     # TODO allow these to be passed in
     BW = 70  # kg
     basal = 0  # units
-    boluses = [Bolus(0, 60, BolusType.Simple, None)]
-    meals = [Meal(0, 60)]
-    traces = verify_multi_meal_scenario([105, 120], BW, basal, boluses, meals, duration=24 * 60)
-    breakpoint()
-    plot_variable(traces, 'Q1', 'verify')
+    boluses = [Bolus(30, 80, BolusType.Extended, ExtendedBolusConfig(50, 360))]
+    meals = [Meal(40, 80)]
+    settings = {
+        'carb_ratio': 20,
+        'correction_factor': 30,
+        'insulin_duration': 180,
+        'max_bolus': 15,
+        'basal_rate': 0.35,
+        'target_bg': 120
+    }
+    traces = simulate_multi_meal_scenario(105, BW, basal, boluses, meals, duration=6 * 60, settings=settings)
+    plot_variable(traces, 'G', 'simulate')
     breakpoint()
 

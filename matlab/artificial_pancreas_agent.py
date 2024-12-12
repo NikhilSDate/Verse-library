@@ -83,6 +83,7 @@ class ArtificialPancreasAgent(BaseAgent):
             bg = int(state_vec[state_indices['C']] * 18)
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)
+            tqdm.write(f'bg({current_time}) = {bg}')
             carbs = 0
             if bolus:
                 self.pump.send_bolus_command(bg, bolus)
@@ -101,5 +102,4 @@ class ArtificialPancreasAgent(BaseAgent):
             trace[i + 1, 1:] = state_vec
             
             
-        print('end', state_vec)
         return trace

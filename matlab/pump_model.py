@@ -21,12 +21,13 @@ class InsulinPumpEvent:
 
 class InsulinPumpModel:
 
-    def __init__(self, sim_scenario, basal_iq=False):
+    def __init__(self, sim_scenario, basal_iq=False, settings=None):
 
         self.current_iob = sim_scenario.iob
-        self.basal_rate = sim_scenario.basal_rate
-
+        self.basal_rate = sim_scenario.basal_rate            
         pump = Pump(basal_iq=basal_iq)
+        if settings is not None:
+            pump.set_settings(carb_ratio=settings['carb_ratio'], correction_factor=settings['correction_factor'], target_bg=settings['target_bg'], max_bolus=settings['max_bolus'], insulin_duration=settings['insulin_duration'], basal_rate=settings['basal_rate'])
         self.pump_emulator = pump
 
     def send_bolus_command(self, bg, bolus: Bolus):
@@ -34,7 +35,7 @@ class InsulinPumpModel:
             # TODO why is this +30?
             self.pump_emulator.dose_simple(bg, bolus.carbs)
         else:
-            self.pump_emulator.dose_extended(bg, bolus.carbs, 0, 120)
+            self.pump_emulator.dose_extended(bg, bolus.carbs, bolus.config.deliver_now_perc, bolus.config.duration)
 
 
 ###################################
