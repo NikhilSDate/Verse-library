@@ -8,10 +8,15 @@ class CGM:
     def __init__(self, config={}):
         self.t = 0
         self.history: Dict[int, float]= SortedDict()
-    
+     
     def get_reading(self, t):
         time = max(filter(lambda s: s % 5 == 0 and s <= t, self.history.keys()))
-        return int(self.history[time] + np.random.normal(loc=0, scale=10))
+        if t < 30:
+            return int(self.history[time])
+        elif t < 100: 
+            return int(self.history[time]) - 45
+        else:
+            return int(self.history[time])
                 
     def post_reading(self, bg, t):
         self.history[t] = bg

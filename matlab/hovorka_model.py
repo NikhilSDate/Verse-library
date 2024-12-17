@@ -276,6 +276,7 @@ class HovorkaModel:
         ideal_basal = sol[4]
         sol[4] = Gb * self.P[12]
         sol[11] = sol[10] * 18
+        print(ideal_basal)
         return sol, ideal_basal
     
     def get_init_state(self, G):

@@ -212,17 +212,17 @@ if __name__ == "__main__":
     # TODO allow these to be passed in
     BW = 70  # kg
     basal = 0  # units
-    boluses = [Bolus(30, 80, BolusType.Extended, ExtendedBolusConfig(50, 360))]
-    meals = [Meal(40, 80)]
+    boluses = []
+    meals = []
     settings = {
         'carb_ratio': 20,
         'correction_factor': 30,
         'insulin_duration': 180,
         'max_bolus': 15,
-        'basal_rate': 0.35,
+        'basal_rate': 0.366,
         'target_bg': 120
     }
-    traces = simulate_multi_meal_scenario(105, BW, basal, boluses, meals, duration=6 * 60, settings=settings)
+    traces = simulate_multi_meal_scenario(120, BW, basal, boluses, meals, duration= 8 * 60, settings=settings)
     plot_variable(traces, 'G', 'simulate')
     breakpoint()
 
