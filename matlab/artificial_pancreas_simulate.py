@@ -120,7 +120,7 @@ def verify_three_meal_scenario(init_bg, BW, basal_rate, breakfast_carbs, lunch_c
 def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=True, settings=settings)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=False, settings=settings)
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     agent = ArtificialPancreasAgent(
@@ -140,10 +140,10 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
 
     return traces
 
-def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60):
+def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=False) # we don't have state stuff working yet, so disable basal IQ
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=False, settings=settings) # we don't have state stuff working yet, so disable basal IQ
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     agent = ArtificialPancreasAgent(
@@ -212,17 +212,20 @@ if __name__ == "__main__":
     # TODO allow these to be passed in
     BW = 70  # kg
     basal = 0  # units
-    boluses = []
-    meals = []
+    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(240, 100, BolusType.Simple, None), Bolus(660, 100, BolusType.Simple, None)]
+    meals = [Meal(0, 60), Meal(240, 100), Meal(660, 100)]
     settings = {
-        'carb_ratio': 20,
-        'correction_factor': 30,
+        'carb_ratio': 25,
+        'correction_factor': 60,
         'insulin_duration': 180,
         'max_bolus': 15,
-        'basal_rate': 0.366,
+        'basal_rate': 0.3,
         'target_bg': 120
     }
-    traces = simulate_multi_meal_scenario(120, BW, basal, boluses, meals, duration= 8 * 60, settings=settings)
-    plot_variable(traces, 'G', 'simulate')
+    traces = verify_multi_meal_scenario([80, 120], BW, basal, boluses, meals, duration=24 * 60, settings=settings)
+    fig = plot_variable(traces, 'G', 'verify')
+    import pickle
+    with open('verify_hovorka.pkl', 'wb') as f:
+        pickle.dump(fig, f) 
     breakpoint()
 

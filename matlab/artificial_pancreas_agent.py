@@ -62,7 +62,6 @@ class ArtificialPancreasAgent(BaseAgent):
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
         init = np.abs(init)
-        print('simulating', init)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
 
@@ -72,7 +71,18 @@ class ArtificialPancreasAgent(BaseAgent):
         state_vec = init
 
         carbs = 0
-
+        min_glucose = np.inf
+        
+        settings = {
+            'carb_ratio': 25,
+            'correction_factor': 60,
+            'insulin_duration': 180,
+            'max_bolus': 15,
+            'basal_rate': 0.3,
+            'target_bg': 120
+        }
+        
+        self.pump = InsulinPumpModel(self.scenario, basal_iq=False, settings=settings)
         for i in tqdm(range(0, num_points)):
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
@@ -83,9 +93,10 @@ class ArtificialPancreasAgent(BaseAgent):
             bg = int(state_vec[state_indices['C']] * 18)
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)
-            tqdm.write(f'bg({current_time}) = {bg}')
+            # tqdm.write(f'bg({current_time}) = {bg}')
             carbs = 0
             if bolus:
+                print('bolus', bg)
                 self.pump.send_bolus_command(bg, bolus)
 
             if meal:
@@ -97,9 +108,10 @@ class ArtificialPancreasAgent(BaseAgent):
             res: np.ndarray = r.integrate(r.t + time_step)
             state_vec = res.flatten()
 
-
+            min_glucose = min(min_glucose, state_vec[-1])
+            
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
             
-            
+        print(f'min glucose = {min_glucose}')
         return trace
