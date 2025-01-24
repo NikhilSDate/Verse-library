@@ -48,13 +48,17 @@ class ArtificialPancreasAgent(BaseAgent):
         
 
     def get_init_state(self, G):
-        return self.body.get_init_state(G)
+        body_init_state = self.body.get_init_state(G)
+        pump_init_state = self.pump.get_init_state()
+        return list(body_init_state) + pump_init_state
+        
     
     def get_init_range(self, Gl, Gh):
         lo, hi = self.body.get_init_range(Gl, Gh)
         real_lo = np.minimum(lo, hi)
         real_hi = np.maximum(lo, hi)
-        return [real_lo, real_hi]
+        pump_state = self.pump.get_init_state()
+        return [list(real_lo) + pump_state, list(real_hi) + pump_state]
         
     def get_bg(self, Q1):
         return Q1 / self.body.hovorka_parameters()[12] * 18
@@ -71,22 +75,10 @@ class ArtificialPancreasAgent(BaseAgent):
         state_vec = init
 
         carbs = 0
-        min_glucose = np.inf
-        
-        settings = {
-            'carb_ratio': 25,
-            'correction_factor': 60,
-            'insulin_duration': 180,
-            'max_bolus': 15,
-            'basal_rate': 0.3,
-            'target_bg': 120
-        }
-        
-        self.pump = InsulinPumpModel(self.scenario, basal_iq=False, settings=settings)
+        meal_index = 0
         for i in tqdm(range(0, num_points)):
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
-
             current_time = i * time_step
             bolus, meal = self.scenario.get_events(current_time)
 
@@ -96,22 +88,19 @@ class ArtificialPancreasAgent(BaseAgent):
             # tqdm.write(f'bg({current_time}) = {bg}')
             carbs = 0
             if bolus:
-                print('bolus', bg)
                 self.pump.send_bolus_command(bg, bolus)
 
             if meal:
-                carbs = meal.carbs
-            #     # TODO make sure this handles multiple carb inputs correctly
+                carbs = state_vec[state_indices[f'carbs_{meal_index}']]
+                meal_index += 1
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
+            print(f'dose({i}) = {dose}')
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
-            r.set_initial_value(state_vec)
+            r.set_initial_value(state_vec[:-1])
             res: np.ndarray = r.integrate(r.t + time_step)
-            state_vec = res.flatten()
-
-            min_glucose = min(min_glucose, state_vec[-1])
-            
+            final = res.flatten()
+            state_vec[:-1] = final
+            state_vec[state_indices["iob"]] = self.pump.extract_state()[0]            
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
-            
-        print(f'min glucose = {min_glucose}')
         return trace

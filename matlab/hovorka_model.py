@@ -69,13 +69,12 @@ class HovorkaModel:
         P = self.P
         
         # some unit conversions so that externally we can use grams and u
-        # TODO: dig more into these
         ############################
         u *= 1000
         D *= 1000 / 180
         ############################
         
-        # Defining the various equation names
+        # Model variables
         D1 = x[ 0 ]               # Amount of glucose in compartment 1 [mmol]
         D2 = x[ 1 ]               # Amount of glucose in compartment 2 [mmol]
         S1 = x[ 2 ]               # Amount of insulin in compartment 1 [mU]

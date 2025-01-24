@@ -36,6 +36,14 @@ class InsulinPumpModel:
             self.pump_emulator.dose_simple(bg, bolus.carbs)
         else:
             self.pump_emulator.dose_extended(bg, bolus.carbs, bolus.config.deliver_now_perc, bolus.config.duration)
+            
+    def extract_state(self) -> Tuple[float]:
+        state = self.pump_emulator.get_state()
+        iob = state[1]
+        return [iob]
+    
+    def get_init_state(self):
+        return [0]
 
 
 ###################################

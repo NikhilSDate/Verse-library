@@ -28,3 +28,5 @@ build/
 .python-version
 
 test/
+my_notes/
+plots/

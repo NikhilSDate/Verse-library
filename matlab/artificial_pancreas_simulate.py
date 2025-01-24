@@ -15,6 +15,7 @@ from artificial_pancreas_agent import *
 from pump_model import *
 from cgm import *
 from hovorka_model import HovorkaModel
+import pickle
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -141,8 +142,8 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
     return traces
 
 def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
-
-    simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
+    meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
+    simulation_scenario = SimulationScenario(basal_rate, boluses, meals_low, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=False, settings=settings) # we don't have state stuff working yet, so disable basal IQ
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
@@ -206,26 +207,36 @@ def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", sho
         fig.show()
     return fig
 
+def iob_accuracy_test():
+    pass
+
 
 if __name__ == "__main__":
 
     # TODO allow these to be passed in
     BW = 70  # kg
     basal = 0  # units
-    boluses = [Bolus(0, 60, BolusType.Simple, None), Bolus(240, 100, BolusType.Simple, None), Bolus(660, 100, BolusType.Simple, None)]
-    meals = [Meal(0, 60), Meal(240, 100), Meal(660, 100)]
+    boluses = []
+    meals = []
+    # for i in range(10):
+    boluses = []
+    meals = []
+    
+    for i in range(5):
+        carbs = np.random.randint(10, 150)
+        boluses.append(Bolus(i * 60, carbs, BolusType.Simple, None))
+        meals.append(Meal(i * 60, carbs))
     settings = {
         'carb_ratio': 25,
-        'correction_factor': 60,
-        'insulin_duration': 180,
+        'correction_factor': 30,
+        'insulin_duration': 300,
         'max_bolus': 15,
         'basal_rate': 0.3,
         'target_bg': 120
     }
-    traces = verify_multi_meal_scenario([80, 120], BW, basal, boluses, meals, duration=24 * 60, settings=settings)
-    fig = plot_variable(traces, 'G', 'verify')
-    import pickle
-    with open('verify_hovorka.pkl', 'wb') as f:
-        pickle.dump(fig, f) 
-    breakpoint()
+    traces = verify_multi_meal_scenario([100, 120], BW, basal, boluses, meals, duration=10 * 60, settings=settings)
+    with open('traces/iob_verify.pickle') as f:
+        pickle.dump(traces, f)
+    fig = plot_variable(traces, 'iob', 'verify')
+    fig2 = plot_variable(traces, 'I', 'verify')
 

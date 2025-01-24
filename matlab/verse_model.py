@@ -24,6 +24,21 @@ class State:
     C: float     
     G: float
     
+    # pump state
+    iob: float
+    
+    # scenario state
+    carbs_0: float
+    carbs_1: float
+    carbs_2: float
+    carbs_3: float
+    carbs_4: float
+    carbs_5: float
+    carbs_6: float
+    carbs_7: float
+    carbs_8: float
+    carbs_9: float
+    
     # TODO verification will vary the meal amounts so it might actually need to go back in here
     # TODO if you want to chain multiple verifications together or if you want to verify the pump state (IOB)
 
