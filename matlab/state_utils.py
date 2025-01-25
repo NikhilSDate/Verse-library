@@ -4,7 +4,7 @@ state_indices = {variable: i for i, variable in enumerate(State.__annotations__.
 state_variable_names = list(State.__annotations__.keys())
 num_discrete_variables = 1
 num_continuous_variables = len(state_indices) - num_discrete_variables
-num_meals = 3
+num_meals = 10
 
 
 def set(init, field, value):

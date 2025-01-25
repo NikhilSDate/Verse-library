@@ -53,8 +53,7 @@ class SimulationScenario:
 
         # currently assumes that there are not multiple meals/boluses at the same time
         for bolus in boluses:
-            if bolus.carbs > 0:
-                self.boluses[bolus.time] = bolus
+            self.boluses[bolus.time] = bolus
 
         for meal in meals:
             if meal.carbs > 0:

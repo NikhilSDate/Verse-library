@@ -24,11 +24,19 @@ class InsulinPumpModel:
     def __init__(self, sim_scenario, basal_iq=False, settings=None):
 
         self.current_iob = sim_scenario.iob
-        self.basal_rate = sim_scenario.basal_rate            
+        self.basal_rate = sim_scenario.basal_rate    
+        self.settings = settings
+        self.basal_iq = basal_iq        
+        self.pump_emulator = self.get_pump(basal_iq, settings)
+    
+    def reset_pump(self):
+        self.pump_emulator = self.get_pump(self.basal_iq, self.settings)
+    
+    def get_pump(self, basal_iq, settings):
         pump = Pump(basal_iq=basal_iq)
         if settings is not None:
             pump.set_settings(carb_ratio=settings['carb_ratio'], correction_factor=settings['correction_factor'], target_bg=settings['target_bg'], max_bolus=settings['max_bolus'], insulin_duration=settings['insulin_duration'], basal_rate=settings['basal_rate'])
-        self.pump_emulator = pump
+        return pump
 
     def send_bolus_command(self, bg, bolus: Bolus):
         if bolus.type == BolusType.Simple:

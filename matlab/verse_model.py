@@ -7,7 +7,7 @@ from body_model import BodyModel
 class PumpMode(Enum):
     default = auto()
 
-
+# State = body state + pump state + scenario state + derived state
 class State:
 
     # Body model
@@ -38,6 +38,9 @@ class State:
     carbs_7: float
     carbs_8: float
     carbs_9: float
+    
+    # derived state
+    iob_error: float
     
     # TODO verification will vary the meal amounts so it might actually need to go back in here
     # TODO if you want to chain multiple verifications together or if you want to verify the pump state (IOB)

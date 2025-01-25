@@ -127,7 +127,7 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_state(init_bg)
+    init_state = agent.get_init_state(init_bg, meals)
     init = [init_state, init_state]  # TODO why twice?
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -150,8 +150,7 @@ def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_range(init_bg[0], init_bg[1])
-    print(init_state)
+    init_state = agent.get_init_range(init_bg[0], init_bg[1], meals_low, meals_high)
     init = init_state
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -195,9 +194,15 @@ def plot_trace(filename, variable, trace_directory=TRACES_PATH):
     fig.add_trace(go.Scatter(x=df["t"], y=df[variable]))
     fig.update_layout(dict(xaxis_title="t", yaxis_title=variable))
     fig.show()
+
+# t' = a * t + b
+def linear_transform_trace(traces, agent, index, a, b):
+    for i in range(len(traces.root.trace[agent])):
+        traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
     
-def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", show=True):
-    fig = go.Figure()
+def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", show=True, fig = None):
+    if fig is None:
+        fig = go.Figure()
     idx = state_indices[var] + 1  # time is 0, so 1-index
     if mode == "verify":
         fig = reachtube_tree(tree, None, fig, 0, idx)
@@ -208,35 +213,33 @@ def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", sho
     return fig
 
 def iob_accuracy_test():
-    pass
-
-
-if __name__ == "__main__":
-
-    # TODO allow these to be passed in
     BW = 70  # kg
     basal = 0  # units
     boluses = []
     meals = []
     # for i in range(10):
     boluses = []
-    meals = []
-    
-    for i in range(5):
-        carbs = np.random.randint(10, 150)
-        boluses.append(Bolus(i * 60, carbs, BolusType.Simple, None))
-        meals.append(Meal(i * 60, carbs))
+    meals_low = []
+    meals_high = []
+    # for i in range(10):
+    #     boluses.append(Bolus(i * 60, 0, BolusType.Simple, None))
+    #     meals_low.append(Meal(i * 60, 50))
+    #     meals_high.append(Meal(i * 60, 51))
     settings = {
         'carb_ratio': 25,
         'correction_factor': 30,
         'insulin_duration': 300,
         'max_bolus': 15,
-        'basal_rate': 0.3,
+        'basal_rate': 0.366, # this is the basal rate needed for steady-state
         'target_bg': 120
     }
-    traces = verify_multi_meal_scenario([100, 120], BW, basal, boluses, meals, duration=10 * 60, settings=settings)
-    with open('traces/iob_verify.pickle') as f:
-        pickle.dump(traces, f)
-    fig = plot_variable(traces, 'iob', 'verify')
-    fig2 = plot_variable(traces, 'I', 'verify')
+    traces = simulate_multi_meal_scenario(120, BW, basal, boluses, meals_low, duration=16 * 60, settings=settings)
+    linear_transform_trace(traces, 'pump', state_indices['iob'] + 1, 0.12 * 70, 0) # + 1 because time is index 0
+    fig = plot_variable(traces, 'I', 'simulate')
+
+
+if __name__ == "__main__":
+    iob_accuracy_test()
+    pass
+
 

@@ -7,6 +7,8 @@ from tqdm import tqdm
 
 class HovorkaModel:
     
+    num_variables = 11
+    
     '''
     BW is body weight in kilograms
     Gb is basal glucose in mg/dL
@@ -141,7 +143,7 @@ class HovorkaModel:
             F_R = 0                # Renal excretion of glucose in the kidneys [mmol/min]
 
         # Mass balances/differential equations
-        xdot = np.zeros (12)
+        xdot = np.zeros (11)
 
         xdot[ 0 ] = A_G*D-D1/tau_G                                # dD1
         xdot[ 1 ] = D1/tau_G-U_G                                  # dD2
