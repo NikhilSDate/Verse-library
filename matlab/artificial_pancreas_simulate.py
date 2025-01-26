@@ -221,10 +221,10 @@ def iob_accuracy_test():
     boluses = []
     meals_low = []
     meals_high = []
-    # for i in range(10):
-    #     boluses.append(Bolus(i * 60, 0, BolusType.Simple, None))
-    #     meals_low.append(Meal(i * 60, 50))
-    #     meals_high.append(Meal(i * 60, 51))
+    for i in range(10): 
+        boluses.append(Bolus(i * 60, 0, BolusType.Simple, None))
+        meals_low.append(Meal(i * 60, 50))
+        meals_high.append(Meal(i * 60, 100))
     settings = {
         'carb_ratio': 25,
         'correction_factor': 30,
@@ -233,9 +233,10 @@ def iob_accuracy_test():
         'basal_rate': 0.366, # this is the basal rate needed for steady-state
         'target_bg': 120
     }
-    traces = simulate_multi_meal_scenario(120, BW, basal, boluses, meals_low, duration=16 * 60, settings=settings)
+    traces = verify_multi_meal_scenario([120, 120], BW, basal, boluses, [meals_low, meals_high], duration=5 * 60, settings=settings)
     linear_transform_trace(traces, 'pump', state_indices['iob'] + 1, 0.12 * 70, 0) # + 1 because time is index 0
-    fig = plot_variable(traces, 'I', 'simulate')
+    fig = plot_variable(traces, 'prediction_error', 'verify')
+    breakpoint()
 
 
 if __name__ == "__main__":

@@ -47,8 +47,7 @@ class InsulinPumpModel:
             
     def extract_state(self) -> Tuple[float]:
         state = self.pump_emulator.get_state()
-        iob = state[1]
-        return [iob]
+        return state
     
     def get_init_state(self):
         return [0]

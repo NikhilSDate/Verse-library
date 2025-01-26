@@ -62,7 +62,7 @@ class ArtificialPancreasAgent(BaseAgent):
         return meal_state
             
     def get_scenario_state(self):
-        return [0]
+        return [0, 0]
     
     def get_init_range(self, Gl, Gh, ml, mh):
         lo, hi = self.body.get_init_range(Gl, Gh)
@@ -97,6 +97,8 @@ class ArtificialPancreasAgent(BaseAgent):
 
         carbs = 0
         meal_index = 0
+        
+        predictions = [0] * num_points
         for i in tqdm(range(0, num_points)):
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
@@ -106,7 +108,6 @@ class ArtificialPancreasAgent(BaseAgent):
             bg = int(state_vec[state_indices['C']] * 18)
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)
-            # tqdm.write(f'bg({current_time}) = {bg}')
             carbs = 0
             if meal and bolus:
                 carbs = state_vec[state_indices[f'carbs_{meal_index}']]
@@ -122,8 +123,25 @@ class ArtificialPancreasAgent(BaseAgent):
             r.set_initial_value(state_vec[:self.body.num_variables])
             res: np.ndarray = r.integrate(r.t + time_step)
             final = res.flatten()
+            
+            # body state
             state_vec[:self.body.num_variables] = final
-            state_vec[state_indices["iob"]] = self.pump.extract_state()[0]            
+            
+            # pump state
+            pump_state = self.pump.extract_state()
+            state_vec[state_indices["iob"]] = pump_state[0]         
+            
+            # scenario state is unchanged
+            
+            # derived state
+            state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
+            prediction = pump_state[1]
+            predictions[i] = prediction
+            # prediction is 30 mins into the future
+            
+            # 30 min buffer for predictions to stabilize (this is more than necessary)
+            if i >= 60 and predictions[i - 30] != -1:
+                state_vec[state_indices["prediction_error"]] = abs(state_vec[state_indices['G']] - predictions[i - 30]) / state_vec[state_indices['G']]
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
         return trace
