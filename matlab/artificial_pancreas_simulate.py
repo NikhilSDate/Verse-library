@@ -200,11 +200,11 @@ def linear_transform_trace(traces, agent, index, a, b):
     for i in range(len(traces.root.trace[agent])):
         traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
     
-def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", show=True, fig = None):
+def plot_variable(tree, var, show=True, fig = None):
     if fig is None:
         fig = go.Figure()
     idx = state_indices[var] + 1  # time is 0, so 1-index
-    if mode == "verify":
+    if tree.root.type == AnalysisTreeNodeType.REACH_TUBE:
         fig = reachtube_tree(tree, None, fig, 0, idx)
     else:
         fig = simulation_tree(tree, None, fig, 0, idx)
@@ -212,34 +212,26 @@ def plot_variable(tree, var, mode: Union["simulate", "verify"] = "simulate", sho
         fig.show()
     return fig
 
-def iob_accuracy_test():
+def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     BW = 70  # kg
     basal = 0  # units
     boluses = []
-    meals = []
-    # for i in range(10):
     boluses = []
     meals_low = []
     meals_high = []
-    for i in range(10): 
+    for i in range(num_meals): 
         boluses.append(Bolus(i * 60, 0, BolusType.Simple, None))
-        meals_low.append(Meal(i * 60, 50))
-        meals_high.append(Meal(i * 60, 100))
-    settings = {
-        'carb_ratio': 25,
-        'correction_factor': 30,
-        'insulin_duration': 300,
-        'max_bolus': 15,
-        'basal_rate': 0.366, # this is the basal rate needed for steady-state
-        'target_bg': 120
-    }
-    traces = verify_multi_meal_scenario([120, 120], BW, basal, boluses, [meals_low, meals_high], duration=5 * 60, settings=settings)
+        meals_low.append(Meal(i * 60, 75))
+        meals_high.append(Meal(i * 60, 75))
+    traces = simulate_multi_meal_scenario(120, BW, basal, boluses, meals_low, duration=(num_meals + 5) * 60, settings=settings)
     linear_transform_trace(traces, 'pump', state_indices['iob'] + 1, 0.12 * 70, 0) # + 1 because time is index 0
-    fig = plot_variable(traces, 'prediction_error', 'verify')
+    fig = plot_variable(traces, 'iob')
+    fig = plot_variable(traces, 'I')
     breakpoint()
 
 
 if __name__ == "__main__":
+    
     iob_accuracy_test()
     pass
 

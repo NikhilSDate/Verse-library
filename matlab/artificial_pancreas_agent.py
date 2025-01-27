@@ -141,7 +141,7 @@ class ArtificialPancreasAgent(BaseAgent):
             
             # 30 min buffer for predictions to stabilize (this is more than necessary)
             if i >= 60 and predictions[i - 30] != -1:
-                state_vec[state_indices["prediction_error"]] = abs(state_vec[state_indices['G']] - predictions[i - 30]) / state_vec[state_indices['G']]
+                state_vec[state_indices["prediction_error"]] =  predictions[i - 30] - state_vec[state_indices['G']]
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
         return trace
