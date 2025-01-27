@@ -222,17 +222,30 @@ def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     for i in range(num_meals): 
         boluses.append(Bolus(i * 60, 0, BolusType.Simple, None))
         meals_low.append(Meal(i * 60, 75))
-        meals_high.append(Meal(i * 60, 75))
-    traces = simulate_multi_meal_scenario(120, BW, basal, boluses, meals_low, duration=(num_meals + 5) * 60, settings=settings)
+        meals_high.append(Meal(i * 60, 100))
+    traces = verify_multi_meal_scenario([120, 120], BW, basal, boluses, [meals_low, meals_high], duration=(num_meals + 5) * 60, settings=settings)
     linear_transform_trace(traces, 'pump', state_indices['iob'] + 1, 0.12 * 70, 0) # + 1 because time is index 0
-    fig = plot_variable(traces, 'iob')
-    fig = plot_variable(traces, 'I')
+    fig1 = plot_variable(traces, 'iob')
+    fig2 = plot_variable(traces, 'I')
+    fig3 = plot_variable(traces, 'iob_error')
+    fig4 = plot_variable(traces, 'prediction_error')
+    fig5 = plot_variable(traces, 'G')
+    fig1.write_image('results/iob_verif.png')
+    fig2.write_image('results/insulin_real_verif.png')
+    fig3.write_image('results/iob_error_verif.png')
+    fig4.write_image('results/prediction_error_verif.png')
+    fig5.write_image('results/glucose_verif.png')
     breakpoint()
 
 
 if __name__ == "__main__":
-    
-    iob_accuracy_test()
-    pass
-
+    settings = {
+        'carb_ratio': 25,
+        'correction_factor': 30,
+        'insulin_duration': 300,
+        'max_bolus': 15,
+        'basal_rate': 0.366, # this is the basal rate needed for steady-state with bg = 120
+        'target_bg': 120
+    }
+    iob_accuracy_test(settings)
 
