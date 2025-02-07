@@ -16,6 +16,7 @@ from pump_model import *
 from cgm import *
 from hovorka_model import HovorkaModel
 import pickle
+from safety.safety import tir_analysis
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -121,7 +122,7 @@ def verify_three_meal_scenario(init_bg, BW, basal_rate, breakfast_carbs, lunch_c
 def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=False, settings=settings)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=True, settings=settings)
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     agent = ArtificialPancreasAgent(
@@ -199,7 +200,11 @@ def plot_trace(filename, variable, trace_directory=TRACES_PATH):
 def linear_transform_trace(traces, agent, index, a, b):
     for i in range(len(traces.root.trace[agent])):
         traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
-    
+
+def extract_variable(traces, agent, index):
+    raw_trace = np.array(traces.root.trace[agent])
+    return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
+
 def plot_variable(tree, var, show=True, fig = None):
     if fig is None:
         fig = go.Figure()
@@ -236,16 +241,40 @@ def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     fig4.write_image('results/prediction_error_verif.png')
     fig5.write_image('results/glucose_verif.png')
     breakpoint()
+    
+def get_recommended_settings(TDD = 39.2200, BW = 75):
+    
+     # according to the McGill simulator
+    TDD = (0.75 * TDD + BW * 0.23) / 2
+    TDB = TDD * 0.5
+    rate = TDB / 24
+    CF = 1700 / TDD
+    carb_ratio = 450 / TDD
+    duration = 5 # hours
+    settings = {
+        'carb_ratio': int(carb_ratio),
+        'correction_factor': int(CF),
+        'insulin_duration': int(duration * 60),
+        'max_bolus': 10,
+        'basal_rate': rate,
+        'target_bg': 110
+    }
+    return settings
 
 
 if __name__ == "__main__":
-    settings = {
-        'carb_ratio': 25,
-        'correction_factor': 30,
-        'insulin_duration': 300,
-        'max_bolus': 15,
-        'basal_rate': 0.366, # this is the basal rate needed for steady-state with bg = 120
-        'target_bg': 120
-    }
-    iob_accuracy_test(settings)
-
+    settings = get_recommended_settings()
+    print(settings)
+    settings['insulin_duration'] = 150
+    settings['basal_rate'] = 0.2
+    BW = 75  # kg
+    basal = 0  # units
+    meals_low = [Meal(0, 50), Meal(240, 75)]
+    meals_high = [Meal(0, 75), Meal(240, 100)]
+    boluses = [Bolus(0, 0, BolusType.Simple, None), Bolus(240, 0, BolusType.Simple, None), Bolus(480, 0, BolusType.Simple, None)]
+    traces = simulate_multi_meal_scenario(110, BW, basal, boluses, meals_low, duration=16 * 60, settings=settings)
+    # glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
+    # print(tir_analysis(glucose_trace))
+    fig = plot_variable(traces, 'G')
+    # fig.write_image('results/bad_duration_glucose_.png')
+    breakpoint()

@@ -287,6 +287,8 @@ class HovorkaModel:
         return [self._get_init_state(Gl)[0], self._get_init_state(Gh)[0]]
     
     
+    
+    
         
     
     
