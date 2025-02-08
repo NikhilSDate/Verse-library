@@ -30,11 +30,17 @@ class Logger:
         self.current_dose_file = None
         self.current_output_file = None
         self.output_buffer = [] # store lines of output from the pump
+        self.t = 0
+        
+    def tick(self, increment=1):
+        self.output_buffer.append('=' * 10 + f'time={self.t}' + '=' * 10)
+        self.t += increment
         
     def start_sim(self):
         if self.current_dose_file is not None:
             self.current_dose_file.close()
         if self.current_output_file is not None:
+            self.flush_all_output()                
             self.current_output_file.close()
         dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
         output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
@@ -47,14 +53,21 @@ class Logger:
             print("Can't log without starting a simulation")
         self.current_dose_file.write(f'dose({time}) = {dose}\n')
 
+    def flush_all_output(self):
+        if self.current_output_file is None:
+            return
+        self.current_output_file.write('\n'.join(self.output_buffer))
+        self.output_buffer.clear()
     
     def __del__(self):
         if self.current_dose_file is not None:
             self.current_dose_file.flush()
             self.current_dose_file.close()
         if self.current_output_file is not None:
+            self.flush_all_output()
             self.current_output_file.flush()
             self.current_output_file.close()
+        
         
 
 
@@ -120,6 +133,10 @@ class ArtificialPancreasAgent(BaseAgent):
         
     def get_bg(self, Q1):
         return Q1 / self.body.hovorka_parameters()[12] * 18
+    
+    def reset_pump(self):
+        self.pump.reset_pump()
+        self.pump.pump_emulator.link_output_buffer(self.logger.output_buffer)
 
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
@@ -127,7 +144,7 @@ class ArtificialPancreasAgent(BaseAgent):
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
 
-        self.pump.reset_pump()
+        self.reset_pump()
         self.logger.start_sim()
         
         trace = np.zeros((num_points + 1, 1 + len(init)))
@@ -139,6 +156,8 @@ class ArtificialPancreasAgent(BaseAgent):
         
         predictions = [0] * num_points
         for i in tqdm(range(0, num_points)):
+            
+            self.logger.tick()
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
             current_time = i * time_step
