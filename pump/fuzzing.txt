@@ -47,3 +47,5 @@ User decision (user performs a correction bolus, user )
 "Some people are unable to recognize hypoglycemia, a condition called
 hypoglycemia unawareness. Talk to your healthcare provider if you feel this
 condition applies to you"
+
+# https://arxiv.org/pdf/2005.02126

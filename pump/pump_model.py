@@ -24,7 +24,6 @@ class InsulinPumpModel:
     def __init__(self, sim_scenario, basal_iq=False, settings=None):
 
         self.current_iob = sim_scenario.iob
-        self.basal_rate = sim_scenario.basal_rate    
         self.settings = settings
         self.basal_iq = basal_iq        
         self.pump_emulator = self.get_pump(basal_iq, settings)

@@ -60,7 +60,6 @@ class SimulationScenario:
                 self.meals[meal.time] = meal
 
         self.iob = iob
-        self.basal_rate = basal_rate
         self.sim_duration = sim_duration
 
     def get_events(self, time):

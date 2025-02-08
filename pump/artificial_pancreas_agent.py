@@ -95,7 +95,6 @@ class ArtificialPancreasAgent(BaseAgent):
         trace[0, 1:] = init
         state_vec = init
 
-        carbs = 0
         meal_index = 0
         
         predictions = [0] * num_points
@@ -103,25 +102,28 @@ class ArtificialPancreasAgent(BaseAgent):
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
             current_time = i * time_step
-            bolus, meal = self.scenario.get_events(current_time)
-
+            events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time)
+            bolus, meal = events
             bg = int(state_vec[state_indices['C']] * 18)
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)
             carbs = 0
-            if meal and bolus:
+            
+            # handle meal/bolus
+            if meal:
                 carbs = state_vec[state_indices[f'carbs_{meal_index}']]
-                self.pump.send_bolus_command(bg, Bolus(i, carbs, BolusType.Simple, None))
                 meal_index += 1
-            elif meal:
-                carbs = meal.carbs
-            elif bolus:
-                self.pump.send_bolus_command(bg, bolus)
 
+
+            if bolus and bolus.carbs == -1:
+                # "fill in" carbs: later this should be moved to some "user agent"
+                bolus.carbs = state_vec[state_indices[f'carbs_{meal_index}']]
+            
+            if bolus:
+                self.pump.send_bolus_command(bg, bolus)
 
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             
-            print(f'dose({i}) = {dose}')
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
             r.set_initial_value(state_vec[:self.body.num_variables])
