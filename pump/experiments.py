@@ -84,6 +84,7 @@ def iob_correction_demo(settings):
     
     
 if __name__ == '__main__':
+    np.random.seed(42)
     with open('./pump/configurations/testing_config.json') as f:
         config = json.load(f)
     scenario = generate_scenario(config)
