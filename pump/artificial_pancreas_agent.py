@@ -23,6 +23,41 @@ from pump_model import *
 from state_utils import state_indices, num_meals
 
 
+class Logger:
+    def __init__(self, log_dir):
+        self.dir = log_dir
+        self.sim_idx = 0
+        self.current_dose_file = None
+        self.current_output_file = None
+        self.output_buffer = [] # store lines of output from the pump
+        
+    def start_sim(self):
+        if self.current_dose_file is not None:
+            self.current_dose_file.close()
+        if self.current_output_file is not None:
+            self.current_output_file.close()
+        dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
+        output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
+        self.current_dose_file = open(dose_path, 'w+')
+        self.current_output_file = open(output_path, 'w+')
+        self.sim_idx += 1
+
+    def write_dose(self, time, dose):
+        if self.current_dose_file is None:
+            print("Can't log without starting a simulation")
+        self.current_dose_file.write(f'dose({time}) = {dose}\n')
+
+    
+    def __del__(self):
+        if self.current_dose_file is not None:
+            self.current_dose_file.flush()
+            self.current_dose_file.close()
+        if self.current_output_file is not None:
+            self.current_output_file.flush()
+            self.current_output_file.close()
+        
+
+
 # Combined human body system + insulin pump + scenario system
 
 
@@ -35,6 +70,7 @@ class ArtificialPancreasAgent(BaseAgent):
         pump: InsulinPumpModel,
         cgm: CGM,
         simulation_scenario: SimulationScenario,
+        logger: Logger,
         code=None,
         file_name=None,
     ):
@@ -45,6 +81,9 @@ class ArtificialPancreasAgent(BaseAgent):
         self.pump = pump
         self.cgm = cgm
         self.scenario = simulation_scenario
+        self.logger = logger
+        self.pump.pump_emulator.link_output_buffer(logger.output_buffer)
+
         
 
     def get_init_state(self, G, meals):
@@ -89,6 +128,7 @@ class ArtificialPancreasAgent(BaseAgent):
         num_points = int(np.ceil(time_bound / time_step))
 
         self.pump.reset_pump()
+        self.logger.start_sim()
         
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
@@ -123,7 +163,7 @@ class ArtificialPancreasAgent(BaseAgent):
                 self.pump.send_bolus_command(bg, bolus)
 
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
-            
+            self.logger.write_dose(current_time, dose)
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
             r.set_initial_value(state_vec[:self.body.num_variables])

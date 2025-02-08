@@ -27,34 +27,6 @@ class Meal:
         self.time = time  # minutes
         self.carbs = carbs  # grams
 
-class Logger:
-    def __init__(self, logging_dir):
-        self.dir = logging_dir
-        self.sim_idx = 0
-        self.current_dose_file = None
-        self.current_output_file = None
-        
-    def start_sim(self):
-        if self.current_dose_file:
-            self.current_dose_file.close()
-        if self.current_output_file:
-            self.current_output_file.close()
-        dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
-        output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
-        self.current_dose_file = open(dose_path)
-        self.current_output_file = open(output_path)
-        self.sim_idx += 1
-
-    def write_dose(self, time, dose):
-        if self.current_dose_file is None:
-            print("Can't log without starting a simulation")
-        self.current_dose_file.write(f'')
-    
-    def __del__(self):
-        self.dose_file.close()
-        self.output_file.close()
-
-
 class SimulationScenario:
 
     # ==[ Instance Variables ]==
@@ -74,6 +46,7 @@ class SimulationScenario:
         iob=0,
         rule="simple",
         sim_duration=24 * 60,
+        log_dir='results/logs'
     ):
 
         self.boluses = {}
