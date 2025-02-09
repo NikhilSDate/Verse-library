@@ -7,8 +7,23 @@ from hovorka_model import HovorkaModel
 import pickle
 import random
 import json
-from pyrsistent import freeze
+from pyrsistent import freeze, thaw
+from dataclasses import asdict
 
+# this is currently only to provide a human-readable representation of a scenario
+# the actual serialization/deserialization is done by pickling
+class ScenarioEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, "__dataclass_fields__"):
+            return asdict(obj)
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+    
 
 class SafetyAnalyzer:
     def __init__(self, config):
@@ -34,8 +49,9 @@ def generate_scenario(config):
     num_meals = np.random.randint(config['meals']['number']['low'], config['meals']['number']['high'])
     intervals = np.random.randint(config['meals']['interval']['low'], config['meals']['interval']['high'], size=(num_meals - 1,))
     intervals = np.insert(intervals, 0, 0, axis=0)
+
     meal_times = np.cumsum(intervals)
-    
+        
     forget_prob = config['meals']['forget_prob']
     forget_delay = config['meals']['forget_delay']
     bolus = np.random.binomial(size=num_meals, n=1, p=forget_prob)
@@ -97,7 +113,6 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
         os.makedirs(scenario_log_dir)
         traces = run_scenario(scenario, scenario_log_dir)
-        breakpoint()
         analysis_results = safety_analyzer.analyze(traces)  
         print(analysis_results)
         with open(os.path.join(scenario_log_dir, 'safety.json'), 'w+') as f:
@@ -106,6 +121,8 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
             pickle.dump(traces, f)
         with open(os.path.join(scenario_log_dir, 'scenario.pkl'), 'wb+') as f:
             pickle.dump(scenario, f)
+        with open(os.path.join(scenario_log_dir, 'scenario.json'), 'w+') as f:
+            json.dump(thaw(scenario), f, cls=ScenarioEncoder, indent=4)
         scenario_idx += 1
         scenarios_tested.add(scenario)
     
@@ -126,10 +143,10 @@ def iob_correction_demo(settings):
     
     
 if __name__ == '__main__':
-    np.random.seed(42)
-    random.seed(42)
+    np.random.seed(2)
+    random.seed(2)
     with open('./pump/configurations/testing_config.json') as f:
         config = json.load(f)
     safety_analyzer = SafetyAnalyzer(config['safety'])
-    test(config, 1, safety_analyzer, 'results')
-    breakpoint()
+    scenario = generate_scenario(config)
+    test(config, 10, safety_analyzer, 'results')

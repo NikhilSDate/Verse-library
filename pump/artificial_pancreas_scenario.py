@@ -3,7 +3,9 @@ from enum import Enum
 import os
 from dataclasses import dataclass
 
-BolusType = Enum("BolusType", ["Simple", "Extended"])
+class BolusType(str, Enum):
+    Simple = 'Simple'
+    Extended = 'Extended'
 
 # TODO should we ever model time as a float?
 

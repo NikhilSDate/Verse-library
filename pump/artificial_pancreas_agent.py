@@ -98,7 +98,15 @@ class ArtificialPancreasAgent(BaseAgent):
         self.logger = logger
         self.pump.pump_emulator.link_output_buffer(logger.output_buffer)
 
-        
+    # exclude from picling
+    # TODO: we can probably make this more fine-grainged
+    def __getstate__(self):
+        return ()
+    
+    # exclude from picling
+    # TODO: we can probably make this more fine-grainged
+    def __setstate__(self, state):
+        pass    
 
     def get_init_state(self, G, meals):
         body_init_state = self.body.get_init_state(G)
