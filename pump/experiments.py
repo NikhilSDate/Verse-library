@@ -10,6 +10,20 @@ import json
 from pyrsistent import freeze
 
 
+class SafetyAnalyzer:
+    def __init__(self, config):
+        self.config = config
+    
+    def analyze(self, traces):
+        glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
+        tir_low, tir_high = tir_analysis(glucose_trace, self.config['tir']['low'], self.config['tir']['high'])
+        return {
+            'tir': {
+                'lb': tir_low,
+                'ub': tir_high
+            }
+        }
+
 def generate_scenario(config):
     # first we will build the meal config
     meals_low: List[Meal] = []
@@ -65,9 +79,17 @@ def run_scenario(scenario, log_dir):
     traces = verify_multi_meal_scenario(scenario['init_bg'], scenario['patient']['BW'], None, scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
     return traces   
 
-def test(config, num_scenarios, log_dir):
+def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
     scenarios_tested = set()
-    scenario_idx = 0 
+    
+    # load already executed scenarios
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    scenario_idx = 0
+    for dir in scenario_dirs:
+        with open(os.path.join(dir.path, 'scenario.pkl'), 'rb') as f:
+            scenario = pickle.load(f)
+        scenarios_tested.add(scenario)
+        scenario_idx = max(scenario_idx, int(dir.name[9:])) # FIXME: there is probably a better way to take out the scenario_ prefix
     
     while len(scenarios_tested) < num_scenarios:
         while (scenario := generate_scenario(config)) in scenarios_tested:
@@ -75,6 +97,11 @@ def test(config, num_scenarios, log_dir):
         scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
         os.makedirs(scenario_log_dir)
         traces = run_scenario(scenario, scenario_log_dir)
+        breakpoint()
+        analysis_results = safety_analyzer.analyze(traces)  
+        print(analysis_results)
+        with open(os.path.join(scenario_log_dir, 'safety.json'), 'w+') as f:
+            json.dump(analysis_results, f)
         with open(os.path.join(scenario_log_dir, 'traces.pkl'), 'wb+') as f:
             pickle.dump(traces, f)
         with open(os.path.join(scenario_log_dir, 'scenario.pkl'), 'wb+') as f:
@@ -103,5 +130,6 @@ if __name__ == '__main__':
     random.seed(42)
     with open('./pump/configurations/testing_config.json') as f:
         config = json.load(f)
-    test(config, 1, 'results')
+    safety_analyzer = SafetyAnalyzer(config['safety'])
+    test(config, 1, safety_analyzer, 'results')
     breakpoint()

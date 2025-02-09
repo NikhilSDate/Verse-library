@@ -18,7 +18,7 @@ def tir_analysis(glucose_reachtube, tir_low=70, tir_high=180):
             worst_case_count += 1
         if low <= tir_high and high >= tir_low:
             best_case_count += 1
-    return best_case_count / len(glucose_reachtube), worst_case_count / len(glucose_reachtube)
+    return worst_case_count / len(glucose_reachtube), best_case_count / len(glucose_reachtube)
 
 if __name__ == '__main__':
     print(safety_report([100, 110, 100, 110, 10, 100]))
