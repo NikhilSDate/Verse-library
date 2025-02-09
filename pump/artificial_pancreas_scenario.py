@@ -1,31 +1,31 @@
 from typing import List, Union, Tuple
 from enum import Enum
 import os
+from dataclasses import dataclass
 
 BolusType = Enum("BolusType", ["Simple", "Extended"])
 
 # TODO should we ever model time as a float?
 
-
+@dataclass(eq=True, frozen=True)
 class ExtendedBolusConfig:
     def __init__(self, deliver_now_perc: float, duration: float):
         self.deliver_now_perc: float = deliver_now_perc
         self.duration: float = duration
 
-
+@dataclass(eq=True, frozen=True)
 class Bolus:
-    def __init__(self, time: int, carbs: Union[int, Tuple[int, int]], bolus_type: BolusType, config: ExtendedBolusConfig):
-        self.time = time
-        self.carbs = carbs
-        self.type = bolus_type
-        self.config = config
+    time: int
+    carbs: Union[int, Tuple[int, int]]
+    type: BolusType
+    config: ExtendedBolusConfig
 
-
+@dataclass(eq=True, frozen=True)
 class Meal:
-
-    def __init__(self, time: int, carbs: Union[int, Tuple[int, int]]):
-        self.time = time  # minutes
-        self.carbs = carbs  # grams
+    time: int
+    carbs:  Union[int, Tuple[int, int]]
+    
+    
 
 class SimulationScenario:
 

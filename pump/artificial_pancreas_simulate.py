@@ -58,13 +58,13 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
 
     return traces
 
-def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
+def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None, log_dir=None):
     meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals_low, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=False, settings=settings) # we don't have state stuff working yet, so disable basal IQ
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
-    logger = Logger('results/logs')
+    logger = Logger(log_dir=log_dir)
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )

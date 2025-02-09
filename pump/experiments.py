@@ -7,6 +7,7 @@ from hovorka_model import HovorkaModel
 import pickle
 import random
 import json
+from pyrsistent import freeze
 
 
 def generate_scenario(config):
@@ -26,7 +27,7 @@ def generate_scenario(config):
     bolus = np.random.binomial(size=num_meals, n=1, p=forget_prob)
     
     for i in range(num_meals):
-        meal_range = random.choice(config['meals']['carbs'])
+        meal_range = np.random.choice(config['meals']['carbs'])
         meal_low = Meal(meal_times[i], meal_range['low'])
         meal_high = Meal(meal_times[i], meal_range['high'])
         meals_low.append(meal_low)
@@ -51,22 +52,36 @@ def generate_scenario(config):
     # we need some buffer for the duration
     duration = meal_times[-1] + config['misc']['duration_buffer']
     
-    return {
+    return freeze({
         'meals': [meals_low, meals_high],
         'boluses': boluses,
         'init_bg': init_bg,
         'settings': settings,
         'patient': patient_params,
         'duration': duration
-    }
+    })
     
-def run_scenario(scenario):
-    traces = verify_multi_meal_scenario(scenario['init_bg'], scenario['patient']['BW'], None, scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'])
-    return traces        
-        
-    
-    
+def run_scenario(scenario, log_dir):
+    traces = verify_multi_meal_scenario(scenario['init_bg'], scenario['patient']['BW'], None, scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
+    return traces   
 
+def test(config, num_scenarios, log_dir):
+    scenarios_tested = set()
+    scenario_idx = 0 
+    
+    while len(scenarios_tested) < num_scenarios:
+        while (scenario := generate_scenario(config)) in scenarios_tested:
+            pass
+        scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
+        os.makedirs(scenario_log_dir)
+        traces = run_scenario(scenario, scenario_log_dir)
+        with open(os.path.join(scenario_log_dir, 'traces.pkl'), 'wb+') as f:
+            pickle.dump(traces, f)
+        with open(os.path.join(scenario_log_dir, 'scenario.pkl'), 'wb+') as f:
+            pickle.dump(scenario, f)
+        scenario_idx += 1
+        scenarios_tested.add(scenario)
+    
 
 def iob_correction_demo(settings):
     BW = 70  # kg
@@ -85,8 +100,8 @@ def iob_correction_demo(settings):
     
 if __name__ == '__main__':
     np.random.seed(42)
+    random.seed(42)
     with open('./pump/configurations/testing_config.json') as f:
         config = json.load(f)
-    scenario = generate_scenario(config)
-    traces = run_scenario(scenario)
+    test(config, 1, 'results')
     breakpoint()

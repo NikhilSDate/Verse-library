@@ -22,6 +22,7 @@ from hovorka_model import HovorkaModel
 from pump_model import *
 from state_utils import state_indices, num_meals
 
+import dataclasses
 
 class Logger:
     def __init__(self, log_dir):
@@ -176,7 +177,7 @@ class ArtificialPancreasAgent(BaseAgent):
 
             if bolus and bolus.carbs == -1:
                 # "fill in" carbs: later this should be moved to some "user agent"
-                bolus.carbs = state_vec[state_indices[f'carbs_{meal_index}']]
+                bolus = dataclasses.replace(bolus, carbs=state_vec[state_indices[f'carbs_{meal_index}']])
             
             if bolus:
                 self.pump.send_bolus_command(bg, bolus)
