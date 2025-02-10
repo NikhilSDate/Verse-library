@@ -39,7 +39,6 @@ class InsulinPumpModel:
 
     def send_bolus_command(self, bg, bolus: Bolus):
         if bolus.type == BolusType.Simple:
-            # TODO why is this +30?
             self.pump_emulator.dose_simple(bg, bolus.carbs)
         else:
             self.pump_emulator.dose_extended(bg, bolus.carbs, bolus.config.deliver_now_perc, bolus.config.duration)

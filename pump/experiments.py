@@ -54,7 +54,7 @@ def generate_scenario(config):
         
     forget_prob = config['meals']['forget_prob']
     forget_delay = config['meals']['forget_delay']
-    bolus = np.random.binomial(size=num_meals, n=1, p=forget_prob)
+    bolus = np.random.binomial(size=num_meals, n=1, p= 1 - forget_prob) # probability that bolus happens at meal time is 1 - forget_prob
     
     for i in range(num_meals):
         meal_range = np.random.choice(config['meals']['carbs'])
@@ -72,12 +72,12 @@ def generate_scenario(config):
             boluses.append(Bolus(meal_times[i] + delay, -1, BolusType.Simple, None)) # TODO: handle correction here
     
     
-    init_bg_range = random.choice(config['patient']['init_bg'])
+    init_bg_range = np.random.choice(config['patient']['init_bg'])
     init_bg = [init_bg_range['low'], init_bg_range['high']]
     
     settings = get_recommended_settings()
     
-    patient_params = random.choice(config['patient']['parameters'])
+    patient_params = np.random.choice(config['patient']['parameters'])
     
     # we need some buffer for the duration
     duration = meal_times[-1] + config['misc']['duration_buffer']
@@ -143,10 +143,11 @@ def iob_correction_demo(settings):
     
     
 if __name__ == '__main__':
-    np.random.seed(2)
-    random.seed(2)
     with open('./pump/configurations/testing_config.json') as f:
         config = json.load(f)
+    seed = config['misc']['random_seed']
+    np.random.seed(seed)
+    random.seed(seed)
     safety_analyzer = SafetyAnalyzer(config['safety'])
     scenario = generate_scenario(config)
-    test(config, 10, safety_analyzer, 'results')
+    test(config, 10, safety_analyzer, 'results/fuzzing')
