@@ -34,13 +34,16 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None):
+def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None, logging=True):
 
     simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=True, settings=settings)
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
-    logger = Logger('results/logs')
+    if logging:
+        logger = Logger('results/logs')
+    else:
+        logger = NotLogger()
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
@@ -58,10 +61,10 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, durati
 
     return traces
 
-def verify_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None, log_dir=None):
+def verify_multi_meal_scenario(init_bg, BW, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None):
     meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
-    simulation_scenario = SimulationScenario(basal_rate, boluses, meals_low, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=False, settings=settings) # we don't have state stuff working yet, so disable basal IQ
+    simulation_scenario = SimulationScenario(basal_iq, boluses, meals_low, sim_duration=duration)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings) # we don't have state stuff working yet, so disable basal IQ
     body = HovorkaModel(BW, init_bg)
     cgm = CGM()
     logger = Logger(log_dir=log_dir)
@@ -182,16 +185,18 @@ def get_recommended_settings(TDD = 39.2200, BW = 75):
 if __name__ == "__main__":
     settings = get_recommended_settings()
     print(settings)
-    settings['insulin_duration'] = 150
-    settings['basal_rate'] = 0.2
+    settings['carb_ratio'] = 28
+    settings['basal_rate'] = 0.75
     BW = 75  # kg
     basal = 0  # units
-    meals_low = [Meal(0, 50), Meal(240, 75)]
-    meals_high = [Meal(0, 75), Meal(240, 100)]
-    boluses = [Bolus(0, 0, BolusType.Simple, None), Bolus(240, 0, BolusType.Simple, None), Bolus(480, 0, BolusType.Simple, None)]
-    traces = simulate_multi_meal_scenario(110, BW, basal, boluses, meals_low, duration=16 * 60, settings=settings)
+    meals_low = [Meal(0, 80), Meal(400, 80)]
+    meals_high = [Meal(0, 120), Meal(400, 120)]
+    boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(0, -1, BolusType.Simple, None)]
+    traces = verify_multi_meal_scenario([90, 130], BW, True, boluses, [meals_low, meals_high], duration=12 * 60, settings=settings, log_dir='results/logs')
     # glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
     # print(tir_analysis(glucose_trace))
-    fig = plot_variable(traces, 'G')
-    # fig.write_image('results/bad_duration_glucose_.png')
+    fig1 = plot_variable(traces, 'G')
+    fig2 = plot_variable(traces, 'S1')
+    fig1.write_image('results/figures/basal_iq_verify.png')
+    fig2.write_image('results/figures/basal_iq_verify_S1.png')
     breakpoint()

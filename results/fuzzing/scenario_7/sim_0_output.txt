@@ -1,4 +1,110 @@
 ==========time=0==========
+100 u
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+1
+DONE
+12
+DONE
+125
+NEXT
+CARBS
+grams
+units
+125
+BG
+EXTENDED
+6.58
+mg/dL
+DONE
+BACK
+Enter BG
+3
+37
+375
+Your BG is Above Target
+Add Correction Bolus?
+Add Correction Bolus?
+Current IOB
+0 u
+0 u
+Current BG
+375 mg/dL
+375 mg/dL
+NO
+NO
+YES
+NEXT
+375
+CARBS
+grams
+units
+125
+BG
+EXTENDED
+10.26
+Confirm Request?
+Carbs
+125 g
+BG
+375 mg/dL
+Units To Deliver
+10.26 u
+NO
+YES
+BACK
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+BACK
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+Correction
+3.68 u
+Adjusted Food
+6.32 u
+Deliver 10 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+10 u
+10 u
+10 u
+Correction
+3.68 u
+Adjusted Food
+6.32 u
+Deliver 10 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
 ==========time=1==========
 ==========time=2==========
 ==========time=3==========
@@ -21,97 +127,6 @@
 ==========time=20==========
 ==========time=21==========
 ==========time=22==========
-100 u
-12:22 AM
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-grams
-+/=
-DONE
-BACK
-DONE
-Enter Carbs
-DONE
-3
-DONE
-30
-NEXT
-CARBS
-grams
-units
-30
-BG
-EXTENDED
-1.58
-mg/dL
-DONE
-BACK
-Enter BG
-4
-40
-408
-Your BG is Above Target
-Add Correction Bolus?
-Add Correction Bolus?
-Current IOB
-0 u
-0 u
-Current BG
-408 mg/dL
-408 mg/dL
-NO
-NO
-YES
-NEXT
-408
-CARBS
-grams
-units
-30
-BG
-EXTENDED
-5.72
-Confirm Request?
-Carbs
-30 g
-BG
-408 mg/dL
-Units To Deliver
-5.72 u
-NO
-YES
-Correction
-4.14 u
-Food
-1.58 u
-Deliver 5.72 u Bolus?
-EXTENDED
-BACK
-DELIVER
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-5.72 u
-5.72 u
-5.72 u
-Correction
-4.14 u
-Food
-1.58 u
-Deliver 5.72 u Bolus?
-EXTENDED
-BACK
-DELIVER
-100 u
-BOLUS
-3
-HRS
 ==========time=23==========
 ==========time=24==========
 ==========time=25==========
@@ -365,37 +380,11 @@ HRS
 ==========time=273==========
 ==========time=274==========
 ==========time=275==========
-==========time=276==========
-==========time=277==========
-==========time=278==========
-==========time=279==========
-==========time=280==========
-==========time=281==========
-==========time=282==========
-==========time=283==========
-==========time=284==========
-==========time=285==========
-==========time=286==========
-==========time=287==========
-==========time=288==========
-==========time=289==========
-==========time=290==========
-==========time=291==========
-==========time=292==========
-==========time=293==========
-==========time=294==========
-==========time=295==========
-==========time=296==========
-==========time=297==========
-==========time=298==========
-==========time=299==========
-==========time=300==========
-==========time=301==========
-0.44
-0:24 min
-0:24 min
+0.83
+0:28 min
+0:28 min
 100 u
-5:01 AM
+4:35 AM
 NEXT
 CARBS
 grams
@@ -428,64 +417,50 @@ mg/dL
 DONE
 BACK
 Enter BG
-5
-59
-Your BG is Low
-Due to your BG and IOB, the bolus will be
-Due to your BG and IOB, the bolus will be
-adjusted. Eat carbs and re-test BG.
-Current IOB
-0.44 u
-0.44 u
-Current BG
-59 mg/dL
-59 mg/dL
+1
+10
+Please enter a value
+between: 20-600 mg/dL
 CLOSE
+Please enter a value
+between: 20-600 mg/dL
 CLOSE
-NEXT
-59
-CARBS
-grams
-units
-125
-BG
-EXTENDED
-5.43
-Confirm Request?
-Carbs
-125 g
-BG
-59 mg/dL
-Units To Deliver
-5.43 u
-NO
-YES
-Adjusted Correction
-0 u
-Adjusted Food
-5.43 u
-Deliver 5.43 u Bolus?
-EXTENDED
-BACK
-DELIVER
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-5.43 u
-5.43 u
-5.43 u
-Adjusted Correction
-0 u
-Adjusted Food
-5.43 u
-Deliver 5.43 u Bolus?
-EXTENDED
-BACK
-DELIVER
+Please enter a value
+between: 20-600 mg/dL
+CLOSE
+Please enter a value
+between: 20-600 mg/dL
+CLOSE
 100 u
 BOLUS
 3
 HRS
+==========time=276==========
+==========time=277==========
+==========time=278==========
+==========time=279==========
+==========time=280==========
+==========time=281==========
+==========time=282==========
+==========time=283==========
+==========time=284==========
+==========time=285==========
+==========time=286==========
+==========time=287==========
+==========time=288==========
+==========time=289==========
+==========time=290==========
+==========time=291==========
+==========time=292==========
+==========time=293==========
+==========time=294==========
+==========time=295==========
+==========time=296==========
+==========time=297==========
+==========time=298==========
+==========time=299==========
+==========time=300==========
+==========time=301==========
 ==========time=302==========
 ==========time=303==========
 ==========time=304==========
@@ -766,61 +741,6 @@ HRS
 ==========time=579==========
 ==========time=580==========
 ==========time=581==========
-0.41
-0:23 min
-0:23 min
-100 u
-9:41 AM
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-grams
-+/=
-DONE
-BACK
-DONE
-Enter Carbs
-DONE
-1
-DONE
-17
-DONE
-175
-NEXT
-CARBS
-grams
-units
-175
-BG
-EXTENDED
-9.21
-mg/dL
-DONE
-BACK
-Enter BG
-1
-19
-Please enter a value
-between: 20-600 mg/dL
-CLOSE
-Please enter a value
-between: 20-600 mg/dL
-CLOSE
-Please enter a value
-between: 20-600 mg/dL
-CLOSE
-Please enter a value
-between: 20-600 mg/dL
-CLOSE
-100 u
-BOLUS
-3
-HRS
 ==========time=582==========
 ==========time=583==========
 ==========time=584==========
@@ -867,6 +787,100 @@ HRS
 ==========time=625==========
 ==========time=626==========
 ==========time=627==========
+0
+0:00 min
+0:00 min
+100 u
+10:27 AM
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+7
+DONE
+75
+NEXT
+CARBS
+grams
+units
+75
+BG
+EXTENDED
+3.95
+mg/dL
+DONE
+BACK
+Enter BG
+2
+22
+222
+Your BG is Above Target
+Add Correction Bolus?
+Add Correction Bolus?
+Current IOB
+0 u
+0 u
+Current BG
+222 mg/dL
+222 mg/dL
+NO
+NO
+YES
+NEXT
+222
+CARBS
+grams
+units
+75
+BG
+EXTENDED
+5.51
+Confirm Request?
+Carbs
+75 g
+BG
+222 mg/dL
+Units To Deliver
+5.51 u
+NO
+YES
+Correction
+1.56 u
+Food
+3.95 u
+Deliver 5.51 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+5.51 u
+5.51 u
+5.51 u
+Correction
+1.56 u
+Food
+3.95 u
+Deliver 5.51 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
 ==========time=628==========
 ==========time=629==========
 ==========time=630==========
@@ -1061,6 +1075,78 @@ HRS
 ==========time=819==========
 ==========time=820==========
 ==========time=821==========
+1.5
+1:49 hrs
+1:49 hrs
+100 u
+1:41 PM
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+0
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+mg/dL
+DONE
+BACK
+Enter BG
+1
+10
+104
+Your BG is Below Target
+Reduce Bolus Calculation?
+Reduce Bolus Calculation?
+Current IOB
+1.5 u
+1.5 u
+Current BG
+104 mg/dL
+104 mg/dL
+NO
+NO
+YES
+Due to the adjusted calculation,
+your bolus will be reduced.
+Due to IOB, your BG may drop low.
+Re-test BG as necessary.
+CLOSE
+Due to the adjusted calculation,
+your bolus will be reduced.
+Due to IOB, your BG may drop low.
+Re-test BG as necessary.
+CLOSE
+Due to the adjusted calculation,
+your bolus will be reduced.
+Due to IOB, your BG may drop low.
+Re-test BG as necessary.
+CLOSE
+Due to the adjusted calculation,
+your bolus will be reduced.
+Due to IOB, your BG may drop low.
+Re-test BG as necessary.
+CLOSE
+100 u
+BOLUS
+3
+HRS
 ==========time=822==========
 ==========time=823==========
 ==========time=824==========
@@ -1210,116 +1296,6 @@ HRS
 ==========time=968==========
 ==========time=969==========
 ==========time=970==========
-0
-0:00 min
-0:00 min
-100 u
-4:10 PM
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-grams
-+/=
-DONE
-BACK
-DONE
-Enter Carbs
-DONE
-1
-DONE
-17
-DONE
-175
-NEXT
-CARBS
-grams
-units
-175
-BG
-EXTENDED
-9.21
-mg/dL
-DONE
-BACK
-Enter BG
-2
-22
-222
-Your BG is Above Target
-Add Correction Bolus?
-Add Correction Bolus?
-Current IOB
-0 u
-0 u
-Current BG
-222 mg/dL
-222 mg/dL
-NO
-NO
-YES
-NEXT
-222
-CARBS
-grams
-units
-175
-BG
-EXTENDED
-10.77
-Confirm Request?
-Carbs
-175 g
-BG
-222 mg/dL
-Units To Deliver
-10.77 u
-NO
-YES
-BACK
-CONTINUE
-MAX BOLUS ALERT
-Your 10 u Max Bolus setting has
-been exceeded.
-Press CONTINUE to confirm a
-bolus of 10 u.
-BACK
-CONTINUE
-MAX BOLUS ALERT
-Your 10 u Max Bolus setting has
-been exceeded.
-Press CONTINUE to confirm a
-bolus of 10 u.
-Correction
-1.56 u
-Adjusted Food
-8.44 u
-Deliver 10 u Bolus?
-EXTENDED
-BACK
-DELIVER
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-10 u
-10 u
-10 u
-Correction
-1.56 u
-Adjusted Food
-8.44 u
-Deliver 10 u Bolus?
-EXTENDED
-BACK
-DELIVER
-100 u
-BOLUS
-3
-HRS
 ==========time=971==========
 ==========time=972==========
 ==========time=973==========
@@ -1366,6 +1342,100 @@ HRS
 ==========time=1014==========
 ==========time=1015==========
 ==========time=1016==========
+0
+0:00 min
+0:00 min
+100 u
+4:56 PM
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+3
+DONE
+30
+NEXT
+CARBS
+grams
+units
+30
+BG
+EXTENDED
+1.58
+mg/dL
+DONE
+BACK
+Enter BG
+2
+21
+218
+Your BG is Above Target
+Add Correction Bolus?
+Add Correction Bolus?
+Current IOB
+0 u
+0 u
+Current BG
+218 mg/dL
+218 mg/dL
+NO
+NO
+YES
+NEXT
+218
+CARBS
+grams
+units
+30
+BG
+EXTENDED
+3.08
+Confirm Request?
+Carbs
+30 g
+BG
+218 mg/dL
+Units To Deliver
+3.08 u
+NO
+YES
+Correction
+1.5 u
+Food
+1.58 u
+Deliver 3.08 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+3.08 u
+3.08 u
+3.08 u
+Correction
+1.5 u
+Food
+1.58 u
+Deliver 3.08 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
 ==========time=1017==========
 ==========time=1018==========
 ==========time=1019==========
@@ -1753,73 +1823,6 @@ HRS
 ==========time=1401==========
 ==========time=1402==========
 ==========time=1403==========
-100 u
-11:23 PM
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-grams
-+/=
-DONE
-BACK
-DONE
-Enter Carbs
-DONE
-0
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-mg/dL
-DONE
-BACK
-Enter BG
-3
-39
-Your BG is Low
-Eat carbs and re-test BG
-Eat carbs and re-test BG
-Current IOB
-0 u
-0 u
-Current BG
-39 mg/dL
-39 mg/dL
-CLOSE
-CLOSE
-Due to the adjusted calculation,
-your bolus will be reduced.
-Due to IOB, your BG may drop low.
-Re-test BG as necessary.
-CLOSE
-Due to the adjusted calculation,
-your bolus will be reduced.
-Due to IOB, your BG may drop low.
-Re-test BG as necessary.
-CLOSE
-Due to the adjusted calculation,
-your bolus will be reduced.
-Due to IOB, your BG may drop low.
-Re-test BG as necessary.
-CLOSE
-Due to the adjusted calculation,
-your bolus will be reduced.
-Due to IOB, your BG may drop low.
-Re-test BG as necessary.
-CLOSE
-100 u
-BOLUS
-3
-HRS
 ==========time=1404==========
 ==========time=1405==========
 ==========time=1406==========
@@ -1852,6 +1855,98 @@ HRS
 ==========time=1433==========
 ==========time=1434==========
 ==========time=1435==========
+100 u
+11:55 PM
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+1
+DONE
+12
+DONE
+125
+NEXT
+CARBS
+grams
+units
+125
+BG
+EXTENDED
+6.58
+mg/dL
+DONE
+BACK
+Enter BG
+3
+35
+Your BG is Low
+Due to your BG and IOB, the bolus will be
+Due to your BG and IOB, the bolus will be
+adjusted. Eat carbs and re-test BG.
+Current IOB
+0 u
+0 u
+Current BG
+35 mg/dL
+35 mg/dL
+CLOSE
+CLOSE
+NEXT
+35
+CARBS
+grams
+units
+125
+BG
+EXTENDED
+5.54
+Confirm Request?
+Carbs
+125 g
+BG
+35 mg/dL
+Units To Deliver
+5.54 u
+NO
+YES
+Adjusted Correction
+0 u
+Adjusted Food
+5.54 u
+Deliver 5.54 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+5.54 u
+5.54 u
+5.54 u
+Adjusted Correction
+0 u
+Adjusted Food
+5.54 u
+Deliver 5.54 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
 ==========time=1436==========
 ==========time=1437==========
 ==========time=1438==========
@@ -2282,3 +2377,52 @@ HRS
 ==========time=1863==========
 ==========time=1864==========
 ==========time=1865==========
+==========time=1866==========
+==========time=1867==========
+==========time=1868==========
+==========time=1869==========
+==========time=1870==========
+==========time=1871==========
+==========time=1872==========
+==========time=1873==========
+==========time=1874==========
+==========time=1875==========
+==========time=1876==========
+==========time=1877==========
+==========time=1878==========
+==========time=1879==========
+==========time=1880==========
+==========time=1881==========
+==========time=1882==========
+==========time=1883==========
+==========time=1884==========
+==========time=1885==========
+==========time=1886==========
+==========time=1887==========
+==========time=1888==========
+==========time=1889==========
+==========time=1890==========
+==========time=1891==========
+==========time=1892==========
+==========time=1893==========
+==========time=1894==========
+==========time=1895==========
+==========time=1896==========
+==========time=1897==========
+==========time=1898==========
+==========time=1899==========
+==========time=1900==========
+==========time=1901==========
+==========time=1902==========
+==========time=1903==========
+==========time=1904==========
+==========time=1905==========
+==========time=1906==========
+==========time=1907==========
+==========time=1908==========
+==========time=1909==========
+==========time=1910==========
+==========time=1911==========
+==========time=1912==========
+==========time=1913==========
+==========time=1914==========

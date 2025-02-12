@@ -22,6 +22,8 @@ class ScenarioEncoder(json.JSONEncoder):
             return float(obj)
         if isinstance(obj, np.ndarray):
             return obj.tolist()
+        if isinstance(obj, np.bool_):
+            return bool(obj)
         return super().default(obj)
     
 
@@ -77,6 +79,10 @@ def generate_scenario(config):
     
     settings = get_recommended_settings()
     
+    # FIXME: there is probably a better way to handle this
+    basal_iq = np.random.choice(config['settings']['basal_iq'])
+    settings['basal_iq'] = basal_iq
+    
     patient_params = np.random.choice(config['patient']['parameters'])
     
     # we need some buffer for the duration
@@ -92,7 +98,7 @@ def generate_scenario(config):
     })
     
 def run_scenario(scenario, log_dir):
-    traces = verify_multi_meal_scenario(scenario['init_bg'], scenario['patient']['BW'], None, scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
+    traces = verify_multi_meal_scenario(scenario['init_bg'], scenario['patient']['BW'], scenario['settings']['basal_iq'], scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
     return traces   
 
 def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
@@ -107,14 +113,16 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         scenarios_tested.add(scenario)
         scenario_idx = max(scenario_idx, int(dir.name[9:])) # FIXME: there is probably a better way to take out the scenario_ prefix
     
+    scenario_idx += 1
+    
     while len(scenarios_tested) < num_scenarios:
         while (scenario := generate_scenario(config)) in scenarios_tested:
             pass
         scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
         os.makedirs(scenario_log_dir)
         traces = run_scenario(scenario, scenario_log_dir)
+        plot_variable(traces, 'G')
         analysis_results = safety_analyzer.analyze(traces)  
-        print(analysis_results)
         with open(os.path.join(scenario_log_dir, 'safety.json'), 'w+') as f:
             json.dump(analysis_results, f)
         with open(os.path.join(scenario_log_dir, 'traces.pkl'), 'wb+') as f:
@@ -127,6 +135,12 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         scenarios_tested.add(scenario)
     
 
+def plot_scenario(log_dir, index, variable):
+    with open(os.path.join(log_dir, f'scenario_{index}', 'traces.pkl'), 'rb') as f:
+        traces = pickle.load(f)
+    fig = plot_variable(traces, variable)
+    return fig
+    
 def iob_correction_demo(settings):
     BW = 70  # kg
     basal = 0  # units
@@ -143,11 +157,12 @@ def iob_correction_demo(settings):
     
     
 if __name__ == '__main__':
-    with open('./pump/configurations/testing_config.json') as f:
-        config = json.load(f)
-    seed = config['misc']['random_seed']
-    np.random.seed(seed)
-    random.seed(seed)
-    safety_analyzer = SafetyAnalyzer(config['safety'])
-    scenario = generate_scenario(config)
-    test(config, 10, safety_analyzer, 'results/fuzzing')
+    # with open('./pump/configurations/testing_config.json') as f:
+    #     config = json.load(f)
+    # seed = config['misc']['random_seed']
+    # np.random.seed(seed)
+    # random.seed(seed)
+    # safety_analyzer = SafetyAnalyzer(config['safety'])
+    # scenario = generate_scenario(config)
+    # test(config, 20, safety_analyzer, 'results/fuzzing')
+    plot_scenario('results/fuzzing', 9, 'I')

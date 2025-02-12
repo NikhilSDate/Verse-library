@@ -24,6 +24,18 @@ from state_utils import state_indices, num_meals
 
 import dataclasses
 
+# "logger" that actually does not do any logging
+class NotLogger:
+    def __init__(self):
+        self.output_buffer = []
+        pass
+    def tick(self, increment=1):
+        pass
+    def start_sim(self):
+        pass
+    def write_dose(self, time, dose):
+        pass
+
 class Logger:
     def __init__(self, log_dir):
         self.dir = log_dir
@@ -185,12 +197,13 @@ class ArtificialPancreasAgent(BaseAgent):
 
             if bolus and bolus.carbs == -1:
                 # "fill in" carbs: later this should be moved to some "user agent"
-                bolus = dataclasses.replace(bolus, carbs=state_vec[state_indices[f'carbs_{meal_index}']])
+                bolus = dataclasses.replace(bolus, carbs=carbs)
             
             if bolus:
                 self.pump.send_bolus_command(bg, bolus)
 
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
+            
             self.logger.write_dose(current_time, dose)
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
