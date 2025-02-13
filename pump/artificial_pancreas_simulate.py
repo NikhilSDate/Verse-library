@@ -34,11 +34,11 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, BW, basal_rate, boluses, meals, duration=24 * 60, settings=None, logging=True):
+def simulate_multi_meal_scenario(init_bg, BW, basal_iq, boluses, meals, duration=24 * 60, settings=None, logging=True, model_params='2004'):
 
-    simulation_scenario = SimulationScenario(basal_rate, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=True, settings=settings)
-    body = HovorkaModel(BW, init_bg)
+    simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings)
+    body = HovorkaModel(BW, init_bg, parameters=model_params)
     cgm = CGM()
     if logging:
         logger = Logger('results/logs')
@@ -184,19 +184,10 @@ def get_recommended_settings(TDD = 39.2200, BW = 75):
 
 if __name__ == "__main__":
     settings = get_recommended_settings()
-    print(settings)
-    settings['carb_ratio'] = 28
-    settings['basal_rate'] = 0.75
-    BW = 75  # kg
+    BW = 74.9  # kg
     basal = 0  # units
-    meals_low = [Meal(0, 80), Meal(400, 80)]
-    meals_high = [Meal(0, 120), Meal(400, 120)]
-    boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(0, -1, BolusType.Simple, None)]
-    traces = verify_multi_meal_scenario([90, 130], BW, True, boluses, [meals_low, meals_high], duration=12 * 60, settings=settings, log_dir='results/logs')
-    # glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
-    # print(tir_analysis(glucose_trace))
+    meals_low = [Meal(0, 150)]
+    boluses = [Bolus(0, -1, BolusType.Simple, None)]
+    traces = simulate_multi_meal_scenario(350, BW, False, boluses, meals_low, duration=8 * 60, settings=settings)
     fig1 = plot_variable(traces, 'G')
-    fig2 = plot_variable(traces, 'S1')
-    fig1.write_image('results/figures/basal_iq_verify.png')
-    fig2.write_image('results/figures/basal_iq_verify_S1.png')
     breakpoint()

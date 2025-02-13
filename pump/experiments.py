@@ -165,4 +165,4 @@ if __name__ == '__main__':
     # safety_analyzer = SafetyAnalyzer(config['safety'])
     # scenario = generate_scenario(config)
     # test(config, 20, safety_analyzer, 'results/fuzzing')
-    plot_scenario('results/fuzzing', 9, 'I')
+    plot_scenario('results/fuzzing', 0, 'G')
