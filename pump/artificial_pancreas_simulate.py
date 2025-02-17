@@ -162,7 +162,7 @@ def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     fig5.write_image('results/glucose_verif.png')
     breakpoint()
     
-def get_recommended_settings(TDD = 39.2200, BW = 75):
+def get_recommended_settings(TDD=18.28, BW = 74.9):
     
      # according to the McGill simulator
     TDD = (0.75 * TDD + BW * 0.23) / 2
@@ -183,11 +183,14 @@ def get_recommended_settings(TDD = 39.2200, BW = 75):
 
 
 if __name__ == "__main__":
-    settings = get_recommended_settings()
+    settings = get_recommended_settings(TDD=18.28)
+    
+    settings['basal_rate'] = 0.65
+    
     BW = 74.9  # kg
     basal = 0  # units
     meals_low = [Meal(0, 150)]
     boluses = [Bolus(0, -1, BolusType.Simple, None)]
-    traces = simulate_multi_meal_scenario(350, BW, False, boluses, meals_low, duration=8 * 60, settings=settings)
+    traces = simulate_multi_meal_scenario(350, BW, True, boluses, meals_low, duration=8 * 60, settings=settings)
     fig1 = plot_variable(traces, 'G')
     breakpoint()

@@ -16,8 +16,7 @@ class HovorkaModel:
     '''
     def __init__(self, BW, Gb, parameters='2004'):
         self.BW = BW
-        if parameters == '2010':
-            self.P = self.hovorka_2010()
+        self.P = self.hovorka_parameters()
     
     
     def hovorka_2010(self):
@@ -61,6 +60,21 @@ class HovorkaModel:
         P = [tau_G, tau_I, A_G, k_12, k_a1, k_b1, k_a2, k_b2, k_a3, k_b3, k_e, V_I, V_G, F_01, EGP_0, R_cl, ka_int, R_th]
 
         return P
+    
+    
+    def TDD(self):
+        params = self.P
+        Vg = params[12]
+        Vi = params[11]
+        ke = params[10]
+        BW = self.BW
+        St = 18.41e-4
+        Sd = 5.05e-4
+        Se = 0.019
+        MCHO = 180.1577
+        target = 6.5 * 120
+        carbF = min(max(round(2*(MCHO * (0.4 * max(St, 16e-4) + 0.6 * min(max(Sd, 3e-4), 12e-4)) * target * Vg)/(ke * Vi))/2, 2), 25)
+        Ub = 60 * Ip0 * ke / (1e6 / (Vi * BW));
     
     def hovorka_parameters(self):
         """

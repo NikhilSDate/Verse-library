@@ -27,7 +27,7 @@ units
 150
 BG
 EXTENDED
-7.89
+5.17
 mg/dL
 DONE
 BACK
@@ -55,49 +55,35 @@ units
 150
 BG
 EXTENDED
-11.22
+7.37
 Confirm Request?
 Carbs
 150 g
 BG
 350 mg/dL
 Units To Deliver
-11.22 u
+7.37 u
 NO
 YES
-BACK
-CONTINUE
-MAX BOLUS ALERT
-Your 10 u Max Bolus setting has
-been exceeded.
-Press CONTINUE to confirm a
-bolus of 10 u.
-BACK
-CONTINUE
-MAX BOLUS ALERT
-Your 10 u Max Bolus setting has
-been exceeded.
-Press CONTINUE to confirm a
-bolus of 10 u.
 Correction
-3.33 u
-Adjusted Food
-6.67 u
-Deliver 10 u Bolus?
+2.2 u
+Food
+5.17 u
+Deliver 7.37 u Bolus?
 EXTENDED
 BACK
 DELIVER
 BOLUS INITIATED
 BOLUS INITIATED
 BOLUS INITIATED
-10 u
-10 u
-10 u
+7.37 u
+7.37 u
+7.37 u
 Correction
-3.33 u
-Adjusted Food
-6.67 u
-Deliver 10 u Bolus?
+2.2 u
+Food
+5.17 u
+Deliver 7.37 u Bolus?
 EXTENDED
 BACK
 DELIVER
