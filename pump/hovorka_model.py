@@ -61,21 +61,6 @@ class HovorkaModel:
 
         return P
     
-    
-    def TDD(self):
-        params = self.P
-        Vg = params[12]
-        Vi = params[11]
-        ke = params[10]
-        BW = self.BW
-        St = 18.41e-4
-        Sd = 5.05e-4
-        Se = 0.019
-        MCHO = 180.1577
-        target = 6.5 * 120
-        carbF = min(max(round(2*(MCHO * (0.4 * max(St, 16e-4) + 0.6 * min(max(Sd, 3e-4), 12e-4)) * target * Vg)/(ke * Vi))/2, 2), 25)
-        Ub = 60 * Ip0 * ke / (1e6 / (Vi * BW));
-    
     def hovorka_parameters(self):
         """
         PATIENT PARAMETERS

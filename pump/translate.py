@@ -2,6 +2,17 @@ import numpy as np
 import random
 from scipy.optimize import fsolve
 from scipy.integrate import ode
+from artificial_pancreas_scenario import Meal
+
+
+# multiple patients
+# sensor error modeling
+# different types of meals
+# intra-day variability
+# exercise modeling
+# glucagon boluses
+# carb counting errors
+# 
 
 class HovorkaPatient:
     stateHistorySize = 1000
@@ -94,10 +105,6 @@ class HovorkaPatient:
         self.apply_wrong_pump_param()
         self.apply_carbs_counting_errors()
 
-        self.state = self.get_initial_state()
-        self.stateHistory = np.full((len(self.state), self.stateHistorySize), np.nan)
-        self.stateHistory[:, -1] = self.state
-
         self.CGM = {
             "lambda": 15.96,
             "epsilon": -5.471,
@@ -184,29 +191,14 @@ class HovorkaPatient:
                 (t - meal["time"] - meal["Delay"]) * np.exp(-(t - meal["time"] - meal["Delay"]) / meal["TauM"]) / meal["TauM"]**2
         return 0
 
-    def get_initial_state(self):
-        if self.opt["initialState"]:
-            return np.array(self.opt["initialState"])
-
-        initial_state = np.full(self.eGluMeas + 1, 0)
-
-        if self.opt["initialGlucose"] < 0:
-            Gs0 = self.param["GBasal"] * (1 + 0.7 * np.random.randn())
-            while Gs0 < 4 or Gs0 > 14:
-                Gs0 = self.param["GBasal"] * (1 + 0.7 * np.random.randn())
-        else:
-            Gs0 = self.opt["initialGlucose"]
-
+    def get_initial_state(self, opt):
+        initial_state = np.zeros(self.eGluMeas + 1)
+        Gs0 = opt["initialGlucose"]
         initial_state[self.eGluPlas] = Gs0 * self.param["Vg"]
         initial_state[self.eGluMeas] = Gs0
         initial_state[self.eGluInte] = Gs0
 
-        if self.opt["initialInsulinOnBoard"] < 0:
-            Qb = 2.5 * (np.random.rand() - 0.5)
-            while Qb < -0.8 * self.param["Ub"]:
-                Qb = 2.5 * (np.random.rand() - 0.5)
-        else:
-            Qb = self.opt["initialInsulinOnBoard"]
+        Qb = opt["initialInsulinOnBoard"] if "initialInsulinOnBoard" in opt else 0
 
         initial_state[self.eInsPlas] = (self.param["Ub"] + Qb) / (
             self.param["ke"] / (1e6 * self.param["ka"] / (self.param["Vi"] * self.param["w"])))
@@ -265,6 +257,18 @@ class HovorkaPatient:
 
         return dydt
     
+    def construct_meal(self, meal: Meal):
+        return {
+            'time': meal.time,
+            'value': meal.carbs,
+            'Delay': 0,
+            'TauM': self.param['TauM'],
+            'Bio': self.param['Bio']
+        }
+        
+    def set_meals(self, meals):
+        self.meals = [self.construct_meal(meal) for meal in meals] 
+    
 def patient_original(opt):
     param = {
         "MCHO": 180.1577,
@@ -303,7 +307,11 @@ def patient_original(opt):
     ]
     roots_solution = np.roots(coefficients)
     real_roots = [r.real for r in roots_solution if np.isreal(r)]
-    initial_guess = max(real_roots) if real_roots else 0.1
+    
+    if not real_roots:
+        raise ValueError()
+    
+    initial_guess = max(real_roots)
     
     def insulin_equation(x):
         return (-Fn - Q10 * param["St"] * x + param["k12"] * (Q10 * param["St"] * x) / (param["k12"] + param["Sd"] * x) - Fr + param["EGP0"] * np.exp(-param["Se"] * x))
@@ -318,11 +326,13 @@ def patient_original(opt):
 if __name__ == '__main__':
     opt = {'basalGlucose': 6.5}
     param = patient_original(opt)
-    print(param)
     patient = HovorkaPatient(param=param)
     model = ode(patient.model)
-    model.set_initial_value(patient.get_initial_state())
+    state = patient.get_initial_state(opt={'initialGlucose': 3})
+    model.set_initial_value(state)
     results = np.zeros((4000, 12))
+    meals = [Meal(0, 50), Meal(240, 50)]
+    patient.set_meals(meals)
     for i in range(4000):
         model.set_f_params(0.9097)
         model.integrate(model.t + 1)

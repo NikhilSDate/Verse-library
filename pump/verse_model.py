@@ -11,18 +11,18 @@ class PumpMode(Enum):
 class State:
 
     # Body model
-    D1: float               # Amount of glucose in compartment 1 [mmol]
-    D2: float               # Amount of glucose in compartment 2 [mmol]
-    S1: float               # Amount of insulin in compartment 1 [mU]
-    S2: float               # Amount of insulin in compartment 2 [mU]
-    Q1: float               # Amount of glucose in the main blood stream [mmol]
-    Q2: float               # Amount of glucose in peripheral tissues [mmol]
-    I : float               # Plasma insulin concentration [mU/L]
-    x1: float               # Insluin in muscle tissues [1], x1*Q1 = Insulin dependent uptake of glucose in muscles
-    x2: float               # [1], x2*Q2 = Insulin dependent disposal of glucose in the muscle cells
-    x3: float               # Insulin in the liver [1], EGP_0*(1-x3) = Endogenous release of glucose by the liver
-    C: float     
-    G: float
+    G: float               # Amount of glucose in compartment 1 [mmol]
+    InsSub1: float               # Amount of glucose in compartment 2 [mmol]
+    InsSub2: float               # Amount of insulin in compartment 1 [mU]
+    InsPlas: float               # Amount of insulin in compartment 2 [mU]
+    InsActT: float               # Amount of glucose in the main blood stream [mmol]
+    InsActD: float               # Amount of glucose in peripheral tissues [mmol]
+    InsActE : float               # Plasma insulin concentration [mU/L]
+    GutAbs: float               # Insluin in muscle tissues [1], x1*Q1 = Insulin dependent uptake of glucose in muscles
+    GluPlas: float               # [1], x2*Q2 = Insulin dependent disposal of glucose in the muscle cells
+    GluComp: float               # Insulin in the liver [1], EGP_0*(1-x3) = Endogenous release of glucose by the liver
+    GluInte: float     
+    GluMeas: float
     
     # pump state
     iob: float
