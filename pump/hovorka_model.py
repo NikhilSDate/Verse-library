@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import fsolve
 from tqdm import tqdm
+from state_utils import state_indices
 import random
 
 # implementation from https://github.com/jonasnm/svelte-flask-hovorka-simulator/blob/master/hovorka_simulator.py
@@ -270,7 +271,10 @@ class HovorkaModel:
     
     def get_init_state(self, G):
         G = self.mgdl_to_mmol(G)
-        return self._get_initial_state({'initialGlucose': G})
+        state = self._get_initial_state({'initialGlucose': G})
+        state[state_indices["GluMeas"]] = self.mmol_to_mgdl(state[state_indices["GluInte"]])
+        state[state_indices["G"]] = self.get_real_bg(state[state_indices["GluPlas"]])
+        return state
     
     def get_init_range(self, Gl, Gh):
         return [self.get_init_state(Gl), self.get_init_state(Gh)]
@@ -280,6 +284,9 @@ class HovorkaModel:
     
     def mgdl_to_mmol(self, G):
         return G / 18
+    
+    def get_real_bg(self, plas):
+        return self.mmol_to_mgdl(plas / self.param['Vg'])
     
 def patient_original(opt):
     param = {

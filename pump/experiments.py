@@ -71,7 +71,7 @@ def generate_scenario(config):
         else:
             # if the user forgot, do they realize later?
             delay = np.random.randint(forget_delay['low'], forget_delay['high'])
-            boluses.append(Bolus(meal_times[i] + delay, -1, BolusType.Simple, None)) # TODO: handle correction here
+            boluses.append(Bolus(meal_times[i] + delay, 0, BolusType.Simple, None)) # TODO: handle correction here
     
     
     init_bg_range = np.random.choice(config['patient']['init_bg'])

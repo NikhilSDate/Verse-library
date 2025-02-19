@@ -122,7 +122,6 @@ class ArtificialPancreasAgent(BaseAgent):
 
     def get_init_state(self, G, meals):
         body_init_state = self.body.get_init_state(G)
-        print(body_init_state)
         pump_init_state = self.pump.get_init_state()
         scenario_state = self.get_scenario_state()
         meal_state = self.get_meal_state(meals)
@@ -181,8 +180,6 @@ class ArtificialPancreasAgent(BaseAgent):
         
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
-        init[state_indices["G"]] = self.get_bg(init[state_indices["GluPlas"]])
-        init[state_indices["GluMeas"]] = self.body.mmol_to_mgdl(init[state_indices["GluInte"]])
         trace[0, 1:] = init
         state_vec = init
 

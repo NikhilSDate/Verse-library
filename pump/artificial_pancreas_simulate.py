@@ -61,17 +61,22 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
 
     return traces
 
-def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None):
+def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None, logging=True):
     meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals_low, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings) # we don't have state stuff working yet, so disable basal IQ
     body = HovorkaModel(params)
     cgm = CGM()
-    logger = Logger(log_dir=log_dir)
+    if logging:
+        logger = Logger(log_dir=log_dir)
+    else:
+        logger = NotLogger()
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
     init_state = agent.get_init_range(init_bg[0], init_bg[1], meals_low, meals_high)
+    print(init_state)
+    breakpoint()
     init = init_state
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -186,6 +191,7 @@ if __name__ == "__main__":
     settings = get_recommended_settings(TDD=39.22)    
     BW = 74.9  # kg
     basal = 0  # units
-    traces = simulate_multi_meal_scenario(120, BW, False, [Bolus(0, -1, BolusType.Simple, None)], [Meal(0, 100)], duration=8 * 60, settings=settings)
+    params = patient_original({'basalGlucose': 6.5})
+    traces = verify_multi_meal_scenario([100, 150], params, False, [], [[], []], duration=3 * 60, settings=settings, logging=False)
     fig1 = plot_variable(traces, 'GluMeas')
     breakpoint()

@@ -16,3 +16,9 @@ sensor corrects to the average when calibrating
 but the pump does not account for this
 
 pump is not perfect: great for making the case 
+
+
+
+scenarios
+- "sleeping beauty": CGM dropout shuts off extended bolus
+- basal IQ continues delivering insulin even if G increasing and below target
