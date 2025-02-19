@@ -1,0 +1,111 @@
+{
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 50
+            },
+            {
+                "time": 250,
+                "carbs": 150
+            },
+            {
+                "time": 711,
+                "carbs": 150
+            },
+            {
+                "time": 988,
+                "carbs": 10
+            },
+            {
+                "time": 1091,
+                "carbs": 50
+            },
+            {
+                "time": 1312,
+                "carbs": 100
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 100
+            },
+            {
+                "time": 250,
+                "carbs": 200
+            },
+            {
+                "time": 711,
+                "carbs": 200
+            },
+            {
+                "time": 988,
+                "carbs": 50
+            },
+            {
+                "time": 1091,
+                "carbs": 100
+            },
+            {
+                "time": 1312,
+                "carbs": 150
+            }
+        ]
+    ],
+    "init_bg": [
+        250,
+        300
+    ],
+    "settings": {
+        "basal_iq": false,
+        "correction_factor": 72,
+        "max_bolus": 10,
+        "insulin_duration": 300,
+        "target_bg": 110,
+        "basal_rate": 0.48609375,
+        "carb_ratio": 19
+    },
+    "patient": {
+        "BW": 70
+    },
+    "boluses": [
+        {
+            "time": 0,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 280,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 711,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 988,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 1091,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 1312,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        }
+    ],
+    "duration": 1792
+}

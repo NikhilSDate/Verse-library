@@ -1,0 +1,111 @@
+{
+    "duration": 1664,
+    "boluses": [
+        {
+            "time": 0,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 234,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 344,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 767,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 881,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 1214,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        }
+    ],
+    "settings": {
+        "carb_ratio": 29,
+        "correction_factor": 109,
+        "basal_iq": false,
+        "insulin_duration": 300,
+        "basal_rate": 0.32226041666666666,
+        "target_bg": 110,
+        "max_bolus": 10
+    },
+    "init_bg": [
+        70,
+        120
+    ],
+    "patient": {
+        "BW": 74.9
+    },
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 150
+            },
+            {
+                "time": 234,
+                "carbs": 50
+            },
+            {
+                "time": 344,
+                "carbs": 50
+            },
+            {
+                "time": 767,
+                "carbs": 50
+            },
+            {
+                "time": 881,
+                "carbs": 10
+            },
+            {
+                "time": 1184,
+                "carbs": 50
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 200
+            },
+            {
+                "time": 234,
+                "carbs": 100
+            },
+            {
+                "time": 344,
+                "carbs": 100
+            },
+            {
+                "time": 767,
+                "carbs": 100
+            },
+            {
+                "time": 881,
+                "carbs": 50
+            },
+            {
+                "time": 1184,
+                "carbs": 100
+            }
+        ]
+    ]
+}

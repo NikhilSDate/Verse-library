@@ -1,0 +1,97 @@
+{
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 100
+            },
+            {
+                "time": 124,
+                "carbs": 100
+            },
+            {
+                "time": 528,
+                "carbs": 10
+            },
+            {
+                "time": 914,
+                "carbs": 100
+            },
+            {
+                "time": 982,
+                "carbs": 10
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 150
+            },
+            {
+                "time": 124,
+                "carbs": 150
+            },
+            {
+                "time": 528,
+                "carbs": 50
+            },
+            {
+                "time": 914,
+                "carbs": 150
+            },
+            {
+                "time": 982,
+                "carbs": 50
+            }
+        ]
+    ],
+    "init_bg": [
+        70,
+        120
+    ],
+    "settings": {
+        "basal_iq": false,
+        "correction_factor": 72,
+        "max_bolus": 10,
+        "insulin_duration": 300,
+        "target_bg": 110,
+        "basal_rate": 0.48609375,
+        "carb_ratio": 19
+    },
+    "patient": {
+        "BW": 70
+    },
+    "boluses": [
+        {
+            "time": 0,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 124,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 528,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 914,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 982,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        }
+    ],
+    "duration": 1462
+}

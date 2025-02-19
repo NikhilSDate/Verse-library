@@ -1,0 +1,55 @@
+{
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 150
+            },
+            {
+                "time": 100,
+                "carbs": 10
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 200
+            },
+            {
+                "time": 100,
+                "carbs": 50
+            }
+        ]
+    ],
+    "init_bg": [
+        350,
+        400
+    ],
+    "settings": {
+        "basal_iq": false,
+        "correction_factor": 72,
+        "max_bolus": 10,
+        "insulin_duration": 300,
+        "target_bg": 110,
+        "basal_rate": 0.48609375,
+        "carb_ratio": 19
+    },
+    "patient": {
+        "BW": 70
+    },
+    "boluses": [
+        {
+            "time": 11,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 100,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        }
+    ],
+    "duration": 580
+}

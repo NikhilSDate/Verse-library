@@ -1,0 +1,35 @@
+{
+    "meals": {
+        "number": {"low": 1, "high": 7},
+        "interval": {"low": 60, "high": 480},
+        "forget_prob": 0.1,
+        "forget_delay": {"low": 10, "high": 40},
+        "forget_correction": ["current", "before", "none"],
+        "carbs": [{"low": 10, "high": 50}, {"low": 50, "high": 100}, {"low": 100, "high": 150}, {"low": 150, "high": 200}]
+    },
+    "boluses": {
+        "type": ["simple", "extended"],
+        "correction": [""]
+    },
+    "settings": {
+        "basal_iq": [false]
+    },
+    "patient": {
+        "parameters": [{
+            "GBasal": 6.5
+        }],
+        "init_bg": [{"low": 50, "high": 70}, {"low": 70, "high": 120}, {"low": 120, "high": 180}, {"low": 180, "high": 250}, {"low": 250, "high": 300}, {"low": 300, "high": 350}, {"low": 350, "high": 400}]
+    },
+    "misc": {
+        "duration_buffer": 480,
+        "random_seed": 42
+    },
+
+    "safety": {
+        "tir": {
+            "low": 70,
+            "high": 180
+        }
+    }
+
+}
