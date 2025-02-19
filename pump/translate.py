@@ -15,7 +15,6 @@ from artificial_pancreas_scenario import Meal
 # 
 
 class HovorkaPatient:
-    stateHistorySize = 1000
 
     eInsSub1 = 1
     eInsSub2 = 2

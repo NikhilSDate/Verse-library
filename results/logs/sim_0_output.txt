@@ -17,24 +17,24 @@ Enter Carbs
 DONE
 1
 DONE
-15
+10
 DONE
-150
+100
 NEXT
 CARBS
 grams
 units
-150
+100
 BG
 EXTENDED
-5.17
+5.26
 mg/dL
 DONE
 BACK
 Enter BG
-3
-35
-350
+1
+12
+120
 Your BG is Above Target
 Add Correction Bolus?
 Add Correction Bolus?
@@ -42,48 +42,48 @@ Current IOB
 0 u
 0 u
 Current BG
-350 mg/dL
-350 mg/dL
+120 mg/dL
+120 mg/dL
 NO
 NO
 YES
 NEXT
-350
+120
 CARBS
 grams
 units
-150
+100
 BG
 EXTENDED
-7.37
+5.4
 Confirm Request?
 Carbs
-150 g
+100 g
 BG
-350 mg/dL
+120 mg/dL
 Units To Deliver
-7.37 u
+5.4 u
 NO
 YES
 Correction
-2.2 u
+0.14 u
 Food
-5.17 u
-Deliver 7.37 u Bolus?
+5.26 u
+Deliver 5.4 u Bolus?
 EXTENDED
 BACK
 DELIVER
 BOLUS INITIATED
 BOLUS INITIATED
 BOLUS INITIATED
-7.37 u
-7.37 u
-7.37 u
+5.4 u
+5.4 u
+5.4 u
 Correction
-2.2 u
+0.14 u
 Food
-5.17 u
-Deliver 7.37 u Bolus?
+5.26 u
+Deliver 5.4 u Bolus?
 EXTENDED
 BACK
 DELIVER

@@ -122,6 +122,7 @@ class ArtificialPancreasAgent(BaseAgent):
 
     def get_init_state(self, G, meals):
         body_init_state = self.body.get_init_state(G)
+        print(body_init_state)
         pump_init_state = self.pump.get_init_state()
         scenario_state = self.get_scenario_state()
         meal_state = self.get_meal_state(meals)
@@ -153,12 +154,22 @@ class ArtificialPancreasAgent(BaseAgent):
         return [list(real_lo) + pump_state + meal_state_low + scenario_state, list(real_hi) + pump_state + meal_state_high + scenario_state]
         
     def get_bg(self, Q1):
-        return Q1 / self.body.hovorka_parameters()[12] * 18
+        return Q1 * 18 / self.body.param['Vg']
     
     def reset_pump(self):
         self.pump.reset_pump()
         self.pump.pump_emulator.link_output_buffer(self.logger.output_buffer)
 
+    def get_meals(self, state_vec):
+        raw_meals = self.scenario.get_meals()
+        meals = []
+        for i, orig_meal in enumerate(raw_meals):
+            carbs = state_vec[state_indices[f'carbs_{i}']]
+            meals.append(dataclasses.replace(orig_meal, carbs=carbs))
+        return meals
+    
+    
+    
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
         init = np.abs(init)
@@ -170,21 +181,26 @@ class ArtificialPancreasAgent(BaseAgent):
         
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
+        init[state_indices["G"]] = self.get_bg(init[state_indices["GluPlas"]])
+        init[state_indices["GluMeas"]] = self.body.mmol_to_mgdl(init[state_indices["GluInte"]])
         trace[0, 1:] = init
         state_vec = init
 
-        meal_index = 0
-        
+        self.body.set_meals(self.get_meals(state_vec))
+                
         predictions = [0] * num_points
+        meal_index = 0
         for i in tqdm(range(0, num_points)):
             
             self.logger.tick()
 
-            state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["Q1"]])
+            state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["GluPlas"]])
+            init[state_indices["GluMeas"]] = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
+
             current_time = i * time_step
             events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time)
             bolus, meal = events
-            bg = int(state_vec[state_indices['C']] * 18)
+            bg = int(state_vec[state_indices['GluMeas']])
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)
             carbs = 0
@@ -206,7 +222,7 @@ class ArtificialPancreasAgent(BaseAgent):
             
             self.logger.write_dose(current_time, dose)
             
-            r = ode(lambda t, state: self.body.model(current_time + t, state, dose, carbs))
+            r = ode(lambda t, state: self.body.model(current_time + t, state, dose))
             r.set_initial_value(state_vec[:self.body.num_variables])
             res: np.ndarray = r.integrate(r.t + time_step)
             final = res.flatten()
@@ -221,7 +237,7 @@ class ArtificialPancreasAgent(BaseAgent):
             # scenario state is unchanged
             
             # derived state
-            state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
+            # state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
             prediction = pump_state[1]
             predictions[i] = prediction
             # prediction is 30 mins into the future

@@ -14,7 +14,7 @@ from verse_model import *
 from artificial_pancreas_agent import *
 from pump_model import *
 from cgm import *
-from hovorka_model import HovorkaModel
+from hovorka_model import HovorkaModel, patient_original
 import pickle
 from safety.safety import tir_analysis
 
@@ -34,11 +34,11 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, BW, basal_iq, boluses, meals, duration=24 * 60, settings=None, logging=True, model_params='2004'):
+def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, logging=True, model_params='2004'):
 
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings)
-    body = HovorkaModel(BW, init_bg, parameters=model_params)
+    body = HovorkaModel(params)
     cgm = CGM()
     if logging:
         logger = Logger('results/logs')
@@ -61,11 +61,11 @@ def simulate_multi_meal_scenario(init_bg, BW, basal_iq, boluses, meals, duration
 
     return traces
 
-def verify_multi_meal_scenario(init_bg, BW, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None):
+def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None):
     meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals_low, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings) # we don't have state stuff working yet, so disable basal IQ
-    body = HovorkaModel(BW, init_bg)
+    body = HovorkaModel(params)
     cgm = CGM()
     logger = Logger(log_dir=log_dir)
     agent = ArtificialPancreasAgent(
@@ -183,14 +183,9 @@ def get_recommended_settings(TDD=18.28, BW = 74.9):
 
 
 if __name__ == "__main__":
-    settings = get_recommended_settings(TDD=18.28)
-    
-    settings['basal_rate'] = 0.65
-    
+    settings = get_recommended_settings(TDD=39.22)    
     BW = 74.9  # kg
     basal = 0  # units
-    meals_low = [Meal(0, 150)]
-    boluses = [Bolus(0, -1, BolusType.Simple, None)]
-    traces = simulate_multi_meal_scenario(350, BW, True, boluses, meals_low, duration=8 * 60, settings=settings)
-    fig1 = plot_variable(traces, 'G')
+    traces = simulate_multi_meal_scenario(120, BW, False, [Bolus(0, -1, BolusType.Simple, None)], [Meal(0, 100)], duration=8 * 60, settings=settings)
+    fig1 = plot_variable(traces, 'GluMeas')
     breakpoint()

@@ -79,3 +79,6 @@ class SimulationScenario:
         if time in self.meals:
             return self.meals[time]
         return None
+    
+    def get_meals(self):
+        return [self.meals[t] for t in sorted(self.meals.keys())]

@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import fsolve
 from tqdm import tqdm
+import random
 
 # implementation from https://github.com/jonasnm/svelte-flask-hovorka-simulator/blob/master/hovorka_simulator.py
 
@@ -14,324 +15,325 @@ class HovorkaModel:
     BW is body weight in kilograms
     Gb is basal glucose in mg/dL
     '''
-    def __init__(self, BW, Gb, parameters='2004'):
-        self.BW = BW
-        self.P = self.hovorka_parameters()
     
-    
-    def hovorka_2010(self):
-        """
-        PATIENT PARAMETERS
-        BW - body weight in kilos
-        """
-        # Patient-dependent parameters:
-        V_I = 0.12*self.BW              # Insulin volume [L]
-        V_G = 0.15*self.BW              # Glucose volume [L]
-        
-        
-        F_01 = 0.0111*self.BW           # Non-insulin-dependent glucose flux [mmol/min]
-        EGP_0 = 0.0169*self.BW          # EGP extrapolated to zero insulin concentration [mmol/min]
+    eInsSub1 = 1
+    eInsSub2 = 2
+    eInsPlas = 3
+    eInsActT = 4
+    eInsActD = 5
+    eInsActE = 6
+    eGutAbs = 7
+    eGluPlas = 8
+    eGluComp = 9
+    eGluInte = 10
+    eGluMeas = 11
 
-        # Patient-independent(?) parameters:
-        S_IT = 18.41e-4             # Insulin sensitivity of distribution/transport [L/min*mU]
-        S_ID = 5.05e-4              # Insulin sensitivity of disposal [L/min*mU]
-        S_IE = 0.019              # Insluin sensitivity of EGP [L/mU]
+    def __init__(self, param, meal_plan=None, exercise_plan=None, options=None):
+        self.meal_plan = meal_plan
+        self.exercise_plan = exercise_plan
 
-        tau_G = 40                 # Time-to-maximum CHO absorption [min]
+        # Default options
+        self.opt = {
+            "name": "HovorkaPatient",
+            "patient": ["patientAvg"],
+            "sensorNoiseType": "none",
+            "sensorNoiseValue": 0.4,
+            "intraVariability": 0.0,
+            "mealVariability": 0.0,
+            "basalGlucose": 6.5,
+            "randomInitialConditions": False,
+            "initialGlucose": np.nan,
+            "initialInsulinOnBoard": np.nan,
+            "initialState": [],
+            "useTreatments": True,
+            "treatmentRules": [{
+                "sensorGlucose": 3.9,
+                "bloodGlucose": 2.8,
+                "duration": 15,
+                "lastTreatment": 40
+            }],
+            "wrongPumpParam": False,
+            "pumpBasalsError": {"time": [], "value": []},
+            "carbFactorsError": {"time": [], "value": []},
+            "carbsCountingError": False,
+            "carbsCountingErrorValue": {"bias": [], "std": []},
+            "dailyCarbsCountingError": {"time": [], "value": []},
+            "RNGSeed": -1
+        }
 
-        A_G = 0.8                  # CHO bioavailability [1]
-        k_12 = 0.060               # Transfer rate [min]
+        if options:
+            self.opt.update({k: options[k] for k in self.opt if k in options})
 
-        k_a1 = 0.0034               # Deactivation rate of insulin on distribution/transport [1/min]
-        k_b1 = S_IT * k_a1                    # Activation rate of insulin on distribution/transport
-        k_a2 = 0.056              # Deactivation rate of insulin on dsiposal [1/min]
-        k_b2 = S_ID * k_a1                     # Activation rate of insulin on disposal
-        k_a3 = 0.024                # Deactivation rate of insulin on EGP [1/min]
-        k_b3 = S_IE * k_a1                    # Activation rate of insulin on EGP
+        self.name = self.opt["name"]
+        random.seed(self.opt["RNGSeed"]) if self.opt["RNGSeed"] > 0 else None
 
-        k_e = 0.14                       # Insulin elimination from Plasma [1/min] [mean]
+        self.param = param
 
-        tau_I = 1 / k_a1                 # Time-to-maximum of absorption of s.c. injected short-acting insulin [min]
-
-        R_cl = 0.01
-        ka_int = np.exp(-2.372)
-        R_th = 9
-        # Summary of the patient's values:
-        P = [tau_G, tau_I, A_G, k_12, k_a1, k_b1, k_a2, k_b2, k_a3, k_b3, k_e, V_I, V_G, F_01, EGP_0, R_cl, ka_int, R_th]
-
-        return P
-    
-    def hovorka_parameters(self):
-        """
-        PATIENT PARAMETERS
-        BW - body weight in kilos
-        """
-
-        # Patient-dependent parameters:
-        V_I = 0.12*self.BW              # Insulin volume [L]
-        V_G = 0.16*self.BW              # Glucose volume [L]
-        F_01 = 0.0097*self.BW           # Non-insulin-dependent glucose flux [mmol/min]
-        EGP_0 = 0.0161*self.BW          # EGP extrapolated to zero insulin concentration [mmol/min]
-
-        # Patient-independent(?) parameters:
-        S_IT = 51.2e-4             # Insulin sensitivity of distribution/transport [L/min*mU]
-        S_ID = 8.2e-4              # Insulin sensitivity of disposal [L/min*mU]
-        S_IE = 520e-4              # Insluin sensitivity of EGP [L/mU]
-
-        tau_G = 40                 # Time-to-maximum CHO absorption [min]
-        tau_I = 55                 # Time-to-maximum of absorption of s.c. injected short-acting insulin [min]
-
-        A_G = 0.8                  # CHO bioavailability [1]
-        k_12 = 0.066               # Transfer rate [min]
-
-        k_a1 = 0.006               # Deactivation rate of insulin on distribution/transport [1/min]
-        k_b1 = S_IT*k_a1           # Activation rate of insulin on distribution/transport
-        k_a2 = 0.06                # Deactivation rate of insulin on dsiposal [1/min]
-        k_b2 = S_ID*k_a2           # Activation rate of insulin on disposal
-        k_a3 = 0.03                # Deactivation rate of insulin on EGP [1/min]
-        k_b3 = S_IE*k_a3           # Activation rate of insulin on EGP
-
-        k_e = 0.138                # Insulin elimination from Plasma [1/min]
-
-        # Summary of the patient's values:
-        P = [tau_G, tau_I, A_G, k_12, k_a1, k_b1, k_a2, k_b2, k_a3, k_b3, k_e, V_I, V_G, F_01, EGP_0]
-
-        return P
-    
-    def model(self, t, x, u, D): ## This is the ode version
-        """HOVORKA DIFFERENTIAL EQUATIONS
-        # t:    Time window for the simulation. Format: [t0 t1], or [t1 t2 t3 ... tn]. [min]
-        # x:    Initial conditions
-        # u:    Amount of insulin insulin injected [mU/min]
-        # D:    CHO eating rate [mmol/min]
-        # P:    Model fixed parameters
-        #
-        # Syntax :
-        # [T, X] = ode15s(@Hovorka, [t0 t1], xInitial0, odeOptions, u, D, p);
-        """
-        # TODO: update syntax in docstring
-        
-        
-        P = self.P
-        
-        # some unit conversions so that externally we can use grams and u
-        ############################
-        u *= 1000
-        D *= 1000 / 180
-        ############################
-        
-        # Model variables
-        D1 = x[ 0 ]               # Amount of glucose in compartment 1 [mmol]
-        D2 = x[ 1 ]               # Amount of glucose in compartment 2 [mmol]
-        S1 = x[ 2 ]               # Amount of insulin in compartment 1 [mU]
-        S2 = x[ 3 ]               # Amount of insulin in compartment 2 [mU]
-        Q1 = x[ 4 ]               # Amount of glucose in the main blood stream [mmol]
-        Q2 = x[ 5 ]               # Amount of glucose in peripheral tissues [mmol]
-        I =  x[ 6 ]                # Plasma insulin concentration [mU/L]
-        x1 = x[ 7 ]               # Insluin in muscle tissues [1], x1*Q1 = Insulin dependent uptake of glucose in muscles
-        x2 = x[ 8 ]               # [1], x2*Q2 = Insulin dependent disposal of glucose in the muscle cells
-        x3 = x[ 9 ]              # Insulin in the liver [1], EGP_0*(1-x3) = Endogenous release of glucose by the liver
-        C = x[10]
-
-        # Unpack data
-        tau_G = P[ 0 ]               # Time-to-glucose absorption [min]
-        tau_I = P[ 1 ]               # Time-to-insulin absorption [min]
-        A_G = P[ 2 ]                 # Factor describing utilization of CHO to glucose [1]
-        k_12 = P[ 3 ]                # [1/min] k_12*Q2 = Transfer of glucose from peripheral tissues (ex. muscle to the blood)
-        k_a1 = P[ 4 ]                # Deactivation rate [1/min]
-        k_b1 = P[ 5 ]                # [L/(mU*min)]
-        k_a2 = P[ 6 ]                # Deactivation rate [1/min]
-        k_b2 = P[ 7 ]                # [L/(mU*min)]
-        k_a3 = P[ 8 ]                # Deactivation rate [1/min]
-        k_b3 = P[ 9 ]               # [L/(mU*min)]
-        k_e = P[ 10 ]                # Insulin elimination rate [1/min]
-        V_I = P[ 11 ]                # Insulin distribution volume [L]
-        V_G = P[ 12 ]                # Glucose distribution volume [L]
-        F_01 = P[ 13 ]               # Glucose consumption by the central nervous system [mmol/min]
-        EGP_0 = P[ 14 ]              # Liver glucose production rate [mmol/min]
-
-        # If some parameters are not defined
-        if len(P) == 15:
-            ka_int = 0.073
-            R_cl = 0.003
-            # R_thr = 9
-            R_thr = 14
-        elif len(P) == 18:
-            R_cl = P[16]
-            ka_int = P[15]
-            R_thr = P[17]
-
-        # Certain parameters are defined
-        U_G = D2/tau_G             # Glucose absorption rate [mmol/min]
-        U_I = S2/tau_I             # Insulin absorption rate [mU/min]
-
-        # Constitutive equations
-        G = Q1/V_G                 # Glucose concentration [mmol/L]
-
-        # if (G>=4.5):
-        #     F_01c = F_01           # Consumption of glucose by the central nervous system [mmol/min
-        # else:
-        #     F_01c = F_01*G/4.5     # Consumption of glucose by the central nervous system [mmol/min]
-
-        F_01s = F_01/0.85
-        F_01c = F_01s*G / (G + 1)
-
-        # if (G>=9):
-            # F_R = 0.003*(G-9)*V_G  # Renal excretion of glucose in the kidneys [mmol/min]
-        # else:
-            # F_R = 0                # Renal excretion of glucose in the kidneys [mmol/min]
-
-        if (G >= R_thr):
-            F_R = R_cl*(G - R_thr)*V_G  # Renal excretion of glucose in the kidneys [mmol/min]
+        if self.opt["basalGlucose"] < 0:
+            self.param["GBasal"] = np.random.normal(6.5, 1.0)
+            while self.param["GBasal"] < 5 or self.param["GBasal"] > 8:
+                self.param["GBasal"] = np.random.normal(6.5, 1.0)
         else:
-            F_R = 0                # Renal excretion of glucose in the kidneys [mmol/min]
-
-        # Mass balances/differential equations
-        xdot = np.zeros (11)
-
-        xdot[ 0 ] = A_G*D-D1/tau_G                                # dD1
-        xdot[ 1 ] = D1/tau_G-U_G                                  # dD2
-    
-        xdot[ 2 ] = u-S1/tau_I                                    # dS1
-        xdot[ 3 ] = S1/tau_I-U_I                                  # dS2
-    
-        xdot[ 4 ] = -(F_01c+F_R) - x1*Q1 + k_12*Q2 + U_G + max(EGP_0*(1-x3), 0)   # dQ1
-        xdot[ 5 ] = x1*Q1-(k_12+x2)*Q2                            # dQ2
-
-        xdot[ 6 ] = U_I/V_I-k_e*I                                 # dI
-        
-        xdot[ 7 ] = k_b1*I-k_a1*x1                                # dx1
-        xdot[ 8 ] = k_b2*I-k_a2*x2                                # dx2
-        xdot[ 9 ] = k_b3*I-k_a3*x3                                # dx3
-
-        # ===============
-        # CGM delay
-        # ===============
-        xdot[10] = ka_int*(G - C)
+            self.param["GBasal"] = self.opt["basalGlucose"]
 
 
-        return xdot
-    
-    # TODO: this and model() should somehow be merged
-    # TODO: values don't 100% line up with values from simulator, try to find out why
-    # instead of solving for the glucose value that will give us a steady state with a fixed  basal rate, 
-    # we solve for the basal rate that will give us a steady state with basal glucose level fixed
-    def solve_model(self, x, *args):
-        Gb = args[0]
-        
-        D = 0
-        P = self.P
+        if "RCl" not in self.param:
+            self.param["RTh"] = 14
+            self.param["RCl"] = np.random.lognormal(np.log(1 / (2 * 60)), 0.2)
 
-        # XXX: slight hack, make u = x[4] instead of Q1
-        D1 = x[ 0 ]               # Amount of glucose in compartment 1 [mmol]
-        D2 = x[ 1 ]               # Amount of glucose in compartment 2 [mmol]
-        S1 = x[ 2 ]               # Amount of insulin in compartment 1 [mU]
-        S2 = x[ 3 ]               # Amount of insulin in compartment 2 [mU]
-        u = x[ 4 ]               # Amount of glucose in the main blood stream [mmol]
-        Q2 = x[ 5 ]               # Amount of glucose in peripheral tissues [mmol]
-        I =  x[ 6 ]                # Plasma insulin concentration [mU/L]
-        x1 = x[ 7 ]               # Insluin in muscle tissues [1], x1*Q1 = Insulin dependent uptake of glucose in muscles
-        x2 = x[ 8 ]               # [1], x2*Q2 = Insulin dependent disposal of glucose in the muscle cells
-        x3 = x[ 9 ]              # Insulin in the liver [1], EGP_0*(1-x3) = Endogenous release of glucose by the liver
-        C = x[10]
+        if "TGlu" not in self.param:
+            self.param["TauGlu"] = np.random.lognormal(np.log(19), 0.2)
+            self.param["TGlu"] = np.random.lognormal(np.log(0.0012), 0.2)
+            self.param["MCRGlu"] = np.random.lognormal(np.log(0.012), 0.2)
 
-        # Unpack data
-        tau_G = P[ 0 ]               # Time-to-glucose absorption [min]
-        tau_I = P[ 1 ]               # Time-to-insulin absorption [min]
-        A_G = P[ 2 ]                 # Factor describing utilization of CHO to glucose [1]
-        k_12 = P[ 3 ]                # [1/min] k_12*Q2 = Transfer of glucose from peripheral tissues (ex. muscle to the blood)
-        k_a1 = P[ 4 ]                # Deactivation rate [1/min]
-        k_b1 = P[ 5 ]                # [L/(mU*min)]
-        k_a2 = P[ 6 ]                # Deactivation rate [1/min]
-        k_b2 = P[ 7 ]                # [L/(mU*min)]
-        k_a3 = P[ 8 ]                # Deactivation rate [1/min]
-        k_b3 = P[ 9 ]               # [L/(mU*min)]
-        k_e = P[ 10 ]                # Insulin elimination rate [1/min]
-        V_I = P[ 11 ]                # Insulin distribution volume [L]
-        V_G = P[ 12 ]                # Glucose distribution volume [L]
-        F_01 = P[ 13 ]               # Glucose consumption by the central nervous system [mmol/min]
-        EGP_0 = P[ 14 ]              # Liver glucose production rate [mmol/min]
+        if self.opt["randomInitialConditions"]:
+            self.opt["initialGlucose"] = self.param["GBasal"] * (1 + 2.0 * np.random.randn())
+            while self.opt["initialGlucose"] < 4 or self.opt["initialGlucose"] > 12:
+                self.opt["initialGlucose"] = self.param["GBasal"] * (1 + 2.0 * np.random.randn())
 
-        # If some parameters are not defined
-        if len(P) == 15:
-            ka_int = 0.073
-            R_cl = 0.003
-            # R_thr = 9
-            R_thr = 14
-        elif len(P) == 18:
-            R_cl = P[16]
-            ka_int = P[15]
-            R_thr = P[17]
-
-        Q1 = Gb * V_G
-
-        # Certain parameters are defined
-        U_G = D2/tau_G             # Glucose absorption rate [mmol/min]
-        U_I = S2/tau_I             # Insulin absorption rate [mU/min]
-
-        # Constitutive equations
-        G = Q1/V_G                 # Glucose concentration [mmol/L]
-
-        # if (G>=4.5):
-        #     F_01c = F_01           # Consumption of glucose by the central nervous system [mmol/min
-        # else:
-        #     F_01c = F_01*G/4.5     # Consumption of glucose by the central nervous system [mmol/min]
-
-        F_01s = F_01/0.85
-        F_01c = F_01s*G / (G + 1)
-
-        # if (G>=9):
-            # F_R = 0.003*(G-9)*V_G  # Renal excretion of glucose in the kidneys [mmol/min]
-        # else:
-            # F_R = 0                # Renal excretion of glucose in the kidneys [mmol/min]
-
-        if (G >= R_thr):
-            F_R = R_cl*(G - R_thr)*V_G  # Renal excretion of glucose in the kidneys [mmol/min]
+            self.opt["initialInsulinOnBoard"] = 0.1 * self.param["TDD"] * (np.random.rand() - 0.5)
+            while self.opt["initialInsulinOnBoard"] < -0.8 * self.param["Ub"]:
+                self.opt["initialInsulinOnBoard"] = 0.1 * self.param["TDD"] * (np.random.rand() - 0.5)
         else:
-            F_R = 0                # Renal excretion of glucose in the kidneys [mmol/min]
+            self.opt["initialGlucose"] = self.param["GBasal"] if np.isnan(self.opt["initialGlucose"]) else self.opt["initialGlucose"]
+            self.opt["initialInsulinOnBoard"] = 0.0 if np.isnan(self.opt["initialInsulinOnBoard"]) else self.opt["initialInsulinOnBoard"]
 
-        # Mass balances/differential equations
-        xdot = np.zeros (12)
+        self.param["carbFactors"] = {"value": self.param["carbF"], "time": 0}
+        self.param["pumpBasals"] = {"value": self.param["Ub"], "time": 0}
 
-        xdot[ 0 ] = A_G*D-D1/tau_G                                # dD1
-        xdot[ 1 ] = D1/tau_G-U_G                                  # dD2
-    
-        xdot[ 2 ] = u-S1/tau_I                                    # dS1
-        xdot[ 3 ] = S1/tau_I-U_I                                  # dS2
-    
-        xdot[ 4 ] = -(F_01c+F_R) - x1*Q1 + k_12*Q2 + U_G + max(EGP_0*(1-x3), 0)   # dQ1
-        xdot[ 5 ] = x1*Q1-(k_12+x2)*Q2                            # dQ2
+        self.apply_wrong_pump_param()
+        self.apply_carbs_counting_errors()
 
-        xdot[ 6 ] = U_I/V_I-k_e*I                                 # dI
+        self.CGM = {
+            "lambda": 15.96,
+            "epsilon": -5.471,
+            "delta": 1.6898,
+            "gamma": -0.5444,
+            "error": 0
+        }
+
+        self.meals = []
+        self.glucagon = []
+
+        self.variability = {key: {"val": self.param[key], "target": self.param[key]} for key in [
+            "EGP0", "F01", "k12", "ka1", "ka2", "ka3", "St", "Sd", "Se", "ka", "ke"
+        ]}
         
-        xdot[ 7 ] = k_b1*I-k_a1*x1                                # dx1
-        xdot[ 8 ] = k_b2*I-k_a2*x2                                # dx2
-        xdot[ 9 ] = k_b3*I-k_a3*x3                                # dx3
+        for k, v in self.variability.items():
+            self.variability[k]['val'] = self.param[k]
+            self.variability[k]['target'] = self.param[k]
 
-        # ===============
-        # CGM delay
-        # ===============
-        xdot[10] = ka_int*(G - C)
+        self.stateScale = np.array([
+            1.0, 1.0, 1e-6 * 60 * self.param["ke"] * (self.param["Vi"] * self.param["w"]),
+            1.0, 1.0, 1.0, 60 / self.param["Vg"], 1 / self.param["Vg"],
+            1 / self.param["Vg"], 1.0, 1.0
+        ])
 
-        return xdot
+    def load_patient_parameters(self, patient_name):
+        pass
+
+    def apply_wrong_pump_param(self):
+        pass
+
+    def apply_carbs_counting_errors(self):
+        pass
+
+    def apply_intra_variability(self, t):
+        for key in self.variability:
+            if isinstance(self.variability[key], dict):
+                self.variability[key]["target"] = self.param[key]
+
+        if self.opt["intraVariability"] > 0:
+            for key in self.variability:
+                if isinstance(self.variability[key], dict):
+                    self.variability[key]["target"] = self.param[key] * (
+                        1 + 0.2 * self.opt["intraVariability"] * np.sin(2 * np.pi * (t + self.variability[key]["phase"]) / self.variability[key]["period"])
+                    )
+
+        exerc_int = 0
+        exerc_type = "aerobic"
+        for exercise in self.exercises:
+            if exercise["time"] <= t < exercise["time"] + exercise["duration"]:
+                exerc_int = exercise["intensity"]
+                exerc_type = ExercisePlan.types_of_exercise[exercise["type"]]
+
+        if exerc_int > 0:
+            self.variability["ka"]["target"] = self.param["ka"] * (1 + 2 * exerc_int)
+            self.variability["ka1"]["target"] = self.param["ka1"] * (1 + 4 * exerc_int)
+            self.variability["ka2"]["target"] = self.param["ka2"] * (1 + 4 * exerc_int)
+            self.variability["ka3"]["target"] = self.param["ka3"] * (1 + 4 * exerc_int)
+
+            if exerc_type == "mixed":
+                mixing_effect = -0.7 + (0.7 + 0.7) * np.random.rand()
+                mixing_coeff = [1 + mixing_effect, 1 - mixing_effect]
+            else:
+                mixing_coeff = [1, 1]
+
+            if exerc_type in ["aerobic", "mixed"]:
+                self.variability["St"]["target"] = self.param["St"] * (1 + 5 * mixing_coeff[0] * exerc_int)
+                self.variability["Sd"]["target"] = self.param["Sd"] * (1 + 10 * mixing_coeff[0] * exerc_int)
+
+            if exerc_type in ["anaerobic", "mixed"]:
+                self.variability["EGP0"]["target"] = self.param["EGP0"] * (1 + mixing_coeff[1] * exerc_int)
+                self.variability["Se"]["target"] = self.param["Se"] / (1 + 6 * mixing_coeff[1] * exerc_int)
+
+        alpha = 0.7
+        for key in self.variability:
+            if isinstance(self.variability[key], dict):
+                self.variability[key]["val"] = (1 - alpha) * self.variability[key]["val"] + alpha * self.variability[key]["target"]
+
     
-    def _get_init_state(self, Gb):
-        Gb = Gb / 18
-        sol = fsolve(self.solve_model, np.zeros(12), args=(Gb,))
-        ideal_basal = sol[4]
-        sol[4] = Gb * self.P[12]
-        sol[11] = sol[10] * 18
-        print(ideal_basal)
-        return sol, ideal_basal
+    
+    def gut2comp_model(self, t, meal):
+        if t > (meal["time"] + meal["Delay"]):
+            return (1e6 / (self.param["w"] * self.param["MCHO"])) * meal["Bio"] * meal["value"] * \
+                (t - meal["time"] - meal["Delay"]) * np.exp(-(t - meal["time"] - meal["Delay"]) / meal["TauM"]) / meal["TauM"]**2
+        return 0
+
+    def _get_initial_state(self, opt):
+        initial_state = np.zeros(self.eGluMeas + 1)
+        Gs0 = opt["initialGlucose"]
+        initial_state[self.eGluPlas] = Gs0 * self.param["Vg"]
+        initial_state[self.eGluMeas] = Gs0
+        initial_state[self.eGluInte] = Gs0
+
+        Qb = opt["initialInsulinOnBoard"] if "initialInsulinOnBoard" in opt else 0
+
+        initial_state[self.eInsPlas] = (self.param["Ub"] + Qb) / (
+            self.param["ke"] / (1e6 * self.param["ka"] / (self.param["Vi"] * self.param["w"])))
+
+        initial_state[self.eInsActT] = self.param["St"] * initial_state[self.eInsPlas]
+        initial_state[self.eInsActD] = self.param["Sd"] * initial_state[self.eInsPlas]
+        initial_state[self.eInsActE] = self.param["Se"] * initial_state[self.eInsPlas]
+
+        Q10 = Gs0 * self.param["Vg"]
+        Q20 = Q10 * initial_state[self.eInsActT] / (initial_state[self.eInsActD] + self.param["k12"])
+        initial_state[self.eGluComp] = Q20
+
+        initial_state[self.eInsSub1] = self.param["Ub"] / 60 / self.param["ka"]
+        initial_state[self.eInsSub2] = initial_state[self.eInsSub1]
+
+        initial_state[self.eGutAbs] = 0
+
+        return initial_state
+
+    def model(self, t, y, u):
+        dydt = np.zeros_like(y)
+
+        dydt[self.eInsSub1] = u - y[self.eInsSub1] * self.variability["ka"]["val"] # changed u / 60 to u since we are sending raw insulin amounts
+        dydt[self.eInsSub2] = y[self.eInsSub1] * self.variability["ka"]["val"] - y[self.eInsSub2] * self.variability["ka"]["val"]
+
+        GluPlas = sum(
+            (1e6 / (self.param["w"] * self.param["MCRGlu"])) * g["value"] *
+            (t - g["time"]) * np.exp(-(t - g["time"]) / self.param["TauGlu"]) / self.param["TauGlu"]**2
+            for g in self.glucagon
+        )
+
+        dydt[self.eInsPlas] = 1e6 * y[self.eInsSub2] * self.variability["ka"]["val"] / (self.param["Vi"] * self.param["w"]) - \
+                            y[self.eInsPlas] * self.variability["ke"]["val"]
+
+        dydt[self.eInsActT] = -self.variability["ka1"]["val"] * y[self.eInsActT] + \
+                            self.variability["ka1"]["val"] * self.variability["St"]["val"] * y[self.eInsPlas]
+        dydt[self.eInsActD] = -self.variability["ka2"]["val"] * y[self.eInsActD] + \
+                            self.variability["ka2"]["val"] * self.variability["Sd"]["val"] * y[self.eInsPlas]
+        dydt[self.eInsActE] = -self.variability["ka3"]["val"] * y[self.eInsActE] + \
+                            self.variability["ka3"]["val"] * self.variability["Se"]["val"] * y[self.eInsPlas]
+
+        Um = sum(self.gut2comp_model(t, meal) for meal in self.meals)
+
+
+        GluPlas_exp = np.exp(-1 / (GluPlas * self.param["TGlu"])) if GluPlas != 0 else 0
+        dydt[self.eGluPlas] = -((self.variability["F01"]["val"] / 0.85) / (y[self.eGluPlas] + self.param["Vg"]) + y[self.eInsActT]) * y[self.eGluPlas] + \
+                            self.variability["k12"]["val"] * y[self.eGluComp] - \
+                            self.param["RCl"] * (y[self.eGluPlas] - self.param["RTh"] * self.param["Vg"]) * \
+                            (y[self.eGluPlas] > self.param["RTh"] * self.param["Vg"]) + \
+                            self.variability["EGP0"]["val"] * (np.exp(-y[self.eInsActE]) + GluPlas_exp) + Um
+
+        dydt[self.eGluComp] = y[self.eInsActT] * y[self.eGluPlas] - \
+                            (self.variability["k12"]["val"] + y[self.eInsActD]) * y[self.eGluComp]
+
+        dydt[self.eGluInte] = (y[self.eGluPlas] / self.param["Vg"] - y[self.eGluInte]) / self.param["TauS"]
+
+        return dydt
+    
+    def construct_meal(self, meal):
+        return {
+            'time': meal.time,
+            'value': meal.carbs,
+            'Delay': 0,
+            'TauM': self.param['TauM'],
+            'Bio': self.param['Bio']
+        }
+        
+    def set_meals(self, meals):
+        self.meals = [self.construct_meal(meal) for meal in meals] 
     
     def get_init_state(self, G):
-        return self._get_init_state(G)[0]
+        G = self.mgdl_to_mmol(G)
+        return self._get_initial_state({'initialGlucose': G})
     
     def get_init_range(self, Gl, Gh):
-        return [self._get_init_state(Gl)[0], self._get_init_state(Gh)[0]]
+        return [self.get_init_state(Gl), self.get_init_state(Gh)]
     
+    def mmol_to_mgdl(self, G):
+        return G * 18
     
+    def mgdl_to_mmol(self, G):
+        return G / 18
     
+def patient_original(opt):
+    param = {
+        "MCHO": 180.1577,
+        "w": 74.9,
+        "TauS": np.exp(2.372),
+        "EGP0": 16.9,
+        "F01": 11.1,
+        "k12": 0.060,
+        "RTh": 9,
+        "RCl": 0.01,
+        "ka1": 0.0034,
+        "ka2": 0.056,
+        "ka3": 0.024,
+        "St": 18.41e-4,
+        "Sd": 5.05e-4,
+        "Se": 190e-4,
+        "ka": 0.018,
+        "ke": 0.14,
+        "Vi": 120,
+        "Vg": 160,
+        "Bio": 0.8,
+        "TauM": 1 / 0.025,
+        "TauGlu": 19,
+        "TGlu": 0.0012,
+        "MCRGlu": 0.012
+    }
+    Gs0 = opt["basalGlucose"]
+    Q10 = Gs0 * param["Vg"]
+    Fn = Q10 * (param["F01"] / 0.85) / (Q10 + param["Vg"])
+    Fr = param["RCl"] * (Q10 - param["RTh"] * param["Vg"]) * (Q10 > param["RTh"] * param["Vg"])
+    
+    coefficients = [
+        -Q10 * param["St"] * param["Sd"] - param["EGP0"] * param["Sd"] * param["Se"],
+        -param["k12"] * param["EGP0"] * param["Se"] + (param["EGP0"] - Fr - Fn) * param["Sd"],
+        param["k12"] * (param["EGP0"] - Fn - Fr)
+    ]
+    roots_solution = np.roots(coefficients)
+    real_roots = [r.real for r in roots_solution if np.isreal(r)]
+    
+    if not real_roots:
+        raise ValueError()
+    
+    initial_guess = max(real_roots)
+    
+    def insulin_equation(x):
+        return (-Fn - Q10 * param["St"] * x + param["k12"] * (Q10 * param["St"] * x) / (param["k12"] + param["Sd"] * x) - Fr + param["EGP0"] * np.exp(-param["Se"] * x))
+    
+    Ip0 = fsolve(insulin_equation, initial_guess)[0]
+    
+    param["Ub"] = 60 * Ip0 * param["ke"] / (1e6 / (param["Vi"] * param["w"]))
+    param["carbF"] = min(max(round(2 * (param["MCHO"] * (0.4 * max(param["St"], 16e-4) + 0.6 * min(max(param["Sd"], 3e-4), 12e-4)) * Gs0 * param["Vg"])/(param["ke"] * param["Vi"]))/2, 2), 25)
+    param["TDD"] = min(max(round(param["Ub"] * 24 + 200 / param["carbF"], 2), 10), 110)
+    return param
     
         
     

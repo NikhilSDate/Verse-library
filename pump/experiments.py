@@ -3,7 +3,7 @@ from verse_model import *
 from artificial_pancreas_agent import *
 from pump_model import *
 from cgm import *
-from hovorka_model import HovorkaModel
+from hovorka_model import HovorkaModel, patient_original
 import pickle
 import random
 import json
@@ -77,13 +77,15 @@ def generate_scenario(config):
     init_bg_range = np.random.choice(config['patient']['init_bg'])
     init_bg = [init_bg_range['low'], init_bg_range['high']]
     
-    settings = get_recommended_settings()
+    GBasal = np.random.choice(config['patient']['parameters'])['GBasal']
+    patient_params = patient_original({'basalGlucose': GBasal})
+    
+    settings = get_recommended_settings(BW=patient_params['w'], TDD=patient_params['TDD'])
     
     # FIXME: there is probably a better way to handle this
     basal_iq = np.random.choice(config['settings']['basal_iq'])
     settings['basal_iq'] = basal_iq
     
-    patient_params = np.random.choice(config['patient']['parameters'])
     
     # we need some buffer for the duration
     duration = meal_times[-1] + config['misc']['duration_buffer']
@@ -98,7 +100,9 @@ def generate_scenario(config):
     })
     
 def run_scenario(scenario, log_dir):
-    traces = verify_multi_meal_scenario(scenario['init_bg'], scenario['patient']['BW'], scenario['settings']['basal_iq'], scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
+    
+    # HACK    
+    traces = verify_multi_meal_scenario(scenario['init_bg'], thaw(scenario['patient']), scenario['settings']['basal_iq'], scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
     return traces   
 
 def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
@@ -164,4 +168,4 @@ if __name__ == '__main__':
     random.seed(seed)
     safety_analyzer = SafetyAnalyzer(config['safety'])
     scenario = generate_scenario(config)
-    test(config, 20, safety_analyzer, 'results/fuzzing_new')
+    test(config, 20, safety_analyzer, 'results/fuzzing_translate')
