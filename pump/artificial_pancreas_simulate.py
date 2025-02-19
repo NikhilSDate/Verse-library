@@ -75,8 +75,6 @@ def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, durati
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
     init_state = agent.get_init_range(init_bg[0], init_bg[1], meals_low, meals_high)
-    print(init_state)
-    breakpoint()
     init = init_state
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))

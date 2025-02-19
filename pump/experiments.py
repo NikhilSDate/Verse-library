@@ -9,6 +9,8 @@ import random
 import json
 from pyrsistent import freeze, thaw
 from dataclasses import asdict
+import argparse
+from shutil import rmtree
 
 # this is currently only to provide a human-readable representation of a scenario
 # the actual serialization/deserialization is done by pickling
@@ -112,10 +114,15 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
     scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
     scenario_idx = 0
     for dir in scenario_dirs:
-        with open(os.path.join(dir.path, 'scenario.pkl'), 'rb') as f:
-            scenario = pickle.load(f)
-        scenarios_tested.add(scenario)
-        scenario_idx = max(scenario_idx, int(dir.name[9:])) # FIXME: there is probably a better way to take out the scenario_ prefix
+        try:
+            with open(os.path.join(dir.path, 'scenario.pkl'), 'rb') as f:
+                scenario = pickle.load(f)
+            scenarios_tested.add(scenario)
+            scenario_idx = max(scenario_idx, int(dir.name[9:])) # FIXME: there is probably a better way to take out the scenario_ prefix
+        except:
+            # this scenario was not fully tested, so we need to re-test
+            rmtree(dir)
+    
     
     scenario_idx += 1
     
@@ -161,6 +168,11 @@ def iob_correction_demo(settings):
     
     
 if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path')
+    args = parser.parse_args()
+    
     with open('./pump/configurations/testing_config.json') as f:
         config = json.load(f)
     seed = config['misc']['random_seed']
@@ -168,4 +180,4 @@ if __name__ == '__main__':
     random.seed(seed)
     safety_analyzer = SafetyAnalyzer(config['safety'])
     scenario = generate_scenario(config)
-    test(config, 20, safety_analyzer, 'results/fuzzing_translate')
+    test(config, 20, safety_analyzer, args.path)
