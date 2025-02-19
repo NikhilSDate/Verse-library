@@ -30,3 +30,4 @@ build/
 test/
 my_notes/
 plots/
+.env
