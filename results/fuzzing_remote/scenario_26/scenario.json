@@ -1,0 +1,94 @@
+{
+    "settings": {
+        "basal_rate": 0.48585416666666664,
+        "max_bolus": 10,
+        "insulin_duration": 300,
+        "carb_ratio": 19,
+        "target_bg": 110,
+        "correction_factor": 72,
+        "basal_iq": false
+    },
+    "boluses": [
+        {
+            "time": 0,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 478,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 626,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        }
+    ],
+    "init_bg": [
+        350,
+        400
+    ],
+    "duration": 1106,
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 150
+            },
+            {
+                "time": 478,
+                "carbs": 100
+            },
+            {
+                "time": 626,
+                "carbs": 50
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 200
+            },
+            {
+                "time": 478,
+                "carbs": 150
+            },
+            {
+                "time": 626,
+                "carbs": 100
+            }
+        ]
+    ],
+    "patient": {
+        "TauM": 40.0,
+        "TDD": 39.22,
+        "EGP0": 16.9,
+        "ka3": 0.024,
+        "Vg": 160,
+        "Vi": 120,
+        "TauS": 10.718808477734166,
+        "RTh": 9,
+        "MCRGlu": 0.012,
+        "Bio": 0.8,
+        "Se": 0.019,
+        "w": 74.9,
+        "TauGlu": 19,
+        "Sd": 0.000505,
+        "St": 0.001841,
+        "k12": 0.06,
+        "ka": 0.018,
+        "carbF": 11.5,
+        "F01": 11.1,
+        "TGlu": 0.0012,
+        "ka2": 0.056,
+        "Ub": 0.9097168337052114,
+        "RCl": 0.01,
+        "ka1": 0.0034,
+        "ke": 0.14,
+        "MCHO": 180.1577
+    }
+}

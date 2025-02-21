@@ -111,6 +111,10 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
     scenarios_tested = set()
     
     # load already executed scenarios
+    
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
     scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
     scenario_idx = 0
     for dir in scenario_dirs:
@@ -132,7 +136,6 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
         os.makedirs(scenario_log_dir)
         traces = run_scenario(scenario, scenario_log_dir)
-        plot_variable(traces, 'G')
         analysis_results = safety_analyzer.analyze(traces)  
         with open(os.path.join(scenario_log_dir, 'safety.json'), 'w+') as f:
             json.dump(analysis_results, f)
@@ -146,10 +149,10 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         scenarios_tested.add(scenario)
     
 
-def plot_scenario(log_dir, index, variable):
+def plot_scenario(log_dir, index, variable, show=False):
     with open(os.path.join(log_dir, f'scenario_{index}', 'traces.pkl'), 'rb') as f:
         traces = pickle.load(f)
-    fig = plot_variable(traces, variable)
+    fig = plot_variable(traces, variable, show=show)
     return fig
     
 def iob_correction_demo(settings):
@@ -173,11 +176,13 @@ if __name__ == '__main__':
     parser.add_argument('--path')
     args = parser.parse_args()
     
-    with open('./pump/configurations/testing_config.json') as f:
-        config = json.load(f)
-    seed = config['misc']['random_seed']
-    np.random.seed(seed)
-    random.seed(seed)
-    safety_analyzer = SafetyAnalyzer(config['safety'])
-    scenario = generate_scenario(config)
-    test(config, 20, safety_analyzer, args.path)
+    # with open('./pump/configurations/testing_config.json') as f:
+    #     config = json.load(f)
+    # seed = config['misc']['random_seed']
+    # np.random.seed(seed)
+    # random.seed(seed)
+    # safety_analyzer = SafetyAnalyzer(config['safety'])
+    # scenario = generate_scenario(config)
+    # test(config, 50, safety_analyzer, args.path)
+    fig = plot_scenario(args.path, 28, 'G', show=False)
+    fig.write_image('remote.png')
