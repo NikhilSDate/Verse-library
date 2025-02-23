@@ -11,14 +11,27 @@ def safety_report(traces, range_low=70, range_high=180, critical_low=40, critica
 
 # glucose reachtube is array of [low, high] indexed by time
 def tir_analysis(glucose_reachtube, tir_low=70, tir_high=180):
+    hlb = np.max(glucose_reachtube[:, 1])
+    lub = np.min(glucose_reachtube[:, 1])
     worst_case_count = 0
     best_case_count = 0
     for (low, high) in glucose_reachtube:
+        
         if low >= tir_low and high <= tir_high:
             worst_case_count += 1
         if low <= tir_high and high >= tir_low:
             best_case_count += 1
-    return worst_case_count / len(glucose_reachtube), best_case_count / len(glucose_reachtube)
+        
+    return {
+        'tir': 
+            {
+                'low': worst_case_count / len(glucose_reachtube),
+                'high': best_case_count / len(glucose_reachtube)
+            },
+        'lub': lub,
+        'hlb': hlb
+    }
+
 
 if __name__ == '__main__':
     print(safety_report([100, 110, 100, 110, 10, 100]))

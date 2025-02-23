@@ -21,6 +21,7 @@ from artificial_pancreas_scenario import *
 from hovorka_model import HovorkaModel
 from pump_model import *
 from state_utils import state_indices, num_meals
+from simutils import FORGOT_BOLUS
 
 import dataclasses
 
@@ -208,12 +209,20 @@ class ArtificialPancreasAgent(BaseAgent):
                 meal_index += 1
 
 
-            if bolus and bolus.carbs == -1:
-                # "fill in" carbs: later this should be moved to some "user agent"
-                bolus = dataclasses.replace(bolus, carbs=carbs)
-            
             if bolus:
-                self.pump.send_bolus_command(bg, bolus)
+                if bolus.carbs == -1:
+                # "fill in" carbs: later this should be moved to some "user agent"
+                    bolus = dataclasses.replace(bolus, carbs=carbs)
+                    self.pump.send_bolus_command(bg, bolus)
+                elif bolus.carbs == FORGOT_BOLUS:
+                    if meal_index == 0:
+                        raise ValueError("Forgot Bolus but no meal")
+                    carbs = state_vec[state_indices[f'carbs_{meal_index - 1}']]
+                    bolus = dataclasses.replace(bolus, carbs=carbs)
+                    self.pump.send_bolus_command(None, bolus)
+                else:
+                    self.pump.send_bolus_command(bg, bolus)
+                
 
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             

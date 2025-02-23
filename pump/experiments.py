@@ -11,6 +11,7 @@ from pyrsistent import freeze, thaw
 from dataclasses import asdict
 import argparse
 from shutil import rmtree
+from simutils import FORGOT_BOLUS
 
 # this is currently only to provide a human-readable representation of a scenario
 # the actual serialization/deserialization is done by pickling
@@ -35,13 +36,8 @@ class SafetyAnalyzer:
     
     def analyze(self, traces):
         glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
-        tir_low, tir_high = tir_analysis(glucose_trace, self.config['tir']['low'], self.config['tir']['high'])
-        return {
-            'tir': {
-                'lb': tir_low,
-                'ub': tir_high
-            }
-        }
+        return tir_analysis(glucose_trace, self.config['tir']['low'], self.config['tir']['high'])
+
 
 def generate_scenario(config):
     # first we will build the meal config
@@ -73,7 +69,7 @@ def generate_scenario(config):
         else:
             # if the user forgot, do they realize later?
             delay = np.random.randint(forget_delay['low'], forget_delay['high'])
-            boluses.append(Bolus(meal_times[i] + delay, 0, BolusType.Simple, None)) # TODO: handle correction here
+            boluses.append(Bolus(meal_times[i] + delay, FORGOT_BOLUS, BolusType.Simple, None)) # TODO: handle correction here
     
     
     init_bg_range = np.random.choice(config['patient']['init_bg'])
@@ -169,20 +165,46 @@ def iob_correction_demo(settings):
     fig1 = plot_variable(traces, 'iob')
     fig5 = plot_variable(traces, 'G')
     
+
+def basaliq_empirical_test(num_samples):
+    settings = get_recommended_settings(TDD=39.22)
+    BW = 74.9  # kg
+    basal = 0  # units
+    params = patient_original({'basalGlucose': 6.5})
+    settings['basal_rate'] = 1.5
+    settings['carb_ratio'] = 10
+    settings['max_bolus'] = 20
+    meals_low = [Meal(0, 30), Meal(240, 60), Meal(600, 50), Meal(840, 20)]
+    meals_high = [Meal(0, 50), Meal(240, 100), Meal(600, 70), Meal(840, 40)]
+    boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(240, -1, BolusType.Simple, None), Bolus(600, -1, BolusType.Simple, None), Bolus(840, -1, BolusType.Simple, None)]
+    if not os.path.exists('results/basaliq/traces.pkl'):
+        traces = verify_multi_meal_scenario([80, 120], params, True, boluses, [meals_low, meals_high], duration=24 * 60, settings=settings, logging=False)
+        with open('results/basaliq/traces.pkl', 'wb+') as f:
+            pickle.dump(traces, f)
+    
+    # now randomly sample from distribution and check containment
+    for i in range(num_samples):
+        # get a sample
+        bg = np.random.uniform(80, 120)
+        
+        m1 = np.random.uniform(30, 50)
+        m2 = np.random.uniform(60, 100)
+        m3 = np.random.uniform(50, 70)
+        m4 = np.random.uniform(20, 40)
+        
+        print(f'simulating({bg}, {m1}, {m2}, {m3}, {m4})')
+        
+        meals = [Meal(0, m1), Meal(240, m2), Meal(600, m3), Meal(840, m4)]
+    
+    
+def fuzz(config_file, num_scenarios, results_path):
+    with open(config_file) as f:
+        config = json.load(f)
+    seed = config['misc']['random_seed']
+    np.random.seed(seed)
+    random.seed(seed)
+    safety_analyzer = SafetyAnalyzer(config['safety'])
+    test(config, num_scenarios, safety_analyzer, results_path)
     
 if __name__ == '__main__':
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--path')
-    args = parser.parse_args()
-    
-    # with open('./pump/configurations/testing_config.json') as f:
-    #     config = json.load(f)
-    # seed = config['misc']['random_seed']
-    # np.random.seed(seed)
-    # random.seed(seed)
-    # safety_analyzer = SafetyAnalyzer(config['safety'])
-    # scenario = generate_scenario(config)
-    # test(config, 50, safety_analyzer, args.path)
-    fig = plot_scenario(args.path, 28, 'G', show=False)
-    fig.write_image('remote.png')
+    fuzz('pump/configurations/testing_config.json', 50, 'results/fuzzing')

@@ -186,10 +186,15 @@ def get_recommended_settings(TDD=18.28, BW = 74.9):
 
 
 if __name__ == "__main__":
-    settings = get_recommended_settings(TDD=39.22)    
+    settings = get_recommended_settings(TDD=39.22)
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-    traces = verify_multi_meal_scenario([100, 150], params, False, [], [[], []], duration=3 * 60, settings=settings, logging=False)
+    settings['basal_rate'] = 1.5
+    settings['carb_ratio'] = 10
+    settings['max_bolus'] = 20
+    meals = [Meal(0, 40), Meal(240, 80), Meal(600, 60), Meal(840, 30)]
+    boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(240, -1, BolusType.Simple, None), Bolus(600, -1, BolusType.Simple, None), Bolus(840, -1, BolusType.Simple, None)]
+    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False)
     fig1 = plot_variable(traces, 'GluMeas')
     breakpoint()

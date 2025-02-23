@@ -341,6 +341,10 @@ def patient_original(opt):
     param["carbF"] = min(max(round(2 * (param["MCHO"] * (0.4 * max(param["St"], 16e-4) + 0.6 * min(max(param["Sd"], 3e-4), 12e-4)) * Gs0 * param["Vg"])/(param["ke"] * param["Vi"]))/2, 2), 25)
     param["TDD"] = min(max(round(param["Ub"] * 24 + 200 / param["carbF"], 2), 10), 110)
     return param
+
+if __name__ == '__main__':
+    patient = HovorkaModel(patient_original({'basalGlucose': 6.5}))
+    print(patient.param)
     
         
     
