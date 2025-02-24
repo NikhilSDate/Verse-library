@@ -126,6 +126,9 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
     
     scenario_idx += 1
     
+    np.random.seed(scenario_idx)
+    random.seed(scenario_idx)
+    
     while len(scenarios_tested) < num_scenarios:
         while (scenario := generate_scenario(config)) in scenarios_tested:
             pass
@@ -207,4 +210,6 @@ def fuzz(config_file, num_scenarios, results_path):
     test(config, num_scenarios, safety_analyzer, results_path)
     
 if __name__ == '__main__':
-    fuzz('pump/configurations/testing_config.json', 50, 'results/fuzzing')
+    # fuzz('pump/configurations/testing_config.json', 50, 'results/fuzzing')
+    fig = plot_scenario('results/fuzzing', 1, 'G')
+    fig.write_image('remote.png')
