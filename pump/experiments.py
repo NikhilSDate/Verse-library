@@ -209,7 +209,20 @@ def fuzz(config_file, num_scenarios, results_path):
     safety_analyzer = SafetyAnalyzer(config['safety'])
     test(config, num_scenarios, safety_analyzer, results_path)
     
+    
+def rank_scenarios(log_dir):
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    keys = {}
+    for dir in scenario_dirs:
+        idx = int(dir.name[9:])
+        with open(os.path.join(dir.path, 'safety.json'), 'rb') as f:
+            safety = json.load(f)
+            metric = safety['tir']['high']
+            keys[idx] = metric
+    sorted_keys = list(sorted(keys.keys(), key=keys.get))
+    print(sorted_keys)
+    breakpoint()
+    
+            
 if __name__ == '__main__':
-    # fuzz('pump/configurations/testing_config.json', 50, 'results/fuzzing')
-    fig = plot_scenario('results/fuzzing', 1, 'G')
-    fig.write_image('remote.png')
+    rank_scenarios('results/fuzzing')

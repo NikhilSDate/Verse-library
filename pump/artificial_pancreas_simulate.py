@@ -165,7 +165,7 @@ def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     fig5.write_image('results/glucose_verif.png')
     breakpoint()
     
-def get_recommended_settings(TDD=18.28, BW = 74.9, MDI=False):
+def get_recommended_settings(TDD, BW, MDI=False):
     
     # TDD is already the pump TDD?
     if MDI:
