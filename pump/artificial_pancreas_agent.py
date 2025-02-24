@@ -193,14 +193,18 @@ class ArtificialPancreasAgent(BaseAgent):
             self.logger.tick()
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["GluPlas"]])
-            init[state_indices["GluMeas"]] = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
+            
+            GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
 
             current_time = i * time_step
             events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time)
             bolus, meal = events
-            bg = int(state_vec[state_indices['GluMeas']])
+            bg = int(GluMeas)
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)
+            
+            state_vec[state_indices['GluMeas']] = bg
+             
             carbs = 0
             
             # handle meal/bolus

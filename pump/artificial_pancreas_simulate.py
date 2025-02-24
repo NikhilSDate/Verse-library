@@ -34,12 +34,15 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, logging=True, model_params='2004'):
+def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False):
 
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings)
     body = HovorkaModel(params)
-    cgm = CGM()
+    if not cgm_error:
+        cgm = CGM()
+    else:
+        cgm = VettorettiCGM()
     if logging:
         logger = Logger('results/logs')
     else:
@@ -165,7 +168,7 @@ def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     fig5.write_image('results/glucose_verif.png')
     breakpoint()
     
-def get_recommended_settings(TDD=18.28, BW = 74.9, MDI=False):
+def get_recommended_settings(TDD, BW, MDI=False):
     
     # TDD is already the pump TDD?
     if MDI:
@@ -188,13 +191,13 @@ def get_recommended_settings(TDD=18.28, BW = 74.9, MDI=False):
 
 
 if __name__ == "__main__":
-    settings = get_recommended_settings(TDD=39.22)
+    settings = get_recommended_settings(TDD=39.22, BW=74.9)
     print(settings)
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-    meals = [Meal(0, 40), Meal(240, 80), Meal(600, 60), Meal(840, 30)]
-    boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(240, -1, BolusType.Simple, None), Bolus(600, -1, BolusType.Simple, None), Bolus(840, -1, BolusType.Simple, None)]
-    traces = simulate_multi_meal_scenario(117, params, False, boluses, meals, duration=24 * 60, settings=settings, logging=False)
-    fig1 = plot_variable(traces, 'GluMeas')
+    meals = []
+    boluses = []
+    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=8 * 60, settings=settings, logging=False, cgm_error=True)
+    fig1 = plot_variable(traces, 'G')
     breakpoint()
