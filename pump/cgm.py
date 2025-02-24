@@ -15,6 +15,11 @@ class CGM:
     def post_reading(self, bg, t):
         self.history[t] = bg
         
+class ErrorCGM(CGM):
+    def get_reading(self, t):
+        real = super().get_reading(t)
+        
+        
 class BasalAttackCGM(CGM):
     def get_reading(self, t):
         real = super().get_reading(t)

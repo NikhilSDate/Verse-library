@@ -165,10 +165,12 @@ def iob_accuracy_test(settings, starting_bg=120, num_meals=10):
     fig5.write_image('results/glucose_verif.png')
     breakpoint()
     
-def get_recommended_settings(TDD=18.28, BW = 74.9):
+def get_recommended_settings(TDD=18.28, BW = 74.9, MDI=False):
     
-     # according to the McGill simulator
-    TDD = (0.75 * TDD + BW * 0.23) / 2
+    # TDD is already the pump TDD?
+    if MDI:
+        BW = BW * 2.20462
+        TDD = (0.75 * TDD + BW * 0.23) / 2
     TDB = TDD * 0.5
     rate = TDB / 24
     CF = 1700 / TDD
@@ -187,14 +189,12 @@ def get_recommended_settings(TDD=18.28, BW = 74.9):
 
 if __name__ == "__main__":
     settings = get_recommended_settings(TDD=39.22)
+    print(settings)
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-    settings['basal_rate'] = 1.5
-    settings['carb_ratio'] = 10
-    settings['max_bolus'] = 20
     meals = [Meal(0, 40), Meal(240, 80), Meal(600, 60), Meal(840, 30)]
     boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(240, -1, BolusType.Simple, None), Bolus(600, -1, BolusType.Simple, None), Bolus(840, -1, BolusType.Simple, None)]
-    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False)
+    traces = simulate_multi_meal_scenario(117, params, False, boluses, meals, duration=24 * 60, settings=settings, logging=False)
     fig1 = plot_variable(traces, 'GluMeas')
     breakpoint()
