@@ -50,7 +50,7 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_state(init_bg, meals)
+    init_state = agent.get_init_state(init_bg, meals, settings)
     init = [init_state, init_state]  # TODO why twice?
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -67,7 +67,7 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
 def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None, logging=True):
     meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals_low, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings) # we don't have state stuff working yet, so disable basal IQ
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings[0]) # we don't have state stuff working yet, so disable basal IQ
     body = HovorkaModel(params)
     cgm = CGM()
     if logging:
@@ -77,7 +77,8 @@ def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, durati
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_range(init_bg[0], init_bg[1], meals_low, meals_high)
+    settings_low, settings_high = settings
+    init_state = agent.get_init_range(init_bg[0], init_bg[1], meals_low, meals_high, settings_low, settings_high)
     init = init_state
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -192,12 +193,13 @@ def get_recommended_settings(TDD, BW, MDI=False):
 
 if __name__ == "__main__":
     settings = get_recommended_settings(TDD=39.22, BW=74.9)
-    print(settings)
+    settings_high = settings.copy()
+    settings_high['basal_rate'] = 1.5
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
     meals = []
     boluses = []
-    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=8 * 60, settings=settings, logging=False, cgm_error=True)
+    traces = verify_multi_meal_scenario([117, 117], params, True, boluses, [meals, meals], duration=2 * 60, settings=[settings, settings_high], logging=False)
     fig1 = plot_variable(traces, 'G')
     breakpoint()

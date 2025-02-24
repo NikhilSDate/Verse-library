@@ -121,12 +121,13 @@ class ArtificialPancreasAgent(BaseAgent):
     def __setstate__(self, state):
         pass    
 
-    def get_init_state(self, G, meals):
+    def get_init_state(self, G, meals, settings):
         body_init_state = self.body.get_init_state(G)
         pump_init_state = self.pump.get_init_state()
         scenario_state = self.get_scenario_state()
         meal_state = self.get_meal_state(meals)
-        return list(body_init_state) + pump_init_state + meal_state + scenario_state
+        settings_state = self.get_settings_state(settings)
+        return list(body_init_state) + pump_init_state + meal_state + scenario_state + settings_state
     
     
     def get_meal_state(self, meals):
@@ -138,7 +139,10 @@ class ArtificialPancreasAgent(BaseAgent):
     def get_scenario_state(self):
         return [0, 0]
     
-    def get_init_range(self, Gl, Gh, ml, mh):
+    def get_settings_state(self, settings):
+        return [settings['basal_rate']]
+    
+    def get_init_range(self, Gl, Gh, ml, mh, sl, sh):
         lo, hi = self.body.get_init_range(Gl, Gh)
         real_lo = np.minimum(lo, hi)
         real_hi = np.maximum(lo, hi)
@@ -151,7 +155,9 @@ class ArtificialPancreasAgent(BaseAgent):
             meal_state_low[i] = mli
             meal_state_high[i] = mhi
         scenario_state = self.get_scenario_state()
-        return [list(real_lo) + pump_state + meal_state_low + scenario_state, list(real_hi) + pump_state + meal_state_high + scenario_state]
+        settings_low = self.get_settings_state(sl)
+        settings_high = self.get_settings_state(sh)
+        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low, list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high]
         
     def get_bg(self, Q1):
         return Q1 * 18 / self.body.param['Vg']
@@ -177,6 +183,10 @@ class ArtificialPancreasAgent(BaseAgent):
         num_points = int(np.ceil(time_bound / time_step))
 
         self.reset_pump()
+        basal_rate = init[state_indices['basal_rate']]
+        self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
+        
+        
         self.logger.start_sim()
         
         trace = np.zeros((num_points + 1, 1 + len(init)))
@@ -188,6 +198,8 @@ class ArtificialPancreasAgent(BaseAgent):
                 
         predictions = [0] * num_points
         meal_index = 0
+    
+        
         for i in tqdm(range(0, num_points)):
             
             self.logger.tick()
