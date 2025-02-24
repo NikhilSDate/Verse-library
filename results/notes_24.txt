@@ -1,0 +1,10 @@
+- results with fixed settings
+- error model
+- reconnection paper
+- XDrip+ authentication
+
+Questions
+- there's a lot of directions, what's the priority
+- how to model CGM error with Verse verification given that it's stochastic
+- should we commit to verifying basal IQ?
+- bluetooth stuff

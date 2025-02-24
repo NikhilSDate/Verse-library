@@ -217,12 +217,11 @@ def rank_scenarios(log_dir):
         idx = int(dir.name[9:])
         with open(os.path.join(dir.path, 'safety.json'), 'rb') as f:
             safety = json.load(f)
-            metric = safety['tir']['high']
+            metric = safety['tir']['low']
             keys[idx] = metric
     sorted_keys = list(sorted(keys.keys(), key=keys.get))
-    print(sorted_keys)
-    breakpoint()
-    
+    return sorted_keys    
             
 if __name__ == '__main__':
-    rank_scenarios('results/fuzzing')
+    print(rank_scenarios('results/fuzzing'))
+    plot_scenario('results/fuzzing', 4, 'G', show=True)
