@@ -31,6 +31,20 @@ def tir_analysis(glucose_reachtube, tir_low=70, tir_high=180):
         'lub': lub,
         'hlb': hlb
     }
+    
+def tir_analysis_simulate(glucose_trace, tir_low=70, tir_high=180):
+    low = np.min(glucose_trace)
+    high = np.max(glucose_trace)
+    count = 0
+    for g in glucose_trace:
+        if tir_low <= g <= tir_high:
+            count += 1
+    return {
+        'tir': count / len(glucose_trace),
+        'low': low,
+        'high': high
+    }
+    
 
 
 if __name__ == '__main__':

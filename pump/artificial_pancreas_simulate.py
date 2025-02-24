@@ -16,7 +16,7 @@ from pump_model import *
 from cgm import *
 from hovorka_model import HovorkaModel, patient_original
 import pickle
-from safety.safety import tir_analysis
+from safety.safety import tir_analysis, tir_analysis_simulate
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -127,9 +127,12 @@ def linear_transform_trace(traces, agent, index, a, b):
     for i in range(len(traces.root.trace[agent])):
         traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
 
-def extract_variable(traces, agent, index):
+def extract_variable(traces, agent, index, simulate=False):
     raw_trace = np.array(traces.root.trace[agent])
-    return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
+    if simulate:
+        return raw_trace.reshape((-1, raw_trace.shape[1]))[:, index]
+    else:
+        return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
 
 def plot_variable(tree, var, show=True, fig = None):
     if fig is None:
@@ -192,12 +195,22 @@ def get_recommended_settings(TDD, BW, MDI=False):
 
 if __name__ == "__main__":
     settings = get_recommended_settings(TDD=39.22, BW=74.9)
-    print(settings)
+
+    settings['basal_rate'] = 1.5
+
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-    meals = []
-    boluses = []
-    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=8 * 60, settings=settings, logging=False, cgm_error=True)
+    meals = [Meal(0, 40), Meal(240, 80), Meal(600, 60), Meal(840, 30)]
+    boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(240, -1, BolusType.Simple, None), Bolus(600, -1, BolusType.Simple, None), Bolus(840, -1, BolusType.Simple, None)]
+    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False, cgm_error=False)
+    glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1, simulate=True)
+    safety=  tir_analysis_simulate(glucose_trace)
+    print(safety)
     fig1 = plot_variable(traces, 'G')
     breakpoint()
+
+# {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}
+# {'tir': 0.8507980569049272, 'low': 91.07826567567132, 'high': 234.21975753031126}
+# {'tir': 0.8015267175572519, 'low': 59.83497960799967, 'high': 197.72905701924455}
+# 
