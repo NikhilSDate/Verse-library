@@ -42,7 +42,7 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
     if not cgm_error:
         cgm = CGM()
     else:
-        cgm = VettorettiCGM()
+        cgm = VettorettiCGM({'start_day': 5})
     if logging:
         logger = Logger('results/logs')
     else:
@@ -203,11 +203,12 @@ if __name__ == "__main__":
     params = patient_original({'basalGlucose': 6.5})
     meals = [Meal(0, 40), Meal(240, 80), Meal(600, 60), Meal(840, 30)]
     boluses = [Bolus(0, -1, BolusType.Simple, None), Bolus(240, -1, BolusType.Simple, None), Bolus(600, -1, BolusType.Simple, None), Bolus(840, -1, BolusType.Simple, None)]
-    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False, cgm_error=False)
+    traces = simulate_multi_meal_scenario(117, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False, cgm_error=True)
     glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1, simulate=True)
-    safety=  tir_analysis_simulate(glucose_trace)
-    print(safety)
     fig1 = plot_variable(traces, 'G')
+    fig2 = plot_variable(traces, 'GluMeas')
+    fig1.write_image('results/figures/error_day5_G.png')
+    fig2.write_image('results/figures/error_day5_GluMeas.png')
     breakpoint()
 
 # {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}

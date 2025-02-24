@@ -44,12 +44,13 @@ class VettorettiCGM(CGM):
         self.sigma = 3.20
         self.errors = {-5: 0, -10: 0} # hack to make error(0) and error(5) work
         self.last_reading = None
+        self.start_day = config.get('start_day', 0)
     
     def get_reading(self, t):
         if t % 5 != 0:
             return self.last_reading
         IG = self.history[t]
-        days = t / 1440 # t is initially in minutes
+        days = t / 1440 + self.start_day # t is initially in minutes
         IG_s = (self.a0 + self.a1 * days + self.a2 * days**2) * IG + self.b0
         AR_error = self.alph1 * self.errors[t - 5] + self.alph2 * self.errors[t - 10] + np.random.normal(scale=self.sigma)
         self.errors[t] = AR_error
