@@ -12,6 +12,7 @@ from dataclasses import asdict
 import argparse
 from shutil import rmtree
 from simutils import FORGOT_BOLUS
+from safety.safety import realism
 
 # this is currently only to provide a human-readable representation of a scenario
 # the actual serialization/deserialization is done by pickling
@@ -58,18 +59,32 @@ def generate_scenario(config):
     
     for i in range(num_meals):
         meal_range = np.random.choice(config['meals']['carbs'])
+        TauM = np.random.choice(config['meals']['TauM'])
+        
         meal_low = Meal(meal_times[i], meal_range['low'])
         meal_high = Meal(meal_times[i], meal_range['high'])
         meals_low.append(meal_low)
         meals_high.append(meal_high)
         
         # should we bolus for this meal, and if so, when
+        
+        # TODO: this should be moved into a "user-agent"
+        
+        bolus_type = BolusType.Simple
+        bolus_config = BolusType.Extended
+        if TauM != 40:
+            
+            extended_config = np.random.choice(config['boluses']['extended'])
+            
+            bolus_type = BolusType.Extended
+            bolus_config = ExtendedBolusConfig(extended_config['percentage'], extended_config['duration'])
+        
         if bolus[i]:
-            boluses.append(Bolus(meal_times[i], -1, BolusType.Simple, None))
+            boluses.append(Bolus(meal_times[i], -1, bolus_type, bolus_config))
         else:
             # if the user forgot, do they realize later?
             delay = np.random.randint(forget_delay['low'], forget_delay['high'])
-            boluses.append(Bolus(meal_times[i] + delay, FORGOT_BOLUS, BolusType.Simple, None)) # TODO: handle correction here
+            boluses.append(Bolus(meal_times[i] + delay, FORGOT_BOLUS, bolus_type, bolus_config)) # TODO: handle correction here
     
     
     init_bg_range = np.random.choice(config['patient']['init_bg'])
@@ -79,11 +94,19 @@ def generate_scenario(config):
     patient_params = patient_original({'basalGlucose': GBasal})
     
     settings = get_recommended_settings(BW=patient_params['w'], TDD=patient_params['TDD'])
-    
+        
     # FIXME: there is probably a better way to handle this
     basal_iq = np.random.choice(config['settings']['basal_iq'])
     settings['basal_iq'] = basal_iq
     
+    
+    basal_rate_multiplier = np.random.choice(config['settings']['basal_rate'])
+    b_low = basal_rate_multiplier["low"]
+    b_high = basal_rate_multiplier["high"]
+    settings_low = settings.copy()
+    settings_high = settings.copy()
+    settings_low['basal_rate'] = settings['basal_rate'] * b_low
+    settings_high['basal_rate'] = settings['basal_rate'] * b_high
     
     # we need some buffer for the duration
     duration = meal_times[-1] + config['misc']['duration_buffer']
@@ -92,7 +115,7 @@ def generate_scenario(config):
         'meals': [meals_low, meals_high],
         'boluses': boluses,
         'init_bg': init_bg,
-        'settings': settings,
+        'settings': [settings, settings],
         'patient': patient_params,
         'duration': duration
     })
@@ -223,5 +246,9 @@ def rank_scenarios(log_dir):
     return sorted_keys    
             
 if __name__ == '__main__':
-    print(rank_scenarios('results/fuzzing'))
-    plot_scenario('results/fuzzing', 4, 'G', show=True)
+    with open('pump/configurations/testing_config.json', 'r') as f:
+        config = json.load(f)
+    with open('results/fuzzing/scenario_1/scenario.json', 'r') as f:
+        scenario = json.load(f)
+    r = realism(scenario)
+    print(r)

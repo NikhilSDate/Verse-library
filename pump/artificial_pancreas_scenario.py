@@ -11,9 +11,8 @@ class BolusType(str, Enum):
 
 @dataclass(eq=True, frozen=True)
 class ExtendedBolusConfig:
-    def __init__(self, deliver_now_perc: float, duration: float):
-        self.deliver_now_perc: float = deliver_now_perc
-        self.duration: float = duration
+    deliver_now_perc: float
+    duration: float
 
 @dataclass(eq=True, frozen=True)
 class Bolus:
@@ -25,7 +24,8 @@ class Bolus:
 @dataclass(eq=True, frozen=True)
 class Meal:
     time: int
-    carbs:  Union[int, Tuple[int, int]]
+    carbs: Union[int, Tuple[int, int]]
+    TauM: float
     
     
 

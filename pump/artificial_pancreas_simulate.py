@@ -197,17 +197,17 @@ def get_recommended_settings(TDD, BW, MDI=False):
 if __name__ == "__main__":
     settings = get_recommended_settings(TDD=39.22, BW=74.9)
     settings_high = settings.copy()
-    settings_high['basal_rate'] = 1.5
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-    meals = []
-    boluses = []
-    traces = verify_multi_meal_scenario([117, 117], params, True, boluses, [meals, meals], duration=2 * 60, settings=[settings, settings_high], logging=False)
+
+    params['TauM'] = 120
+
+    meals = [Meal(0, 60)]
+    boluses = [Bolus(0, 60, BolusType.Extended, ExtendedBolusConfig(20, 240))]
+    traces = simulate_multi_meal_scenario(120, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False)
     fig1 = plot_variable(traces, 'G')
     fig2 = plot_variable(traces, 'GluMeas')
-    fig1.write_image('results/figures/error_day5_G.png')
-    fig2.write_image('results/figures/error_day5_GluMeas.png')
     breakpoint()
 
 # {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}

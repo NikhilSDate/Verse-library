@@ -44,7 +44,7 @@ class State:
     prediction_error: float
     
     # settings
-    basal_rate: float
+    basal_rate: float    
     
     # TODO verification will vary the meal amounts so it might actually need to go back in here
     # TODO if you want to chain multiple verifications together or if you want to verify the pump state (IOB)

@@ -45,7 +45,7 @@ def tir_analysis_simulate(glucose_trace, tir_low=70, tir_high=180):
         'high': high
     }
     
-def realism(scenario, config, f_low=3, f_high=6):
+def realism(scenario, f_low=3, f_high=6):
     # two things controlling realism score: 
     
     # following Table 1 here: https://pmc.ncbi.nlm.nih.gov/articles/PMC6566372/
@@ -53,14 +53,14 @@ def realism(scenario, config, f_low=3, f_high=6):
     meals_low = scenario["meals"][0]
     meals_high = scenario["meals"][1]
     
-    weight = config["patient"]["w"]
-    
+    weight = scenario["patient"]["w"]
+        
     thresh_low = f_low * weight
     thresh_high = f_high * weight
     
     carbs_low = sum([meal["carbs"] for meal in meals_low])
     carbs_high = sum([meal["carbs"] for meal in meals_high])
-    
+
     score = max(0, carbs_high - thresh_high)
 
     return -score
