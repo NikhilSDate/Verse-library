@@ -242,6 +242,9 @@ class ArtificialPancreasAgent(BaseAgent):
 
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             
+            if dose < 1 and bg < 60:
+                dose = 0
+            
             self.logger.write_dose(current_time, dose)
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose))

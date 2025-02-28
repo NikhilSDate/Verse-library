@@ -31,6 +31,40 @@ def tir_analysis(glucose_reachtube, tir_low=70, tir_high=180):
         'lub': lub,
         'hlb': hlb
     }
+    
+def tir_analysis_simulate(glucose_trace, tir_low=70, tir_high=180):
+    low = np.min(glucose_trace)
+    high = np.max(glucose_trace)
+    count = 0
+    for g in glucose_trace:
+        if tir_low <= g <= tir_high:
+            count += 1
+    return {
+        'tir': count / len(glucose_trace),
+        'low': low,
+        'high': high
+    }
+    
+def realism(scenario, config, f_low=3, f_high=6):
+    # two things controlling realism score: 
+    
+    # following Table 1 here: https://pmc.ncbi.nlm.nih.gov/articles/PMC6566372/
+    
+    meals_low = scenario["meals"][0]
+    meals_high = scenario["meals"][1]
+    
+    weight = config["patient"]["w"]
+    
+    thresh_low = f_low * weight
+    thresh_high = f_high * weight
+    
+    carbs_low = sum([meal["carbs"] for meal in meals_low])
+    carbs_high = sum([meal["carbs"] for meal in meals_high])
+    
+    score = max(0, carbs_high - thresh_high)
+
+    return -score
+    
 
 
 if __name__ == '__main__':

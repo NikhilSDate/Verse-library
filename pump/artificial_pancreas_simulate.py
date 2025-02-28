@@ -16,7 +16,7 @@ from pump_model import *
 from cgm import *
 from hovorka_model import HovorkaModel, patient_original
 import pickle
-from safety.safety import tir_analysis
+from safety.safety import tir_analysis, tir_analysis_simulate
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -42,7 +42,7 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
     if not cgm_error:
         cgm = CGM()
     else:
-        cgm = VettorettiCGM()
+        cgm = VettorettiCGM({'start_day': 5})
     if logging:
         logger = Logger('results/logs')
     else:
@@ -128,9 +128,12 @@ def linear_transform_trace(traces, agent, index, a, b):
     for i in range(len(traces.root.trace[agent])):
         traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
 
-def extract_variable(traces, agent, index):
+def extract_variable(traces, agent, index, simulate=False):
     raw_trace = np.array(traces.root.trace[agent])
-    return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
+    if simulate:
+        return raw_trace.reshape((-1, raw_trace.shape[1]))[:, index]
+    else:
+        return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
 
 def plot_variable(tree, var, show=True, fig = None):
     if fig is None:
@@ -202,4 +205,12 @@ if __name__ == "__main__":
     boluses = []
     traces = verify_multi_meal_scenario([117, 117], params, True, boluses, [meals, meals], duration=2 * 60, settings=[settings, settings_high], logging=False)
     fig1 = plot_variable(traces, 'G')
+    fig2 = plot_variable(traces, 'GluMeas')
+    fig1.write_image('results/figures/error_day5_G.png')
+    fig2.write_image('results/figures/error_day5_GluMeas.png')
     breakpoint()
+
+# {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}
+# {'tir': 0.8507980569049272, 'low': 91.07826567567132, 'high': 234.21975753031126}
+# {'tir': 0.8015267175572519, 'low': 59.83497960799967, 'high': 197.72905701924455}
+# 
