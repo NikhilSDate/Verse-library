@@ -126,6 +126,9 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
     
     scenario_idx += 1
     
+    np.random.seed(scenario_idx)
+    random.seed(scenario_idx)
+    
     while len(scenarios_tested) < num_scenarios:
         while (scenario := generate_scenario(config)) in scenarios_tested:
             pass
@@ -206,5 +209,19 @@ def fuzz(config_file, num_scenarios, results_path):
     safety_analyzer = SafetyAnalyzer(config['safety'])
     test(config, num_scenarios, safety_analyzer, results_path)
     
+    
+def rank_scenarios(log_dir):
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    keys = {}
+    for dir in scenario_dirs:
+        idx = int(dir.name[9:])
+        with open(os.path.join(dir.path, 'safety.json'), 'rb') as f:
+            safety = json.load(f)
+            metric = safety['tir']['low']
+            keys[idx] = metric
+    sorted_keys = list(sorted(keys.keys(), key=keys.get))
+    return sorted_keys    
+            
 if __name__ == '__main__':
-    fuzz('pump/configurations/testing_config.json', 50, 'results/fuzzing')
+    print(rank_scenarios('results/fuzzing'))
+    plot_scenario('results/fuzzing', 4, 'G', show=True)
