@@ -15,17 +15,17 @@ BACK
 DONE
 Enter Carbs
 DONE
-1
+4
 DONE
-17
+49
 NEXT
 CARBS
 grams
 units
-17
+49
 BG
 EXTENDED
-1.55
+4.45
 mg/dL
 DONE
 BACK
@@ -49,41 +49,110 @@ NEXT
 CARBS
 grams
 units
-17
+49
 BG
 EXTENDED
-0.71
+3.61
 Confirm Request?
 Carbs
-17 g
+49 g
 BG
 74 mg/dL
 Units To Deliver
-0.71 u
+3.61 u
 NO
 YES
 Adjusted Correction
 0 u
 Adjusted Food
-0.71 u
-Deliver 0.71 u Bolus?
+3.61 u
+Deliver 3.61 u Bolus?
 EXTENDED
 BACK
 DELIVER
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-0.71 u
-0.71 u
-0.71 u
+NEXT
+Extend Food Bolus?
 Adjusted Correction
 0 u
 Adjusted Food
-0.71 u
-Deliver 0.71 u Bolus?
+3.61 u
+Extend Food Bolus?
 EXTENDED
 BACK
+NEXT
+2 hrs
+DELIVER NOW
+DELIVER LATER
+DURATION
+NEXT
+50%
+50%
+3.61
+%
+DONE
+BACK
+50
+3
+30
+2 hrs
+DELIVER NOW
+DELIVER LATER
+DURATION
+NEXT
+30%
+70%
+3.61
+DONE
+BACK
+2
+00
+0
+06
+0
+60
+6
+00
+6 hrs
+DELIVER NOW
+DELIVER LATER
+DURATION
+NEXT
+30%
+70%
+3.61
+Confirm Request?
+Deliver Now
+30%
+Deliver Later
+70%
+Duration
+6 hrs
+NO
+YES
+Now
+1.083 u
+2.527 u
+6 hrs
+Duration
+Later
+BACK
 DELIVER
+Deliver 3.61 u Bolus?
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+1.083 u Now + 2.527 u Later
+1.083 u Now + 2.527 u Later
+1.083 u Now + 2.527 u Later
+Now
+1.083 u
+2.527 u
+6 hrs
+Duration
+Later
+BACK
+DELIVER
+Deliver 3.61 u Bolus?
 100 u
 BOLUS
 3

@@ -119,7 +119,8 @@ def generate_scenario(config):
             extended_end = meal_times[i] + bolus_config.duration
     
     # SIMULATION DURATION
-    duration = meal_times[-1] + config['misc']['duration_buffer']
+    # duration = meal_times[-1] + config['misc']['duration_buffer']
+    duration = 60
     
     return freeze({
         'meals': [meals_low, meals_high],
@@ -146,12 +147,12 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         py_state = random.getstate()
         random_state = (np_state, py_state)
         with open(state_file, 'wb') as f:
-            pickle.dump(random_state, state_file)
+            pickle.dump(random_state, f)
 
     def load_random_state():
         if os.path.exists(state_file):
             with open(state_file, 'rb') as f:
-                (np_state, py_state) = pickle.load(state_file)
+                (np_state, py_state) = pickle.load(f)
             np.random.set_state(np_state)
             random.setstate(py_state)
         else:
@@ -307,9 +308,7 @@ def find_optimal_extended_settings():
     
             
 if __name__ == '__main__':
-    # with open('pump/configurations/testing_config.json', 'r') as f:
-    #     config = json.load(f)
-    # safety_analyzer = SafetyAnalyzer(config)
-    # test(config, 50, safety_analyzer, 'results/fuzzing_extended')
-    
-    plot_scenario('results/fuzzing_extended', 5, 'G', show=True)
+    with open('pump/configurations/testing_config.json', 'r') as f:
+        config = json.load(f)
+    safety_analyzer = SafetyAnalyzer(config)
+    test(config, 50, safety_analyzer, 'results/fuzzing_extended')

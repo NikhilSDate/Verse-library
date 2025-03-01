@@ -1,98 +1,133 @@
 {
-    "patient": {
-        "ka3": 0.024,
-        "ke": 0.14,
-        "Ub": 0.9097168337052115,
-        "RCl": 0.01,
-        "Vi": 120,
-        "ka": 0.018,
-        "TauS": 10.718808477734166,
-        "TDD": 39.22,
-        "EGP0": 16.9,
-        "F01": 11.1,
-        "Bio": 0.8,
-        "TGlu": 0.0012,
-        "MCRGlu": 0.012,
-        "St": 0.001841,
-        "RTh": 9,
-        "TauGlu": 19,
-        "carbF": 11.5,
-        "MCHO": 180.1577,
-        "ka1": 0.0034,
-        "k12": 0.06,
-        "ka2": 0.056,
-        "Se": 0.019,
-        "TauM": 40.0,
-        "Vg": 160,
-        "w": 74.9,
-        "Sd": 0.000505
-    },
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 33,
+                "TauM": 180
+            },
+            {
+                "time": 419,
+                "carbs": 100,
+                "TauM": 40
+            },
+            {
+                "time": 488,
+                "carbs": 33,
+                "TauM": 180
+            },
+            {
+                "time": 825,
+                "carbs": 33,
+                "TauM": 40.0
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 66,
+                "TauM": 180
+            },
+            {
+                "time": 419,
+                "carbs": 150,
+                "TauM": 40
+            },
+            {
+                "time": 488,
+                "carbs": 66,
+                "TauM": 180
+            },
+            {
+                "time": 825,
+                "carbs": 66,
+                "TauM": 40.0
+            }
+        ]
+    ],
+    "duration": 60,
     "boluses": [
         {
             "time": 0,
-            "carbs": -1,
-            "type": "Simple",
-            "config": null
-        },
-        {
-            "time": 204,
             "carbs": -1,
             "type": "Extended",
             "config": {
                 "deliver_now_perc": 30,
                 "duration": 360
             }
+        },
+        {
+            "time": 419,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 488,
+            "carbs": -1,
+            "type": "Extended",
+            "config": {
+                "deliver_now_perc": 30,
+                "duration": 360
+            }
+        },
+        {
+            "time": 825,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
         }
     ],
+    "patient": {
+        "ka1": 0.0034,
+        "MCRGlu": 0.012,
+        "w": 74.9,
+        "RTh": 9,
+        "Vi": 120,
+        "TauS": 10.718808477734166,
+        "EGP0": 16.9,
+        "ka3": 0.024,
+        "St": 0.001841,
+        "TauM": 40.0,
+        "carbF": 11.5,
+        "k12": 0.06,
+        "ka2": 0.056,
+        "TDD": 39.22,
+        "ka": 0.018,
+        "F01": 11.1,
+        "MCHO": 180.1577,
+        "RCl": 0.01,
+        "Sd": 0.000505,
+        "TGlu": 0.0012,
+        "Bio": 0.8,
+        "ke": 0.14,
+        "Vg": 160,
+        "Se": 0.019,
+        "Ub": 0.9097168337052115,
+        "TauGlu": 19
+    },
     "init_bg": [
         50,
         100
     ],
-    "duration": 60,
     "settings": [
         {
-            "basal_rate": 0.5719583333333332,
-            "target_bg": 110,
-            "insulin_duration": 300,
-            "basal_iq": true,
-            "carb_ratio": 11,
+            "basal_rate": 0.735375,
             "correction_factor": 43,
-            "max_bolus": 10
+            "insulin_duration": 300,
+            "carb_ratio": 11,
+            "max_bolus": 10,
+            "target_bg": 110,
+            "basal_iq": false
         },
         {
-            "basal_rate": 0.735375,
-            "target_bg": 110,
-            "insulin_duration": 300,
-            "basal_iq": true,
-            "carb_ratio": 11,
+            "basal_rate": 0.8987916666666667,
             "correction_factor": 43,
-            "max_bolus": 10
+            "insulin_duration": 300,
+            "carb_ratio": 11,
+            "max_bolus": 10,
+            "target_bg": 110,
+            "basal_iq": false
         }
-    ],
-    "meals": [
-        [
-            {
-                "time": 0,
-                "carbs": 1,
-                "TauM": 40
-            },
-            {
-                "time": 204,
-                "carbs": 66,
-                "TauM": 180
-            }
-        ],
-        [
-            {
-                "time": 0,
-                "carbs": 33,
-                "TauM": 40
-            },
-            {
-                "time": 204,
-                "carbs": 100,
-                "TauM": 180
-            }
-        ]
     ]
 }

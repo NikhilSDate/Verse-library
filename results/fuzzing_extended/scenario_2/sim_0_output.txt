@@ -71,89 +71,20 @@ Deliver 5.39 u Bolus?
 EXTENDED
 BACK
 DELIVER
-NEXT
-Extend Food Bolus?
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+5.39 u
+5.39 u
+5.39 u
 Correction
 3.84 u
 Food
 1.55 u
-Extend Food Bolus?
+Deliver 5.39 u Bolus?
 EXTENDED
 BACK
-NEXT
-2 hrs
-DELIVER NOW
-DELIVER LATER
-DURATION
-NEXT
-50%
-50%
-1.55
-%
-DONE
-BACK
-50
-3
-30
-2 hrs
-DELIVER NOW
-DELIVER LATER
-DURATION
-NEXT
-30%
-70%
-1.55
-DONE
-BACK
-2
-00
-0
-06
-0
-60
-6
-00
-6 hrs
-DELIVER NOW
-DELIVER LATER
-DURATION
-NEXT
-30%
-70%
-1.55
-Confirm Request?
-Deliver Now
-30%
-Deliver Later
-70%
-Duration
-6 hrs
-NO
-YES
-Now + Correction
-4.305 u
-1.085 u
-6 hrs
-Duration
-Later
-BACK
 DELIVER
-Deliver 5.39 u Bolus?
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-4.305 u Now + 1.085 u Later
-4.305 u Now + 1.085 u Later
-4.305 u Now + 1.085 u Later
-Now + Correction
-4.305 u
-1.085 u
-6 hrs
-Duration
-Later
-BACK
-DELIVER
-Deliver 5.39 u Bolus?
 100 u
 BOLUS
 3

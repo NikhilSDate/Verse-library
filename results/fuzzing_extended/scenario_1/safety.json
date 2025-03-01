@@ -1,1 +1,1 @@
-{"safety": {"tir": {"low": 0.0, "high": 1.0}, "lub": 99.88984820920277, "hlb": 163.10817328620323}, "realism": 0}
+{"safety": {"tir": {"low": 0.0, "high": 1.0}, "lub": 99.41106548562826, "hlb": 106.95317850578857}, "realism": {"carbs_high": 348, "carbs_low": 199, "low_distance": 25.700000000000017, "high_distance": 101.40000000000003}}
