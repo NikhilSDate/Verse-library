@@ -119,8 +119,7 @@ def generate_scenario(config):
             extended_end = meal_times[i] + bolus_config.duration
     
     # SIMULATION DURATION
-    # duration = meal_times[-1] + config['misc']['duration_buffer']
-    duration = 60
+    duration = meal_times[-1] + config['misc']['duration_buffer']
     
     return freeze({
         'meals': [meals_low, meals_high],
@@ -311,4 +310,4 @@ if __name__ == '__main__':
     with open('pump/configurations/testing_config.json', 'r') as f:
         config = json.load(f)
     safety_analyzer = SafetyAnalyzer(config)
-    test(config, 50, safety_analyzer, 'results/fuzzing_extended')
+    test(config, 200, safety_analyzer, 'results/remote/fuzzing')
