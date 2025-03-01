@@ -139,6 +139,25 @@ def run_scenario(scenario, log_dir):
     return traces   
 
 def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
+    state_file = os.path.join(log_dir, f'random_state.pickle')
+
+    def save_random_state():
+        np_state = np.random.get_state()
+        py_state = random.getstate()
+        random_state = (np_state, py_state)
+        with open(state_file, 'wb') as f:
+            pickle.dump(random_state, state_file)
+
+    def load_random_state():
+        if os.path.exists(state_file):
+            with open(state_file, 'rb') as f:
+                (np_state, py_state) = pickle.load(state_file)
+            np.random.set_state(np_state)
+            random.setstate(py_state)
+        else:
+            np.random.seed(config['misc']['random_seed'])
+            random.seed(config['misc']['random_seed'])
+    
     scenarios_tested = set()
     
     # load already executed scenarios
@@ -158,13 +177,15 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
             # this scenario was not fully tested, so we need to re-test
             rmtree(dir)
     
-    
     scenario_idx += 1
     
-    np.random.seed(scenario_idx)
-    random.seed(scenario_idx)
+    # before we start fuzzing, load state
+    load_random_state()
     
     while len(scenarios_tested) < num_scenarios:
+        
+        # before generating any scenarios, dump random state
+        save_random_state()
         while (scenario := generate_scenario(config)) in scenarios_tested:
             pass                
         scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
