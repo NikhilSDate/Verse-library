@@ -262,7 +262,7 @@ class HovorkaModel:
             'time': meal.time,
             'value': meal.carbs,
             'Delay': 0,
-            'TauM': self.param['TauM'],
+            'TauM': meal.TauM,
             'Bio': self.param['Bio']
         }
         

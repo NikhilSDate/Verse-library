@@ -1,0 +1,152 @@
+==========time=600==========
+100 u
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+1
+DONE
+15
+NEXT
+CARBS
+grams
+units
+15
+BG
+EXTENDED
+1.36
+mg/dL
+DONE
+BACK
+Enter BG
+5
+52
+Your BG is Low
+Due to your BG and IOB, the bolus will be
+Due to your BG and IOB, the bolus will be
+adjusted. Eat carbs and re-test BG.
+Current IOB
+0 u
+0 u
+Current BG
+52 mg/dL
+52 mg/dL
+CLOSE
+CLOSE
+NEXT
+52
+CARBS
+grams
+units
+15
+BG
+EXTENDED
+0.01
+Confirm Request?
+Carbs
+15 g
+BG
+52 mg/dL
+Units To Deliver
+0.01 u
+NO
+YES
+CLOSE
+The requested bolus is below
+the minimum amount of 0.05 u
+for delivery.
+Please enter a new amount.
+CLOSE
+The requested bolus is below
+the minimum amount of 0.05 u
+for delivery.
+Please enter a new amount.
+CLOSE
+The requested bolus is below
+the minimum amount of 0.05 u
+for delivery.
+Please enter a new amount.
+CLOSE
+The requested bolus is below
+the minimum amount of 0.05 u
+for delivery.
+Please enter a new amount.
+CLOSE
+The requested bolus is below
+the minimum amount of 0.05 u
+for delivery.
+Please enter a new amount.
+100 u
+BOLUS
+3
+HRS
+==========time=601==========
+==========time=602==========
+==========time=603==========
+==========time=604==========
+==========time=605==========
+==========time=606==========
+==========time=607==========
+==========time=608==========
+==========time=609==========
+==========time=610==========
+==========time=611==========
+==========time=612==========
+==========time=613==========
+==========time=614==========
+==========time=615==========
+==========time=616==========
+==========time=617==========
+==========time=618==========
+==========time=619==========
+==========time=620==========
+==========time=621==========
+==========time=622==========
+==========time=623==========
+==========time=624==========
+==========time=625==========
+==========time=626==========
+==========time=627==========
+==========time=628==========
+==========time=629==========
+==========time=630==========
+==========time=631==========
+==========time=632==========
+==========time=633==========
+==========time=634==========
+==========time=635==========
+==========time=636==========
+==========time=637==========
+==========time=638==========
+==========time=639==========
+==========time=640==========
+==========time=641==========
+==========time=642==========
+==========time=643==========
+==========time=644==========
+==========time=645==========
+==========time=646==========
+==========time=647==========
+==========time=648==========
+==========time=649==========
+==========time=650==========
+==========time=651==========
+==========time=652==========
+==========time=653==========
+==========time=654==========
+==========time=655==========
+==========time=656==========
+==========time=657==========
+==========time=658==========
+==========time=659==========

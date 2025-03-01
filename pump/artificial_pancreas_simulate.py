@@ -196,19 +196,27 @@ def get_recommended_settings(TDD, BW, MDI=False):
 
 if __name__ == "__main__":
     settings = get_recommended_settings(TDD=39.22, BW=74.9)
-    settings_high = settings.copy()
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-
-    params['TauM'] = 120
-
-    meals = [Meal(0, 60)]
-    boluses = [Bolus(0, 60, BolusType.Extended, ExtendedBolusConfig(20, 240))]
-    traces = simulate_multi_meal_scenario(120, params, True, boluses, meals, duration=24 * 60, settings=settings, logging=False)
-    fig1 = plot_variable(traces, 'G')
-    fig2 = plot_variable(traces, 'GluMeas')
-    breakpoint()
+    settings['basal_rate'] = params['Ub'] # set ideal basal rate
+    deliver_now = [20, 30, 40, 50, 60, 70]
+    duration = [2, 3, 4, 5, 6]
+    
+    meals = [Meal(0, 100, 180)]
+    # simple bolus
+    boluses = [Bolus(0, 100, BolusType.Simple, None)]
+    traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=12 * 60, settings=settings, logging=False)
+    tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
+    print('simple', tir)
+    for dn in deliver_now:
+        for dur in duration:
+            boluses = [Bolus(0, 100, BolusType.Extended, ExtendedBolusConfig(dn, dur * 60))]
+            traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=12 * 60, settings=settings, logging=False)
+            tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
+            variation = tir['high'] - tir['low']
+            print(dn, dur, tir, variation)
+    
 
 # {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}
 # {'tir': 0.8507980569049272, 'low': 91.07826567567132, 'high': 234.21975753031126}

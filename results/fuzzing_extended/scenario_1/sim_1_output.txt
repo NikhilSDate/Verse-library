@@ -1,0 +1,149 @@
+==========time=60==========
+100 u
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+2
+DONE
+25
+NEXT
+CARBS
+grams
+units
+25
+BG
+EXTENDED
+2.27
+mg/dL
+DONE
+BACK
+Enter BG
+9
+95
+Your BG is Below Target
+Reduce Bolus Calculation?
+Reduce Bolus Calculation?
+Current IOB
+0 u
+0 u
+Current BG
+95 mg/dL
+95 mg/dL
+NO
+NO
+YES
+NEXT
+95
+CARBS
+grams
+units
+25
+BG
+EXTENDED
+1.92
+Confirm Request?
+Carbs
+25 g
+BG
+95 mg/dL
+Units To Deliver
+1.92 u
+NO
+YES
+Adjusted Correction
+0 u
+Adjusted Food
+1.92 u
+Deliver 1.92 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+1.92 u
+1.92 u
+1.92 u
+Adjusted Correction
+0 u
+Adjusted Food
+1.92 u
+Deliver 1.92 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
+==========time=61==========
+==========time=62==========
+==========time=63==========
+==========time=64==========
+==========time=65==========
+==========time=66==========
+==========time=67==========
+==========time=68==========
+==========time=69==========
+==========time=70==========
+==========time=71==========
+==========time=72==========
+==========time=73==========
+==========time=74==========
+==========time=75==========
+==========time=76==========
+==========time=77==========
+==========time=78==========
+==========time=79==========
+==========time=80==========
+==========time=81==========
+==========time=82==========
+==========time=83==========
+==========time=84==========
+==========time=85==========
+==========time=86==========
+==========time=87==========
+==========time=88==========
+==========time=89==========
+==========time=90==========
+==========time=91==========
+==========time=92==========
+==========time=93==========
+==========time=94==========
+==========time=95==========
+==========time=96==========
+==========time=97==========
+==========time=98==========
+==========time=99==========
+==========time=100==========
+==========time=101==========
+==========time=102==========
+==========time=103==========
+==========time=104==========
+==========time=105==========
+==========time=106==========
+==========time=107==========
+==========time=108==========
+==========time=109==========
+==========time=110==========
+==========time=111==========
+==========time=112==========
+==========time=113==========
+==========time=114==========
+==========time=115==========
+==========time=116==========
+==========time=117==========
+==========time=118==========
+==========time=119==========

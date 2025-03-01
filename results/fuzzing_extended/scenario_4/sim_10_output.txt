@@ -1,0 +1,164 @@
+==========time=600==========
+100 u
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+8
+DONE
+81
+NEXT
+CARBS
+grams
+units
+81
+BG
+EXTENDED
+7.36
+mg/dL
+DONE
+BACK
+Enter BG
+3
+30
+302
+Your BG is Above Target
+Add Correction Bolus?
+Add Correction Bolus?
+Current IOB
+0 u
+0 u
+Current BG
+302 mg/dL
+302 mg/dL
+NO
+NO
+YES
+NEXT
+302
+CARBS
+grams
+units
+81
+BG
+EXTENDED
+11.83
+Confirm Request?
+Carbs
+81 g
+BG
+302 mg/dL
+Units To Deliver
+11.83 u
+NO
+YES
+BACK
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+BACK
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+Correction
+4.47 u
+Adjusted Food
+5.53 u
+Deliver 10 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+10 u
+10 u
+10 u
+Correction
+4.47 u
+Adjusted Food
+5.53 u
+Deliver 10 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
+==========time=601==========
+==========time=602==========
+==========time=603==========
+==========time=604==========
+==========time=605==========
+==========time=606==========
+==========time=607==========
+==========time=608==========
+==========time=609==========
+==========time=610==========
+==========time=611==========
+==========time=612==========
+==========time=613==========
+==========time=614==========
+==========time=615==========
+==========time=616==========
+==========time=617==========
+==========time=618==========
+==========time=619==========
+==========time=620==========
+==========time=621==========
+==========time=622==========
+==========time=623==========
+==========time=624==========
+==========time=625==========
+==========time=626==========
+==========time=627==========
+==========time=628==========
+==========time=629==========
+==========time=630==========
+==========time=631==========
+==========time=632==========
+==========time=633==========
+==========time=634==========
+==========time=635==========
+==========time=636==========
+==========time=637==========
+==========time=638==========
+==========time=639==========
+==========time=640==========
+==========time=641==========
+==========time=642==========
+==========time=643==========
+==========time=644==========
+==========time=645==========
+==========time=646==========
+==========time=647==========
+==========time=648==========
+==========time=649==========
+==========time=650==========
+==========time=651==========
+==========time=652==========
+==========time=653==========
+==========time=654==========
+==========time=655==========
+==========time=656==========
+==========time=657==========
+==========time=658==========
+==========time=659==========

@@ -35,13 +35,38 @@ class SafetyAnalyzer:
     def __init__(self, config):
         self.config = config
     
-    def analyze(self, traces):
+    def analyze(self, traces, scenario):
         glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
-        return tir_analysis(glucose_trace, self.config['tir']['low'], self.config['tir']['high'])
-
+        safety_analysis = tir_analysis(glucose_trace, self.config['safety']['tir']['low'], self.config['safety']['tir']['high'])
+        realism_analysis = realism(scenario, config['safety']['realism']['carb_to_weight_low'], config['safety']['realism']['carb_to_weight_high'])
+        return {'safety': safety_analysis, 'realism': realism_analysis}
 
 def generate_scenario(config):
-    # first we will build the meal config
+    # PATIENT PARAMETERS
+    GBasal = np.random.choice(config['patient']['parameters'])['GBasal']
+    patient_params = patient_original({'basalGlucose': GBasal})
+    TauM_DEFAULT = patient_params['TauM']
+    EXTENDED_END_BUFFER = 5
+    
+    # PUMP SETTINGS
+    # FIXME: there is probably a better way to handle this
+    settings = get_recommended_settings(BW=patient_params['w'], TDD=patient_params['TDD'])
+    basal_iq = np.random.choice(config['settings']['basal_iq'])
+    settings['basal_iq'] = basal_iq
+    
+    basal_rate_multiplier = np.random.choice(config['settings']['basal_rate'])
+    b_low = basal_rate_multiplier["low"]
+    b_high = basal_rate_multiplier["high"]
+    settings_low = settings.copy()
+    settings_high = settings.copy()
+    settings_low['basal_rate'] = settings['basal_rate'] * b_low
+    settings_high['basal_rate'] = settings['basal_rate'] * b_high
+    
+    # INITIAL CONDITIONS
+    init_bg_range = np.random.choice(config['patient']['init_bg'])
+    init_bg = [init_bg_range['low'], init_bg_range['high']]    
+    
+    # MEALS AND BOLUSES
     meals_low: List[Meal] = []
     meals_high: List[Meal] = []
     
@@ -57,12 +82,18 @@ def generate_scenario(config):
     forget_delay = config['meals']['forget_delay']
     bolus = np.random.binomial(size=num_meals, n=1, p= 1 - forget_prob) # probability that bolus happens at meal time is 1 - forget_prob
     
+    extended_end = -1 # when will the current extended bolus end? (we can't have simulateous extended boluses)
+    
     for i in range(num_meals):
         meal_range = np.random.choice(config['meals']['carbs'])
-        TauM = np.random.choice(config['meals']['TauM'])
         
-        meal_low = Meal(meal_times[i], meal_range['low'])
-        meal_high = Meal(meal_times[i], meal_range['high'])
+        if meal_times[i] + EXTENDED_END_BUFFER <= extended_end:
+            TauM = TauM_DEFAULT
+        else:
+            TauM = np.random.choice(config['meals']['TauM'][0], p=config['meals']['TauM'][1])
+        
+        meal_low = Meal(meal_times[i], meal_range['low'], TauM)
+        meal_high = Meal(meal_times[i], meal_range['high'], TauM)
         meals_low.append(meal_low)
         meals_high.append(meal_high)
         
@@ -71,11 +102,9 @@ def generate_scenario(config):
         # TODO: this should be moved into a "user-agent"
         
         bolus_type = BolusType.Simple
-        bolus_config = BolusType.Extended
-        if TauM != 40:
-            
+        bolus_config = None
+        if TauM != TauM_DEFAULT:
             extended_config = np.random.choice(config['boluses']['extended'])
-            
             bolus_type = BolusType.Extended
             bolus_config = ExtendedBolusConfig(extended_config['percentage'], extended_config['duration'])
         
@@ -85,37 +114,18 @@ def generate_scenario(config):
             # if the user forgot, do they realize later?
             delay = np.random.randint(forget_delay['low'], forget_delay['high'])
             boluses.append(Bolus(meal_times[i] + delay, FORGOT_BOLUS, bolus_type, bolus_config)) # TODO: handle correction here
+
+        if bolus_type == BolusType.Extended:
+            extended_end = meal_times[i] + bolus_config.duration
     
-    
-    init_bg_range = np.random.choice(config['patient']['init_bg'])
-    init_bg = [init_bg_range['low'], init_bg_range['high']]
-    
-    GBasal = np.random.choice(config['patient']['parameters'])['GBasal']
-    patient_params = patient_original({'basalGlucose': GBasal})
-    
-    settings = get_recommended_settings(BW=patient_params['w'], TDD=patient_params['TDD'])
-        
-    # FIXME: there is probably a better way to handle this
-    basal_iq = np.random.choice(config['settings']['basal_iq'])
-    settings['basal_iq'] = basal_iq
-    
-    
-    basal_rate_multiplier = np.random.choice(config['settings']['basal_rate'])
-    b_low = basal_rate_multiplier["low"]
-    b_high = basal_rate_multiplier["high"]
-    settings_low = settings.copy()
-    settings_high = settings.copy()
-    settings_low['basal_rate'] = settings['basal_rate'] * b_low
-    settings_high['basal_rate'] = settings['basal_rate'] * b_high
-    
-    # we need some buffer for the duration
+    # SIMULATION DURATION
     duration = meal_times[-1] + config['misc']['duration_buffer']
     
     return freeze({
         'meals': [meals_low, meals_high],
         'boluses': boluses,
         'init_bg': init_bg,
-        'settings': [settings, settings],
+        'settings': [settings_low, settings_high],
         'patient': patient_params,
         'duration': duration
     })
@@ -123,7 +133,9 @@ def generate_scenario(config):
 def run_scenario(scenario, log_dir):
     
     # HACK    
-    traces = verify_multi_meal_scenario(scenario['init_bg'], thaw(scenario['patient']), scenario['settings']['basal_iq'], scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
+    # Notes
+    # we can do scenario['settings'][0]['basal_iq'] since we don't vary basal IQ in pump settings
+    traces = verify_multi_meal_scenario(scenario['init_bg'], thaw(scenario['patient']), scenario['settings'][0]['basal_iq'], scenario['boluses'], scenario['meals'], scenario['duration'], scenario['settings'], log_dir=log_dir)
     return traces   
 
 def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
@@ -154,19 +166,21 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
     
     while len(scenarios_tested) < num_scenarios:
         while (scenario := generate_scenario(config)) in scenarios_tested:
-            pass
+            pass                
         scenario_log_dir = os.path.join(log_dir, f'scenario_{scenario_idx}')
         os.makedirs(scenario_log_dir)
         traces = run_scenario(scenario, scenario_log_dir)
-        analysis_results = safety_analyzer.analyze(traces)  
-        with open(os.path.join(scenario_log_dir, 'safety.json'), 'w+') as f:
-            json.dump(analysis_results, f)
         with open(os.path.join(scenario_log_dir, 'traces.pkl'), 'wb+') as f:
             pickle.dump(traces, f)
         with open(os.path.join(scenario_log_dir, 'scenario.pkl'), 'wb+') as f:
             pickle.dump(scenario, f)
         with open(os.path.join(scenario_log_dir, 'scenario.json'), 'w+') as f:
             json.dump(thaw(scenario), f, cls=ScenarioEncoder, indent=4)
+        
+         
+        analysis_results = safety_analyzer.analyze(traces, scenario)  
+        with open(os.path.join(scenario_log_dir, 'safety.json'), 'w+') as f:
+            json.dump(analysis_results, f)
         scenario_idx += 1
         scenarios_tested.add(scenario)
     
@@ -244,11 +258,37 @@ def rank_scenarios(log_dir):
             keys[idx] = metric
     sorted_keys = list(sorted(keys.keys(), key=keys.get))
     return sorted_keys    
+
+
+# Test different meal amounts, starting BGs, and basal rates (around the ideal)
+# Which combination of deliver now percentage and duration gives the best results?
+def find_optimal_extended_settings():
+    settings = get_recommended_settings(TDD=39.22, BW=74.9)
+    BW = 74.9  # kg
+    basal = 0  # units
+    params = patient_original({'basalGlucose': 6.5})
+    settings['basal_rate'] = params['Ub'] # set ideal basal rate
+    deliver_now = [20, 30, 40, 50, 60, 70]
+    duration = [2, 3, 4, 5, 6]
+    
+    meals = [Meal(0, 100, 180)]
+    # simple bolus
+    boluses = [Bolus(0, 100, BolusType.Simple, None)]
+    traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=12 * 60, settings=settings, logging=False)
+    tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
+    for dn in deliver_now:
+        for dur in duration:
+            boluses = [Bolus(0, 100, BolusType.Extended, ExtendedBolusConfig(dn, dur * 60))]
+            traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=12 * 60, settings=settings, logging=False)
+            tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
+            variation = tir['high'] - tir['low']
+            print(dn, dur, tir, variation)
+    
             
 if __name__ == '__main__':
-    with open('pump/configurations/testing_config.json', 'r') as f:
-        config = json.load(f)
-    with open('results/fuzzing/scenario_1/scenario.json', 'r') as f:
-        scenario = json.load(f)
-    r = realism(scenario)
-    print(r)
+    # with open('pump/configurations/testing_config.json', 'r') as f:
+    #     config = json.load(f)
+    # safety_analyzer = SafetyAnalyzer(config)
+    # test(config, 50, safety_analyzer, 'results/fuzzing_extended')
+    
+    plot_scenario('results/fuzzing_extended', 5, 'G', show=True)

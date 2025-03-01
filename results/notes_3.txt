@@ -1,0 +1,2 @@
+can't have simultaneous extended boluses (this seems like a major limitation, how to handle?)
+

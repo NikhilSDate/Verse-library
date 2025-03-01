@@ -58,12 +58,13 @@ def realism(scenario, f_low=3, f_high=6):
     thresh_low = f_low * weight
     thresh_high = f_high * weight
     
-    carbs_low = sum([meal["carbs"] for meal in meals_low])
-    carbs_high = sum([meal["carbs"] for meal in meals_high])
+    carbs_low = sum([meal.carbs for meal in meals_low])
+    carbs_high = sum([meal.carbs for meal in meals_high])
 
-    score = max(0, carbs_high - thresh_high)
+    low_distance = max(0, thresh_low - carbs_low)
+    high_distance = max(0, thresh_high - carbs_high)
 
-    return -score
+    return {'carbs_high': carbs_high, 'carbs_low': carbs_low, 'low_distance': low_distance, 'high_distance': high_distance}
     
 
 

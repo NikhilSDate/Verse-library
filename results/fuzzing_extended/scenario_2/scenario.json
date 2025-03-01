@@ -1,0 +1,133 @@
+{
+    "patient": {
+        "ka3": 0.024,
+        "ke": 0.14,
+        "Ub": 0.9097168337052115,
+        "RCl": 0.01,
+        "Vi": 120,
+        "ka": 0.018,
+        "TauS": 10.718808477734166,
+        "TDD": 39.22,
+        "EGP0": 16.9,
+        "F01": 11.1,
+        "Bio": 0.8,
+        "TGlu": 0.0012,
+        "MCRGlu": 0.012,
+        "St": 0.001841,
+        "RTh": 9,
+        "TauGlu": 19,
+        "carbF": 11.5,
+        "MCHO": 180.1577,
+        "ka1": 0.0034,
+        "k12": 0.06,
+        "ka2": 0.056,
+        "Se": 0.019,
+        "TauM": 40.0,
+        "Vg": 160,
+        "w": 74.9,
+        "Sd": 0.000505
+    },
+    "boluses": [
+        {
+            "time": 0,
+            "carbs": -1,
+            "type": "Extended",
+            "config": {
+                "deliver_now_perc": 30,
+                "duration": 360
+            }
+        },
+        {
+            "time": 312,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        },
+        {
+            "time": 862,
+            "carbs": -1,
+            "type": "Extended",
+            "config": {
+                "deliver_now_perc": 30,
+                "duration": 360
+            }
+        },
+        {
+            "time": 1320,
+            "carbs": -1,
+            "type": "Simple",
+            "config": null
+        }
+    ],
+    "init_bg": [
+        250,
+        300
+    ],
+    "duration": 60,
+    "settings": [
+        {
+            "basal_rate": 0.8987916666666667,
+            "target_bg": 110,
+            "insulin_duration": 300,
+            "basal_iq": true,
+            "carb_ratio": 11,
+            "correction_factor": 43,
+            "max_bolus": 10
+        },
+        {
+            "basal_rate": 1.0622083333333332,
+            "target_bg": 110,
+            "insulin_duration": 300,
+            "basal_iq": true,
+            "carb_ratio": 11,
+            "correction_factor": 43,
+            "max_bolus": 10
+        }
+    ],
+    "meals": [
+        [
+            {
+                "time": 0,
+                "carbs": 1,
+                "TauM": 180
+            },
+            {
+                "time": 312,
+                "carbs": 33,
+                "TauM": 40.0
+            },
+            {
+                "time": 862,
+                "carbs": 33,
+                "TauM": 180
+            },
+            {
+                "time": 1320,
+                "carbs": 33,
+                "TauM": 40
+            }
+        ],
+        [
+            {
+                "time": 0,
+                "carbs": 33,
+                "TauM": 180
+            },
+            {
+                "time": 312,
+                "carbs": 66,
+                "TauM": 40.0
+            },
+            {
+                "time": 862,
+                "carbs": 66,
+                "TauM": 180
+            },
+            {
+                "time": 1320,
+                "carbs": 66,
+                "TauM": 40
+            }
+        ]
+    ]
+}
