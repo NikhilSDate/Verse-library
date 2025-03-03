@@ -13,6 +13,8 @@ import argparse
 from shutil import rmtree
 from simutils import FORGOT_BOLUS
 from safety.safety import realism
+import matplotlib.pyplot as plt
+
 
 # this is currently only to provide a human-readable representation of a scenario
 # the actual serialization/deserialization is done by pickling
@@ -305,11 +307,69 @@ def find_optimal_extended_settings():
             variation = tir['high'] - tir['low']
             print(dn, dur, tir, variation)
     
-            
+
+def fixup_safety(log_dir):
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    for dir in scenario_dirs:
+        try:
+            with open(os.path.join(dir.path, 'safety.json'), 'rb') as f:
+                safety = json.load(f)
+            r = safety['realism']
+            f_low = 3
+            f_high = 6
+            BW = 74.9
+            cl = r['carbs_low']
+            ch = r['carbs_high']
+            dl = r['low_distance']
+            dh = r['high_distance']
+            if dh != max(0, ch - f_high * BW):
+                r['high_distance'] = max(0, ch - f_high * BW)
+                print('dumping')
+                with open(os.path.join(dir.path, 'safety.json'), 'w') as f:
+                    json.dump(safety, f)
+        except:
+            pass  
+        
+def realism_safety_plot(log_dir, realism_func, safety_func):
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    
+    realism_vals = []
+    safety_vals = []
+    indices = []
+    
+    for dir in scenario_dirs:
+        try:
+            with open(os.path.join(dir.path, 'safety.json'), 'rb') as f:
+                safety = json.load(f)
+            realism_vals.append(realism_func(safety))
+            safety_vals.append(safety_func(safety))
+            scenario_idx = int(dir.name[9:])
+            indices.append(scenario_idx)
+        except:
+            pass
+    fig, ax = plt.subplots()
+    ax.scatter(realism_vals, safety_vals)
+    for i in range(len(realism_vals)):
+        ax.annotate(f'{indices[i]}', (realism_vals[i], safety_vals[i]))
+    plt.xlabel('Realism Metric')
+    plt.ylabel('Safety Metric')
+    plt.title('Safety vs Realism')
+    plt.show()  
+                
 if __name__ == '__main__':
     # with open('pump/configurations/testing_config.json', 'r') as f:
     #     config = json.load(f)
     # safety_analyzer = SafetyAnalyzer(config)
     # test(config, 200, safety_analyzer, 'results/remote/fuzzing')
-    fig = plot_scenario('results/remote/fuzzing', 6, 'G')
-    fig.write_image('scenario.png')
+    # fig = plot_scenario('results/remote/fuzzing', 6, 'G')
+    # fig.write_image('scenario.png')
+
+    # realism_func = lambda safety: safety['realism']['carbs_high']
+    # safety_func = lambda safety: safety['safety']['hlb']
+    
+    # realism_safety_plot('results/remote/fuzzing', realism_func, safety_func)    
+    
+    
+    plot_scenario('results/remote/fuzzing', 37, 'G', True)
+    
+    
