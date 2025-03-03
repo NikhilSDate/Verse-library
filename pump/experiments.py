@@ -307,7 +307,9 @@ def find_optimal_extended_settings():
     
             
 if __name__ == '__main__':
-    with open('pump/configurations/testing_config.json', 'r') as f:
-        config = json.load(f)
-    safety_analyzer = SafetyAnalyzer(config)
-    test(config, 200, safety_analyzer, 'results/remote/fuzzing')
+    # with open('pump/configurations/testing_config.json', 'r') as f:
+    #     config = json.load(f)
+    # safety_analyzer = SafetyAnalyzer(config)
+    # test(config, 200, safety_analyzer, 'results/remote/fuzzing')
+    fig = plot_scenario('results/remote/fuzzing', 6, 'G')
+    fig.write_image('scenario.png')
