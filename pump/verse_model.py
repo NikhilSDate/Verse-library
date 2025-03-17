@@ -5,8 +5,9 @@ from body_model import BodyModel
 
 
 class PumpMode(Enum):
-    default = auto()
+    default = auto()    
 
+    
 # State = body state + pump state + scenario state + derived state
 class State:
 

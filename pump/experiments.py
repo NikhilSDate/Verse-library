@@ -329,18 +329,24 @@ def fixup_safety(log_dir):
                     json.dump(safety, f)
         except:
             pass  
-        
-def realism_safety_plot(log_dir, realism_func, safety_func):
-    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+
+# problem_dirs contains dirs that were affected by the extended bolus emulation bug
+def realism_safety_plot(log_dir, realism_func, safety_func, problem_dirs=[]):
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() if f.path not in problem_dirs]
     
     realism_vals = []
     safety_vals = []
+    biqs = []
     indices = []
     
     for dir in scenario_dirs:
         try:
             with open(os.path.join(dir.path, 'safety.json'), 'rb') as f:
                 safety = json.load(f)
+            with open(os.path.join(dir.path, 'scenario.json'), 'r') as f:
+                scenario = json.load(f)
+            biq = scenario['settings'][0]['basal_iq']
+            biqs.append(biq)
             realism_vals.append(realism_func(safety))
             safety_vals.append(safety_func(safety))
             scenario_idx = int(dir.name[9:])
@@ -348,14 +354,55 @@ def realism_safety_plot(log_dir, realism_func, safety_func):
         except:
             pass
     fig, ax = plt.subplots()
-    ax.scatter(realism_vals, safety_vals)
-    for i in range(len(realism_vals)):
+    c = ['g' if biqs[i] else 'r' for i in range(len(biqs))]
+    
+    safety_biq = [safety_vals[i] for i in range(len(biqs)) if biqs[i]]
+    realism_biq = [realism_vals[i] for i in range(len(biqs)) if biqs[i]]
+    
+    safety_nobiq = [safety_vals[i] for i in range(len(biqs)) if not biqs[i]]
+    realism_nobiq = [realism_vals[i] for i in range(len(biqs)) if not biqs[i]]
+    
+    biq = ax.scatter(realism_biq, safety_biq, c='g')
+    nobiq = ax.scatter(realism_nobiq, safety_nobiq, c='r')
+    
+    plt.legend((biq, nobiq), ('Basal-IQ enabled', 'Basal-IQ Disabled'))
+    
+    for i in range(len(realism_vals)):        
         ax.annotate(f'{indices[i]}', (realism_vals[i], safety_vals[i]))
     plt.xlabel('Realism Metric')
     plt.ylabel('Safety Metric')
     plt.title('Safety vs Realism')
     plt.show()  
-                
+    
+def find_bad_runs(log_dir):
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    rerun_dirs = []
+    count = 0
+    for dir in scenario_dirs:
+        with open(os.path.join(dir.path, 'scenario.json'), 'r') as f:
+            scenario = json.load(f)
+        boluses = scenario['boluses']
+        extended_bolus_times = []
+        for bolus in boluses:
+            if bolus['type'] == 'Extended':
+                extended_bolus_times.append(bolus['time'])
+              
+        # check if the bolus ever failed to deliver
+        fail = False
+        for sim in range(11):
+            with open(os.path.join(dir.path, f'sim_{sim}_dose.txt')) as f:
+                doses = f.read().splitlines()        
+            for t in extended_bolus_times:
+                dose_t = float(doses[t].split("=")[1].strip())
+                if dose_t < 1:
+                    fail = True
+                break
+            if fail:
+                break
+        if fail:
+            rerun_dirs.append(dir.path)
+    return rerun_dirs
+            
 if __name__ == '__main__':
     # with open('pump/configurations/testing_config.json', 'r') as f:
     #     config = json.load(f)
@@ -364,12 +411,15 @@ if __name__ == '__main__':
     # fig = plot_scenario('results/remote/fuzzing', 6, 'G')
     # fig.write_image('scenario.png')
 
-    # realism_func = lambda safety: safety['realism']['carbs_high']
-    # safety_func = lambda safety: safety['safety']['hlb']
+    realism_func = lambda safety: safety['realism']['carbs_high']
+    safety_func = lambda safety: safety['safety']['tir']['high']
     
-    # realism_safety_plot('results/remote/fuzzing', realism_func, safety_func)    
+    problem_dirs = find_bad_runs('results/remote/fuzzing')
+    realism_safety_plot('results/remote/fuzzing', realism_func, safety_func, problem_dirs)
+    # plot_scenario('results/remote/fuzzing', 37, 'InsSub1', True)
     
+    # show how long they were in different ranges
     
-    plot_scenario('results/remote/fuzzing', 37, 'G', True)
+    # 300 for 3 hours vs 600 for 1 hour
     
-    
+    # 600: go to ER
