@@ -821,6 +821,8 @@ def reachtube_tree_single(
     while queue != []:
         node = queue.pop(0)
         traces = node.trace
+        if len(traces) == 0:
+            continue
         trace = np.array(traces[agent_id])
         max_id = len(trace) - 1
         if (

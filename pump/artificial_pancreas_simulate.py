@@ -199,15 +199,18 @@ if __name__ == "__main__":
     BW = 74.9  # kg
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
-    settings['basal_rate'] = params['Ub'] + 0.2 # set ideal basal rate
+    settings['basal_rate'] = params['Ub']
+    t_max_vals = [40, 80, 120, 160, 200]
     
-    meals_low = [Meal(0, 130, 180)]
-    meals_high = [Meal(0, 90, 180)]
-    # simple bolus
-    boluses = [Bolus(0, 130, BolusType.Extended, ExtendedBolusConfig(30, 360))]
-    traces = verify_multi_meal_scenario([115, 125], params, True, boluses, [meals_low, meals_high], duration=4 * 60, settings=[settings, settings], logging=False)
-    plot_variable(traces, 'G')
-    breakpoint()    
+    for t_max in t_max_vals:
+        meals = [Meal(0, 80, t_max)]
+        boluses = [Bolus(0, 80, BolusType.Simple, None)]
+        traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=14 * 60, settings=settings, logging=False)
+        fig = plot_variable(traces, 'G')
+        fig.update_layout(xaxis_title="Time (min)", yaxis_title='Plasma Glucose (mg/dL)', title=dict(text=f"80g meal, t_max = {t_max} min, simple bolus", xanchor='center', x=0.5), font=dict(size=13))
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
+        fig.write_image(f'figs/{t_max}_bolus.png') 
 
 # {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}
 # {'tir': 0.8507980569049272, 'low': 91.07826567567132, 'high': 234.21975753031126}

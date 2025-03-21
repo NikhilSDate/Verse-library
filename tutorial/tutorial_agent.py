@@ -251,7 +251,7 @@ class DroneAgent(BaseAgent):
         traces = []
         end_time = 0
         time_limit = self.t_v_pair[0]
-        mode_parameters = track_map.get_ext_point(
+        mode_parameters = track_map.get_next_point(
             track_map.trans_func(mode[1]),
             self.id,
             np.array(initialCondition[:3]),

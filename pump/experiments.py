@@ -208,7 +208,12 @@ def test(config, num_scenarios, safety_analyzer: SafetyAnalyzer, log_dir):
         scenarios_tested.add(scenario)
     
 
-def plot_scenario(log_dir, index, variable, show=False):
+def plot_scenario(log_dir, index, variable, show=False, problem_dirs=[]):
+    
+    if os.path.join(log_dir, f'scenario_{index}') in problem_dirs:
+        print('bad scenario')
+        return 
+    
     with open(os.path.join(log_dir, f'scenario_{index}', 'traces.pkl'), 'rb') as f:
         traces = pickle.load(f)
     fig = plot_variable(traces, variable, show=show)
@@ -415,8 +420,8 @@ if __name__ == '__main__':
     safety_func = lambda safety: safety['safety']['tir']['high']
     
     problem_dirs = find_bad_runs('results/remote/fuzzing')
-    realism_safety_plot('results/remote/fuzzing', realism_func, safety_func, problem_dirs)
-    # plot_scenario('results/remote/fuzzing', 37, 'InsSub1', True)
+    # realism_safety_plot('results/remote/fuzzing', realism_func, safety_func, problem_dirs)
+    plot_scenario('results/remote/fuzzing', 90, 'G', True, problem_dirs)
     
     # show how long they were in different ranges
     

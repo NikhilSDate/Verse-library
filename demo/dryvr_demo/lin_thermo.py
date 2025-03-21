@@ -119,8 +119,14 @@ if __name__ == "__main__":
     # scenario.set_sensor(BaseStarSensor())
     ### t=10 takes quite a long time to run, try t=4 like in c2e2 example
     ### seems to actually loop at t=4.14, not sure what that is about -- from first glance, reason seems to be hyperrectangles blowing up in size
-    traces = scenario.verify(20, 0.1)
-    fig = go.Figure() 
-    fig = reachtube_tree(traces, None, fig, 0, 1)
-    fig.show()
+    import pickle
+    res = [0.1, 0.01, 0.001]
+    for r in res:
+        traces = scenario.verify(8.5, r)
+        fig = go.Figure()
+        fig = reachtube_tree(traces, None, fig, 0, 1)
+        with open(f'hidden/traces/thermostat_explicit_{r}.pkl', 'wb+') as f:
+            pickle.dump(fig, f)
+
+
 
