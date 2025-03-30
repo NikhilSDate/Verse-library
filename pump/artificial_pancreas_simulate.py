@@ -204,7 +204,7 @@ if __name__ == "__main__":
     
     for t_max in t_max_vals:
         meals = [Meal(0, 80, t_max)]
-        boluses = [Bolus(0, 80, BolusType.Simple, None)]
+        boluses = [Bolus(0, None, BolusType.Simple, 0, False, None)]
         traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=14 * 60, settings=settings, logging=False)
         fig = plot_variable(traces, 'G')
         fig.update_layout(xaxis_title="Time (min)", yaxis_title='Plasma Glucose (mg/dL)', title=dict(text=f"80g meal, t_max = {t_max} min, simple bolus", xanchor='center', x=0.5), font=dict(size=13))

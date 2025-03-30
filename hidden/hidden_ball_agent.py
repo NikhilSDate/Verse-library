@@ -8,6 +8,7 @@ from verse import BaseAgent
 from verse import LaneMap
 from verse.plotter.plotter2D import *
 import plotly.graph_objects as go
+from tqdm import tqdm
 
 
 class BallAgent(BaseAgent):
@@ -40,12 +41,12 @@ class BallAgent(BaseAgent):
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
-        for i in range(num_points):
+        for i in tqdm(range(num_points)):
             
             x, y, vx, vy = init
             rx, ry, rvx, rvy = x, y, vx, vy
 
-            cr = 0.85
+            cr = 1
             if x < 0:
                 rvx = -vx*cr
                 rx = 0

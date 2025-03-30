@@ -19,6 +19,8 @@ class Bolus:
     time: int
     carbs: Union[int, Tuple[int, int]]
     type: BolusType
+    meal_index: int 
+    correction: bool
     config: ExtendedBolusConfig
 
 @dataclass(eq=True, frozen=True)

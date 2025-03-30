@@ -226,19 +226,13 @@ class ArtificialPancreasAgent(BaseAgent):
 
 
             if bolus:
-                if bolus.carbs == -1:
-                # "fill in" carbs: later this should be moved to some "user agent"
-                    bolus = dataclasses.replace(bolus, carbs=carbs)
-                    self.pump.send_bolus_command(bg, bolus)
-                elif bolus.carbs == FORGOT_BOLUS:
-                    if meal_index == 0:
-                        raise ValueError("Forgot Bolus but no meal")
-                    carbs = state_vec[state_indices[f'carbs_{meal_index - 1}']]
-                    bolus = dataclasses.replace(bolus, carbs=carbs)
-                    self.pump.send_bolus_command(None, bolus)
-                else:
-                    self.pump.send_bolus_command(bg, bolus)
-                
+                bolus_bg = bg
+                if not bolus.carbs:
+                    # "fill in" carbs: later this should be moved to some "user agent"
+                    bolus = dataclasses.replace(bolus, carbs=state_vec[state_indices[f'carbs_{bolus.meal_index}']])
+                if not bolus.correction:
+                    bolus_bg = None
+                self.pump.send_bolus_command(bolus_bg, bolus)
 
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             

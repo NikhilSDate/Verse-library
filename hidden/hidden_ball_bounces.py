@@ -28,7 +28,7 @@ class State:
 def decisionLogic(ego: State):
     '''Computes the possible mode transitions'''
     # Stores the prestate first
-    output = copy.deepcopy(ego)   
+    output = copy.deepcopy(ego)
     return output
 
 
@@ -45,14 +45,14 @@ if __name__ == "__main__":
     myball1 = BallAgent("red_ball", file_name=BALL_CONTROLLER)
     bouncingBall.add_agent(myball1)
     bouncingBall.set_init(
-        [[[5, 10, 2, 2], [6, 11, 2, 2]]],
+        [[[0, 10, 3, 3], [0.1, 10.1, 3, 3]]],
         [(BallMode.NORMAL,)],
     )
     # TODO: We should be able to initialize each of the balls separately
     # this may be the cause for the VisibleDeprecationWarning
     # TODO: Longer term: We should initialize by writing expressions like "-2 \leq myball1.x \leq 5"
     # "-2 \leq myball1.x + myball2.x \leq 5"
-    traces = bouncingBall.verify(10, 0.01, 6)
+    traces = bouncingBall.verify(100, 0.01)
     # TODO: There should be a print({traces}) function
     fig = go.Figure()
     fig = reachtube_tree(traces, None, fig, 1, 2)

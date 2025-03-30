@@ -1,0 +1,58 @@
+Verse insulin pump paper
+Intro: how are medical devices verified right now?
+should be verifying it this way, not just reply on trials
+sections: system description: Unicorn, Verse, etc.
+case study: insulin pump
+describe the pump, the model, experiment, safety conditions
+system description: descrive the unicorn setup, etc.
+
+
+State, algorithm
+
+One idea is that we only need to expose a small set of variables that matter to Verse (in the extreme case, just a single variable which is the distance to the unsafe region)
+For discrete state, we might want to split on some variables (what if there is a condition where if 10 boolean variables are true, something bad happens)
+So we "annotate" the variables with which variables we want to split on
+
+
+Experiments
+
+Pump has arbitrary inputs, so we will take some realistic-ish scenario (total carbs, etc.) and say that the user enters +-10% carbs, glucose is off by +-X%, etc.
+user requests a bolus 0-10 minutes before a meal, etc.
+have some safety conditions that we can verify
+
+some of the model parameters have distributions so they are verse-able
+
+there wouldn't be anything adversarial, since that doesn't really work nicely with the Verse probabilistic model
+
+another thing is to run the thermostat extracted logic in simulate at high frequency
+
+have a set of scenarios, we can say if safe or not
+
+
+
+Trace containment
+- there is something here about eliminating some forks/splits, but not clear if this is ever actually implemented
+
+
+if the user is doing everything "correct" with some margin of error, then the pump "works"
+- safety criterion: how long sugar is too low/too high
+- orange/red zones, time less than 
+- setup up outline, alex 
+- contributions: 
+  - ability to use a real artifact
+  - sayan's technique works on black box so want to apply on stuff that's really a black box
+  - model for how you mate firmware simulation with Verse
+  - actually doing the verification and the idea of doing verification
+
+- intro: what we understand about how verification is done, vulnerability testing and clinical trials
+- probability is with respect to the number of independent samples
+- 
+
+TODO
+- what exactly is going on with the splitting/forking
+- why does thermostat fork but bouncing ball doesn't
+- try to integrate at a higher frequency than Verse sees (or make the simulation "perfect", but only allow Verse to sample the perfect simulation at some frequency)
+- is the overshoot causing the blowup?
+- 
+
+

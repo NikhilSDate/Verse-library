@@ -20,6 +20,7 @@ from verse.stars.starset import *
 
 from verse.sensor.base_sensor_stars import *
 from verse.analysis.verifier import ReachabilityMethod
+from tqdm import tqdm
 
 class ThermoAgent(BaseAgent):
     def __init__(
@@ -50,16 +51,9 @@ class ThermoAgent(BaseAgent):
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
-
         mode = 'Heat'
         
-        for i in range(num_points):
-            temp = init[0]
-            if mode == 'Heat' and temp >= 75:
-                mode = 'Cool'
-            if mode == 'Cool' and temp < 65:
-                mode = 'Heat'
-            
+        for i in tqdm(range(num_points)):
             if mode=="Heat":
                 r = ode(self.dynamic_heat)
             elif mode=="Cool":
@@ -69,6 +63,16 @@ class ThermoAgent(BaseAgent):
             r.set_initial_value(init)
             res: np.ndarray = r.integrate(r.t + time_step)
             init = res.flatten()
+            temp = init[0]
+            if mode == 'Heat' and temp >= 75:
+                mode = 'Cool'
+                diff = temp - 75
+                temp = 75 - diff
+            if mode == 'Cool' and temp < 65:
+                mode = 'Heat'
+                diff = 65 - temp
+                temp = 65 + diff            
+            # init = [temp]
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = init
         return trace
@@ -100,24 +104,41 @@ if __name__ == "__main__":
 
     scenario.add_agent(Thermo) ### need to add breakpoint around here to check decision_logic of agents
 
-    # init_bruss = [[40], [45]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
-    # # -----------------------------------------
+    init_bruss = [[40], [45]] # setting initial upper bound to 72 causes hyperrectangle to become large fairly quickly
+    # -----------------------------------------
 
-    # scenario.set_init_single(
-    #     'thermo', init_bruss, (ThermoMode.Heat,)
-    # )
+    scenario.set_init_single(
+        'thermo', init_bruss, (ThermoMode.Heat,)
+    )
     
-    # import pickle
+    import pickle
     
-    # res = [1, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001]
-    # for r in res:
-    #     traces = scenario.verify(8.5, r)
-    #     fig = go.Figure()
-    #     fig = reachtube_tree(traces, None, fig, 0, 1)
-    #     with open(f'hidden/traces/thermostat_hidden_{r}.pkl', 'wb+') as f:
-    #         pickle.dump(fig, f)
+    res = [0.1]
+    for r in res:
+        traces = scenario.verify(20, r)
+        fig = go.Figure()
+        fig = reachtube_tree(traces, None, fig, 0, 1)
+        fig.show()
+        # with open(f'hidden/traces/thermostat_hidden_{r}_long.pkl', 'wb+') as f:
+        #     pickle.dump(fig, f)
     
     
-    temps = np.linspace(40, 45, 10)
-    for temp in temps:
-        
+    # fig = go.Figure()
+    # temps = np.linspace(40, 45, 10)
+    # for temp in tqdm(temps):
+    #     scenario.set_init_single(
+    #     'thermo', [[temp], [temp]], (ThermoMode.Heat,)
+    #     )
+    #     traces = scenario.simulate(8.5, 0.01)
+    #     simulation_tree(traces, None, fig, 0, 1)
+    # fig.show()
+    
+    # TODO
+    # integrate at higher frequency than Verse
+    # only expose the state that matters to Verse, hide everything else
+    # might need to have some discrete transitions still to get good coverage on the important variables
+    
+    
+    # trace containment???
+    
+

@@ -28,7 +28,7 @@ class State:
 def decisionLogic(ego: State):
     '''Computes the possible mode transitions'''
     # Stores the prestate first
-    cr = 0.85
+    cr = 1
     output = copy.deepcopy(ego)
     if ego.x < 0:
         output.vx = -ego.vx*cr
@@ -59,20 +59,18 @@ if __name__ == "__main__":
     bouncingBall = Scenario(ScenarioConfig(parallel=False))  # scenario too small, parallel too slow
     BALL_CONTROLLER = "./demo/ball/ball_bounces.py"
     myball1 = BallAgent("red-ball", file_name=BALL_CONTROLLER)
-    myball2 = BallAgent("green-ball", file_name=BALL_CONTROLLER)
     bouncingBall.add_agent(myball1)
-    bouncingBall.add_agent(myball2)
     bouncingBall.set_init(
-        [[[5, 10, 2, 2], [5, 10, 3, 3]], [[15, 1, 1, -2], [15, 1, 2, -4]]],
-        [(BallMode.NORMAL,), (BallMode.NORMAL,)],
+        [[[0, 10, 3, 3], [0.1, 10.1, 3, 3]]],
+        [(BallMode.NORMAL,)],
     )
     # TODO: We should be able to initialize each of the balls separately
     # this may be the cause for the VisibleDeprecationWarning
     # TODO: Longer term: We should initialize by writing expressions like "-2 \leq myball1.x \leq 5"
     # "-2 \leq myball1.x + myball2.x \leq 5"
-    traces = bouncingBall.simulate(40, 0.01, 6)
+    traces = bouncingBall.verify(100, 0.01)
     # TODO: There should be a print({traces}) function
     fig = go.Figure()
-    fig = simulation_tree(traces, None, fig, 1, 2, [1, 2], "fill", "trace")
+    fig = reachtube_tree(traces, None, fig, 1, 2, [1, 2], "fill", "trace")
     fig.write_image('ball_bounces.png')
     fig.show()

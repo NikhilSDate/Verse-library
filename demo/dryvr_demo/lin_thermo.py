@@ -21,6 +21,8 @@ from verse.stars.starset import *
 from verse.sensor.base_sensor_stars import *
 from verse.analysis.verifier import ReachabilityMethod
 
+from tqdm import tqdm
+
 class ThermoAgent(BaseAgent):
     def __init__(
         self, 
@@ -75,7 +77,7 @@ class State:
     def __init__(self, x, agent_mode: ThermoMode):
         pass 
 
-def decisionLogic(ego: State, other: State):
+def decisionLogic(ego: State):
     output = copy.deepcopy(ego)
 
     if ego.agent_mode == ThermoMode.Heat and ego.x>=75:
@@ -119,14 +121,33 @@ if __name__ == "__main__":
     # scenario.set_sensor(BaseStarSensor())
     ### t=10 takes quite a long time to run, try t=4 like in c2e2 example
     ### seems to actually loop at t=4.14, not sure what that is about -- from first glance, reason seems to be hyperrectangles blowing up in size
-    import pickle
-    res = [0.1, 0.01, 0.001]
+    # import pickle
+    # res = [0.1, 0.01, 0.001]
+    # for r in res:
+    #     traces = scenario.verify(8.5, r)
+    #     fig = go.Figure()
+    #     fig = reachtube_tree(traces, None, fig, 0, 1)
+    #     with open(f'hidden/traces/thermostat_explicit_{r}.pkl', 'wb+') as f:
+    #         pickle.dump(fig, f)
+    
+    # fig = go.Figure()
+    # temps = np.linspace(40, 45, 10)
+    # for temp in tqdm(temps):
+    #     scenario.set_init_single(
+    #     'thermo', [[temp], [temp]], (ThermoMode.Heat,)
+    #     )
+    #     traces = scenario.simulate(25, 0.01)
+    #     simulation_tree(traces, None, fig, 0, 1)
+    # import pickle
+    # with open('hidden/traces/thermostat_simulation_long.pkl', 'wb+') as f:
+    #     pickle.dump(fig, f)
+    
+        
+    res = [0.1]
     for r in res:
-        traces = scenario.verify(8.5, r)
+        traces = scenario.verify(20, r)
         fig = go.Figure()
         fig = reachtube_tree(traces, None, fig, 0, 1)
-        with open(f'hidden/traces/thermostat_explicit_{r}.pkl', 'wb+') as f:
-            pickle.dump(fig, f)
-
+        fig.show()
 
 
