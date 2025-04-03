@@ -21,12 +21,11 @@ class InsulinPumpEvent:
 
 class InsulinPumpModel:
 
-    def __init__(self, sim_scenario, basal_iq=False, settings=None):
+    def __init__(self, sim_scenario, settings=None):
 
-        self.current_iob = sim_scenario.iob
         self.settings = settings
-        self.basal_iq = basal_iq        
-        self.pump_emulator = self.get_pump(basal_iq, settings)
+        self.basal_iq = settings['basal_iq']        
+        self.pump_emulator = self.get_pump(self.basal_iq, settings)
     
     def reset_pump(self):
         self.pump_emulator = self.get_pump(self.basal_iq, self.settings)

@@ -1,7 +1,9 @@
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 from enum import Enum
 import os
 from dataclasses import dataclass
+import dataclasses
+import numpy as np
 
 class BolusType(str, Enum):
     Simple = 'Simple'
@@ -28,8 +30,22 @@ class Meal:
     time: int
     carbs: Union[int, Tuple[int, int]]
     TauM: float
+
     
+def get_meal_range(meals: List[Meal]):
+    meals_low = []
+    meals_high = []
     
+    for m in meals:
+        meals_low.append(dataclasses.replace(m, carbs=m.carbs[0]))
+        meals_high.append(dataclasses.replace(m, carbs=m.carbs[1]))
+    return (meals_low, meals_high)
+
+def get_bolus_config(bolus: Bolus):
+    return (bolus.type, bolus.config)
+
+def set_bolus_config(bolus: Bolus, config: Tuple[BolusType, ExtendedBolusConfig]):
+    return dataclasses.replace(bolus, type=config[0], config=config[1])
 
 class SimulationScenario:
 
@@ -44,16 +60,16 @@ class SimulationScenario:
 
     def __init__(
         self,
-        basal_rate: float,
+        init_bg,
         boluses: List[Bolus],
         meals: List[Meal],
-        iob=0,
-        rule="simple",
+        errors: List[float],
+        settings,
+        params,
         sim_duration=24 * 60,
-        log_dir='results/logs'
     ):
 
-        self.boluses = {}
+        self.boluses: Dict[int, Bolus] = {}
         self.meals = {}
 
         # currently assumes that there are not multiple meals/boluses at the same time
@@ -61,11 +77,15 @@ class SimulationScenario:
             self.boluses[bolus.time] = bolus
 
         for meal in meals:
-            if meal.carbs > 0:
+            if (np.ndim(meal.carbs) == 0 and meal.carbs > 0) or (meal.carbs[1] > 0):       
                 self.meals[meal.time] = meal
 
-        self.iob = iob
         self.sim_duration = sim_duration
+        self.params = params
+        self.errors = errors
+        self.init_bg = init_bg
+        self.settings = settings
+        self.params = params
 
     def get_events(self, time):
         bolus = self.get_bolus(time)
@@ -82,5 +102,31 @@ class SimulationScenario:
             return self.meals[time]
         return None
     
-    def get_meals(self):
+    def get_meals(self) -> List[Meal]:
         return [self.meals[t] for t in sorted(self.meals.keys())]
+    
+    def get_bolus_meal_mapping(self):
+        # maps meal index to bolus
+        mapping = {}
+        for bolus in self.boluses.values():
+            mapping[bolus.meal_index] = bolus
+        return mapping
+    
+    def __repr__(self):
+        return f'Scenario{self.get_meals(), self.boluses.values()}'
+    
+    def __str__(self):
+        return self.__repr__()
+    
+    def scenario_export():
+        '''
+        TODO: fill this out for writing scenarios to a file
+        '''
+        pass
+    
+    def scenario_import():
+        '''
+        TODO: fill this out for reading scenario from a file
+        '''
+        pass
+            

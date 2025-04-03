@@ -16,7 +16,8 @@ from pump_model import *
 from cgm import *
 from hovorka_model import HovorkaModel, patient_original
 import pickle
-from safety.safety import tir_analysis, tir_analysis_simulate
+from safety.safety import tir_analysis, tir_analysis_simulate, AGP_safety, range_time_safety
+from simutils import *
 
 load_dotenv()
 PUMP_PATH = os.environ["PUMP_PATH"]
@@ -34,7 +35,7 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 ##############
 
 
-def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False):
+def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, errors=None, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False):
 
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
     pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings)
@@ -50,7 +51,7 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_state(init_bg, meals, settings)
+    init_state = agent.get_init_state(init_bg, meals, settings, errors)
     init = [init_state, init_state]  # TODO why twice?
 
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
@@ -64,11 +65,12 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, dura
 
     return traces
 
-def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, duration=24 * 60, settings=None, log_dir=None, logging=True):
-    meals_low, meals_high = meals # the actual meal objects will only be used for the meal times
-    simulation_scenario = SimulationScenario(basal_iq, boluses, meals_low, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings[0]) # we don't have state stuff working yet, so disable basal IQ
-    body = HovorkaModel(params)
+
+# TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
+# That's a much cleaner abstraction
+def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None, logging=False):
+    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
+    body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
     if logging:
         logger = Logger(log_dir=log_dir)
@@ -77,10 +79,11 @@ def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, durati
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
-    settings_low, settings_high = settings
-    init_state = agent.get_init_range(init_bg[0], init_bg[1], meals_low, meals_high, settings_low, settings_high)
+    settings_low, settings_high = simulation_scenario.settings
+    errors_low, errors_high = simulation_scenario.errors
+    meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
+    init_state = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high)
     init = init_state
-
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
     scenario.set_init_single(
@@ -88,8 +91,13 @@ def verify_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, durati
     )  # TODO what's the other half of the tuple?
 
     time_step = 1
+    breakpoint()
     traces = scenario.verify(simulation_scenario.sim_duration, time_step)
     return traces
+
+def evaluate_safety_constraint(traces, variable, safety_func):
+    variable_trace = extract_variable(traces, 'pump', state_indices[variable] + 1)
+    return safety_func(variable_trace)
 
 
 def save_traces(traces: AnalysisTree, filename, trace_directory=TRACES_PATH):
@@ -143,6 +151,8 @@ def plot_variable(tree, var, show=True, fig = None):
         fig = reachtube_tree(tree, None, fig, 0, idx)
     else:
         fig = simulation_tree(tree, None, fig, 0, idx)
+    fig.update_xaxes(showgrid=True)
+    fig.update_yaxes(showgrid=True)
     if show:
         fig.show()
     return fig
@@ -200,17 +210,17 @@ if __name__ == "__main__":
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
-    t_max_vals = [40, 80, 120, 160, 200]
+    meals = [Meal(60, (80, 100), DEFAULT_MEAL), Meal(240, (40, 50), DEFAULT_MEAL)]
+    boluses = [Bolus(55, None, BolusType.Simple, 0, True, None), Bolus(235, None, BolusType.Simple, 1, True, None)]
+    traces = verify_multi_meal_scenario((70, 120), params, False, boluses, meals, [0.9, 1.1], duration=8 * 60, settings=[settings, settings], logging=False)
+    fig = plot_variable(traces, 'G')
+    print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
     
-    for t_max in t_max_vals:
-        meals = [Meal(0, 80, t_max)]
-        boluses = [Bolus(0, None, BolusType.Simple, 0, False, None)]
-        traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=14 * 60, settings=settings, logging=False)
-        fig = plot_variable(traces, 'G')
-        fig.update_layout(xaxis_title="Time (min)", yaxis_title='Plasma Glucose (mg/dL)', title=dict(text=f"80g meal, t_max = {t_max} min, simple bolus", xanchor='center', x=0.5), font=dict(size=13))
-        fig.update_xaxes(showgrid=True)
-        fig.update_yaxes(showgrid=True)
-        fig.write_image(f'figs/{t_max}_bolus.png') 
+    
+    # (70, 180): True, True, False, False, False
+    # (70, 100): True True, False, False, False
+    
+    # fig.write_image(f'figs/{t_max}_bolus.png') 
 
 # {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}
 # {'tir': 0.8507980569049272, 'low': 91.07826567567132, 'high': 234.21975753031126}

@@ -31,6 +31,54 @@ def tir_analysis(glucose_reachtube, tir_low=70, tir_high=180):
         'lub': lub,
         'hlb': hlb
     }
+
+
+def range_bounds(glucose_reachtube, lb, ub, relative=True):
+    '''
+    returns bounds on fraction of reachtube that's in the half-open interval [lb, ub)
+    '''
+    low_count = 0
+    high_count = 0
+    for (low, high) in glucose_reachtube:
+        if low >= lb and high < ub:
+            low_count += 1
+        if low < ub and high >= lb:
+            high_count += 1
+    if relative:
+        return (low_count / len(glucose_reachtube), high_count / len(glucose_reachtube))
+    else:
+        return (low_count, high_count)
+    
+def AGP_report(glucose_reachtube, AGP_config=[(-np.inf, 54), (54, 70), (70, 180), (180, 250), (250, np.inf)]):
+    percs = []
+    for (low, high) in AGP_config:
+        percs.append(range_bounds(glucose_reachtube, low, high))
+    return percs
+
+def AGP_safety(glucose_reachtube, targets=[0.01, 0.04, 0.70, 0.25, 0.05]):
+    '''
+    targets 0, 1, 3, and 4 are upper bounds
+    target 2 (for the ideal range) is a lower bound
+    '''
+    report = AGP_report(glucose_reachtube)
+    lower_bounds_ranges = [0, 1, 3, 4]
+    results = [True] * len(targets)
+    for idx in lower_bounds_ranges:
+        if report[idx][1] >= targets[idx]:
+            results[idx] = False
+    upper_bound_ranges = [2]
+    for idx in upper_bound_ranges:
+        if report[idx][0] < targets[idx]:
+            results[idx] = False
+    return results
+
+def range_time_safety(glucose_reachtube, range, time_bound):
+    '''
+    constraint of the form: glucose is within range for at most time_bound minutes
+    '''
+    low, high = range_bounds(glucose_reachtube, range[0], range[1], )
+    return high <= time_bound
+    
     
 def tir_analysis_simulate(glucose_trace, tir_low=70, tir_high=180):
     low = np.min(glucose_trace)

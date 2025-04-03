@@ -47,8 +47,16 @@ class State:
     # settings
     basal_rate: float    
     
-    # TODO verification will vary the meal amounts so it might actually need to go back in here
-    # TODO if you want to chain multiple verifications together or if you want to verify the pump state (IOB)
+    meal_0_error: float
+    meal_1_error: float
+    meal_2_error: float
+    meal_3_error: float
+    meal_4_error: float
+    meal_5_error: float
+    meal_6_error: float
+    meal_7_error: float
+    meal_8_error: float
+    meal_9_error: float
 
     agent_mode: PumpMode
 

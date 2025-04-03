@@ -121,13 +121,14 @@ class ArtificialPancreasAgent(BaseAgent):
     def __setstate__(self, state):
         pass    
 
-    def get_init_state(self, G, meals, settings):
+    def get_init_state(self, G, meals, settings, errors):
         body_init_state = self.body.get_init_state(G)
         pump_init_state = self.pump.get_init_state()
         scenario_state = self.get_scenario_state()
         meal_state = self.get_meal_state(meals)
         settings_state = self.get_settings_state(settings)
-        return list(body_init_state) + pump_init_state + meal_state + scenario_state + settings_state
+        error_state = self.get_error_state(errors, num_meals)
+        return list(body_init_state) + pump_init_state + meal_state + scenario_state + settings_state + list(error_state)
     
     
     def get_meal_state(self, meals):
@@ -140,9 +141,16 @@ class ArtificialPancreasAgent(BaseAgent):
         return [0, 0]
     
     def get_settings_state(self, settings):
-        return [settings['basal_rate']]
+        return [settings['basal_rate']]  
     
-    def get_init_range(self, Gl, Gh, ml, mh, sl, sh):
+    def get_error_state(self, errors, num_meals):
+        if errors is None:
+            return [1] * num_meals
+        if np.ndim(errors) == 0:
+            return np.repeat(errors, num_meals)
+        return errors
+    
+    def get_init_range(self, Gl, Gh, ml, mh, sl, sh, el, eh):
         lo, hi = self.body.get_init_range(Gl, Gh)
         real_lo = np.minimum(lo, hi)
         real_hi = np.maximum(lo, hi)
@@ -157,7 +165,13 @@ class ArtificialPancreasAgent(BaseAgent):
         scenario_state = self.get_scenario_state()
         settings_low = self.get_settings_state(sl)
         settings_high = self.get_settings_state(sh)
-        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low, list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high]
+        
+        assert(np.ndim(eh) == np.ndim(el))
+
+        errors_low = self.get_error_state(el, num_meals)
+        errors_high = self.get_error_state(eh, num_meals)
+        
+        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low), list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high)]
         
     def get_bg(self, Q1):
         return Q1 * 18 / self.body.param['Vg']
@@ -174,6 +188,19 @@ class ArtificialPancreasAgent(BaseAgent):
             meals.append(dataclasses.replace(orig_meal, carbs=carbs))
         return meals
     
+    def process_bolus(self, bolus, bg, state_vec):
+        if bolus:
+            bolus_bg = bg
+        if not bolus.carbs:
+            # "fill in" carbs: later this should be moved to some "user agent"
+            carbs_raw = state_vec[state_indices[f'carbs_{bolus.meal_index}']]
+            error = state_vec[state_indices[f'meal_{bolus.meal_index}_error']]
+            carbs_errored = error * carbs_raw
+            bolus = dataclasses.replace(bolus, carbs=carbs_errored)
+        if not bolus.correction:
+            bolus_bg = None
+            
+        return (bolus_bg, bolus)
     
     
     # TODO should mode be an enum?
@@ -196,10 +223,7 @@ class ArtificialPancreasAgent(BaseAgent):
 
         self.body.set_meals(self.get_meals(state_vec))
                 
-        predictions = [0] * num_points
-        meal_index = 0
-    
-        
+        predictions = [0] * num_points        
         for i in tqdm(range(0, num_points)):
             
             self.logger.tick()
@@ -216,24 +240,11 @@ class ArtificialPancreasAgent(BaseAgent):
             bg = self.cgm.get_reading(current_time)
             
             state_vec[state_indices['GluMeas']] = bg
-             
-            carbs = 0
-            
+                         
             # handle meal/bolus
-            if meal:
-                carbs = state_vec[state_indices[f'carbs_{meal_index}']]
-                meal_index += 1
-
-
             if bolus:
-                bolus_bg = bg
-                if not bolus.carbs:
-                    # "fill in" carbs: later this should be moved to some "user agent"
-                    bolus = dataclasses.replace(bolus, carbs=state_vec[state_indices[f'carbs_{bolus.meal_index}']])
-                if not bolus.correction:
-                    bolus_bg = None
+                (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
                 self.pump.send_bolus_command(bolus_bg, bolus)
-
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             
             if dose < 1 and bg < 60:
