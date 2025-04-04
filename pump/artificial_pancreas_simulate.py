@@ -91,7 +91,6 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     )  # TODO what's the other half of the tuple?
 
     time_step = 1
-    breakpoint()
     traces = scenario.verify(simulation_scenario.sim_duration, time_step)
     return traces
 

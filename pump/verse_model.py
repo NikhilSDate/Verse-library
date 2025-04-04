@@ -57,7 +57,19 @@ class State:
     meal_7_error: float
     meal_8_error: float
     meal_9_error: float
-
+    
+    # experimental
+    # meal_0_time: float
+    # meal_1_time: float
+    # meal_2_time: float
+    # meal_3_time: float
+    # meal_4_time: float
+    # meal_5_time: float
+    # meal_6_time: float
+    # meal_7_time: float
+    # meal_8_time: float
+    # meal_9_time: float
+    
     agent_mode: PumpMode
 
     def __init__(self, x, agent_mode: PumpMode):

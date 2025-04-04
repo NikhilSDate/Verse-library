@@ -140,10 +140,13 @@ def check_scenario(scenario: SimulationScenario):
     MEAL_TIME_RANGES = [(60, 360), (360, 600), (600, 840), (840, 1080)]
     INTER_MEAL_TIME = 30
     ALLOWED_TMAX = [DEFAULT_MEAL, HIGH_FAT_MEAL]
-    TMAX_TO_CONFIG = {DEFAULT_MEAL: [(BolusType.Simple, None)], HIGH_FAT_MEAL: [(BolusType.Extended, ExtendedBolusConfig(50, 120))]}
+    TMAX_TO_CONFIG = {DEFAULT_MEAL: [(BolusType.Simple, None)], HIGH_FAT_MEAL: [(BolusType.Extended, ExtendedBolusConfig(50, 180))]}
     BOLUS_MEAL_DELTA = 20
     
     meals = scenario.get_meals()
+    if not (len(meals) == 4):
+        print('bad number of meals')
+        return False
     
     # M1
     total_carbs_low = 0
@@ -156,11 +159,8 @@ def check_scenario(scenario: SimulationScenario):
         return False
     
     # M3
-    if not len(meals) == 4:
-        print('bad number of meals')
-        return False
     # we will start scenario at 5 AM
-    for i in len(MEAL_TIME_RANGES):
+    for i in range(len(MEAL_TIME_RANGES)):
         if not (meals[i].time >= MEAL_TIME_RANGES[i][0] and meals[i].time <= MEAL_TIME_RANGES[i][1]):
             print('bad meal times')
             return False
@@ -183,6 +183,7 @@ def check_scenario(scenario: SimulationScenario):
         meal = meals[i]
         allowed_configs = TMAX_TO_CONFIG[meal.TauM]
         if not get_bolus_config(bolus) in allowed_configs:
+            print(get_bolus_config(bolus), allowed_configs)
             print('bad bolus config')
             return False
     
@@ -197,7 +198,27 @@ def check_scenario(scenario: SimulationScenario):
         if not bolus.correction:
             print('bad bolus correction')
             return False
-            
+        
+    return True
+
+def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH):
+    meal_carb_ranges = [(0, 37.5), (37.5, 75), (75, 112.5), (112.5, 150)]
+    good_ranges = []
+    for i in range(64):
+        n = i
+        idx0 = n % 4
+        n  = n // 4
+        idx1 = n % 4
+        n = n // 4
+        idx2 = n % 4
+        n = n // 4
+        idx3 = n % 4
+        ranges = [meal_carb_ranges[idx0], meal_carb_ranges[idx1], meal_carb_ranges[idx2], meal_carb_ranges[idx3]]
+        low_sum = sum([ranges[i][0] for i in range(4)])
+        high_sum = sum([ranges[i][1] for i in range(4)])
+        if low_sum >= TOTAL_LOW and high_sum <= TOTAL_HIGH:
+            good_ranges.append(ranges)
+    return good_ranges
     
 def verify():
     # we want a set of conditions that a scenario should satisfy to ensure realism
@@ -230,18 +251,20 @@ def verify():
     ERROR_HIGH = 1.1
         
     PATIENT_BASAL_GLUCOSE = 6.5
+    
+    meal_ranges = get_allowed_meal_carb_ranges(100, 350)
+    
     while True:
         meal_1_time = np.random.choice(60 * np.array([1, 2, 3, 4, 5, 6]))
-        meal_2_time = np.random.choice(60 * np.array([5, 6, 7, 8, 9, 10]))
+        meal_2_time = np.random.choice(60 * np.array([6, 7, 8, 9, 10]))
         meal_3_time = np.random.choice(60 * np.array([10, 11, 12, 13, 14]))
         meal_4_time = np.random.choice(60 * np.array([14, 15, 16, 17, 18]))
         
         meal_TauMs = np.random.choice([DEFAULT_MEAL, HIGH_FAT_MEAL], (4,))
         
-        bolus_configs = {DEFAULT_MEAL: (BolusType.Simple, None), HIGH_FAT_MEAL: (BolusType.Extended, ExtendedBolusConfig(50, 3))}
+        bolus_configs = {DEFAULT_MEAL: (BolusType.Simple, None), HIGH_FAT_MEAL: (BolusType.Extended, ExtendedBolusConfig(50, 180))}
         
-        meal_carb_ranges = [(0, 50), (50, 100), (100, 150)]
-        meal_carbs = [random.choice(meal_carb_ranges) for _ in range(4)]
+        meal_carbs = random.choice(meal_ranges)
         meals = [Meal(meal_1_time, meal_carbs[0], meal_TauMs[0]), Meal(meal_2_time, meal_carbs[1], meal_TauMs[1]), Meal(meal_3_time, meal_carbs[2], meal_TauMs[2]), Meal(meal_4_time, meal_carbs[3], meal_TauMs[3])]
         
         bolus_offsets = np.random.choice([-5], (4,))
@@ -266,8 +289,12 @@ def verify():
         if not check_scenario(scenario):
             continue
                 
-        verify_multi_meal_scenario(scenario)
-    pass
+        traces = verify_multi_meal_scenario(scenario)
+        safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
+        with open('results/verification/scenario_{i}.pkl', 'wb') as f:
+            pickle.dump(scenario, f)
+        with open('results/verification/safety_{i}.pkl', 'wb') as f:
+            pickle.dump(safety_results, f)
     
 def run_scenario(scenario, log_dir):
     
@@ -450,7 +477,6 @@ def find_optimal_extended_settings():
             tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
             variation = tir['high'] - tir['low']
             print(dn, dur, tir, variation)
-    
 
 def fixup_safety(log_dir):
     scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
