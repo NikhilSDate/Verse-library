@@ -209,11 +209,13 @@ if __name__ == "__main__":
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
-    meals = [Meal(60, (80, 100), DEFAULT_MEAL), Meal(240, (40, 50), DEFAULT_MEAL)]
-    boluses = [Bolus(55, None, BolusType.Simple, 0, True, None), Bolus(235, None, BolusType.Simple, 1, True, None)]
-    traces = verify_multi_meal_scenario((70, 120), params, False, boluses, meals, [0.9, 1.1], duration=8 * 60, settings=[settings, settings], logging=False)
+    settings['basal_iq'] = True
+    meals = [Meal((10, 240), (60, 60), DEFAULT_MEAL)]
+    boluses = [Bolus(30, None, BolusType.Simple, 0, True, None)]
+    scenario = SimulationScenario([110, 110], boluses, meals, [1, 1], [settings, settings], params, sim_duration=10 * 60)
+    traces = verify_multi_meal_scenario(scenario)
     fig = plot_variable(traces, 'G')
-    print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
+    # print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
     
     
     # (70, 180): True, True, False, False, False

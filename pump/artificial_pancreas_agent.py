@@ -157,11 +157,20 @@ class ArtificialPancreasAgent(BaseAgent):
         pump_state = self.pump.get_init_state()
         meal_state_low = [0] * num_meals
         meal_state_high = [0] * num_meals
+        
+        meal_times_low = [0] * num_meals
+        meal_times_high = [0] * num_meals
+        
         for i in range(len(ml)):
             mli = np.minimum(ml[i].carbs, mh[i].carbs)
             mhi = np.maximum(ml[i].carbs, mh[i].carbs)
+            mtl = np.minimum(ml[i].time, mh[i].time)
+            mth = np.maximum(ml[i].time, mh[i].time)
             meal_state_low[i] = mli
             meal_state_high[i] = mhi
+            meal_times_low[i] = mtl
+            meal_times_high[i] = mth
+            
         scenario_state = self.get_scenario_state()
         settings_low = self.get_settings_state(sl)
         settings_high = self.get_settings_state(sh)
@@ -171,7 +180,7 @@ class ArtificialPancreasAgent(BaseAgent):
         errors_low = self.get_error_state(el, num_meals)
         errors_high = self.get_error_state(eh, num_meals)
         
-        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low), list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high)]
+        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low) + meal_times_low, list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high) + meal_times_high]
         
     def get_bg(self, Q1):
         return Q1 * 18 / self.body.param['Vg']
@@ -185,7 +194,8 @@ class ArtificialPancreasAgent(BaseAgent):
         meals = []
         for i, orig_meal in enumerate(raw_meals):
             carbs = state_vec[state_indices[f'carbs_{i}']]
-            meals.append(dataclasses.replace(orig_meal, carbs=carbs))
+            time = state_vec[state_indices[f'meal_{i}_time']]
+            meals.append(dataclasses.replace(orig_meal, time=time, carbs=carbs))
         return meals
     
     def process_bolus(self, bolus, bg, state_vec):
@@ -222,7 +232,7 @@ class ArtificialPancreasAgent(BaseAgent):
         state_vec = init
 
         self.body.set_meals(self.get_meals(state_vec))
-                
+        print(self.body.meals)
         predictions = [0] * num_points        
         for i in tqdm(range(0, num_points)):
             
@@ -233,8 +243,8 @@ class ArtificialPancreasAgent(BaseAgent):
             GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
 
             current_time = i * time_step
-            events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time)
-            bolus, meal = events
+            events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time, state_vec)
+            bolus = events
             bg = int(GluMeas)
             self.cgm.post_reading(bg, current_time)
             bg = self.cgm.get_reading(current_time)

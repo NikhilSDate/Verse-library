@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 import dataclasses
 import numpy as np
+from state_utils import *
 
 class BolusType(str, Enum):
     Simple = 'Simple'
@@ -37,8 +38,8 @@ def get_meal_range(meals: List[Meal]):
     meals_high = []
     
     for m in meals:
-        meals_low.append(dataclasses.replace(m, carbs=m.carbs[0]))
-        meals_high.append(dataclasses.replace(m, carbs=m.carbs[1]))
+        meals_low.append(dataclasses.replace(m, carbs=m.carbs[0], time=m.time[0]))
+        meals_high.append(dataclasses.replace(m, carbs=m.carbs[1], time=m.time[1]))
     return (meals_low, meals_high)
 
 def get_bolus_config(bolus: Bolus):
@@ -87,10 +88,8 @@ class SimulationScenario:
         self.settings = settings
         self.params = params
 
-    def get_events(self, time):
-        bolus = self.get_bolus(time)
-        meal = self.get_meal(time)
-        return bolus, meal
+    def get_events(self, time, state_vec):
+        return self.get_bolus(time)
 
     def get_bolus(self, time):
         if time in self.boluses:
@@ -111,6 +110,7 @@ class SimulationScenario:
         for bolus in self.boluses.values():
             mapping[bolus.meal_index] = bolus
         return mapping
+            
     
     def __repr__(self):
         return f'Scenario{self.get_meals(), self.boluses.values()}'
