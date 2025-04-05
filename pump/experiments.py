@@ -253,7 +253,7 @@ def verify():
     PATIENT_BASAL_GLUCOSE = 6.5
     
     meal_ranges = get_allowed_meal_carb_ranges(100, 350)
-    
+    sim_idx = 0
     while True:
         meal_1_time = np.random.choice(60 * np.array([1, 2, 3, 4, 5, 6]))
         meal_2_time = np.random.choice(60 * np.array([6, 7, 8, 9, 10]))
@@ -284,17 +284,18 @@ def verify():
         settings['basal_rate'] = patient_params['Ub']
         settings['basal_iq'] = True
         
-        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings, settings], patient_params)
+        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings, settings], patient_paramsD)
         
         if not check_scenario(scenario):
             continue
                 
         traces = verify_multi_meal_scenario(scenario)
         safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
-        with open('results/verification/scenario_{i}.pkl', 'wb') as f:
+        with open(f'results/verification/scenario_{sim_idx}.pkl', 'wb') as f:
             pickle.dump(scenario, f)
-        with open('results/verification/safety_{i}.pkl', 'wb') as f:
+        with open(f'results/verification/safety_{sim_idx}.pkl', 'wb') as f:
             pickle.dump(safety_results, f)
+        sim_idx += 1
     
 def run_scenario(scenario, log_dir):
     
