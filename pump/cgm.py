@@ -5,15 +5,18 @@ from sortedcontainers import SortedDict
 
 class CGM:
     # in the future, want to be able to configure 
-    def __init__(self, config={}):
+    def __init__(self, config=None):
         self.t = 0
         self.history: Dict[int, float]= SortedDict()
+        self.config = config
      
-    def get_reading(self, t):
-        return int(self.history[t])
-                
-    def post_reading(self, bg, t):
-        self.history[t] = bg
+    def get_reading(self, raw):
+        bias = self.config.bias
+        offset = self.config.offset
+        return int(raw * bias + offset)
+        
+    def set_config(self, config):
+        self.config = config
         
 class DexcomCGM(CGM):
     def get_reading(self, t):

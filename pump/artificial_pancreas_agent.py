@@ -20,7 +20,7 @@ from verse.analysis.analysis_tree import TraceType, AnalysisTree
 from artificial_pancreas_scenario import *
 from hovorka_model import HovorkaModel
 from pump_model import *
-from state_utils import state_indices, num_meals
+from state_utils import state_indices, num_meals, state_get, state_set
 from simutils import FORGOT_BOLUS
 
 import dataclasses
@@ -150,7 +150,7 @@ class ArtificialPancreasAgent(BaseAgent):
             return np.repeat(errors, num_meals)
         return errors
     
-    def get_init_range(self, Gl, Gh, ml, mh, sl, sh, el, eh):
+    def get_init_range(self, Gl, Gh, ml, mh, sl, sh, el, eh, cgm_low, cgm_high):
         lo, hi = self.body.get_init_range(Gl, Gh)
         real_lo = np.minimum(lo, hi)
         real_hi = np.maximum(lo, hi)
@@ -171,7 +171,7 @@ class ArtificialPancreasAgent(BaseAgent):
         errors_low = self.get_error_state(el, num_meals)
         errors_high = self.get_error_state(eh, num_meals)
         
-        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low), list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high)]
+        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low) + cgm_low, list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high) + cgm_high]
         
     def get_bg(self, Q1):
         return Q1 * 18 / self.body.param['Vg']
@@ -202,28 +202,55 @@ class ArtificialPancreasAgent(BaseAgent):
             
         return (bolus_bg, bolus)
     
+    # for any potential modifications to the pump's logic
+    def apply_custom_logic(self, state_vec, dose):
+        pass
+    
+    def get_config(self, state_vec):
+        return CGMConfig(bias=state_get(state_vec, 'cgm_config_a'), offset=state_get(state_vec, 'cgm_config_b'))
+    
+    def apply_analyses(self, time, state_vec):
+        # setup
+        if not hasattr(self.apply_analyses, 'predictions'):
+            self.apply_analyses.predictions = []
+        
+        predictions: List[float] = self.apply_analyses.predictions
+        
+        # pump state
+        pump_state = self.pump.extract_state()
+        state_vec[state_indices["iob"]] = pump_state[0]         
+        
+        # scenario state is unchanged
+        
+        # derived state
+        # state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
+        prediction = pump_state[1]
+        predictions.append(prediction)
+        # prediction is 30 mins into the future
+        
+        # 30 min buffer for predictions to stabilize (this is more than necessary)
+        if time >= 60 and predictions[int(time) - 30] != -1:
+            state_vec[state_indices["prediction_error"]] =  self.predictions[i - 30] - state_vec[state_indices['G']]
+    
     
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
         init = np.abs(init)
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
-
-        self.reset_pump()
-        basal_rate = init[state_indices['basal_rate']]
-        self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
-        
-        
-        self.logger.start_sim()
-        
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
         state_vec = init
 
+
+        self.reset_pump()
+        basal_rate = init[state_indices['basal_rate']]
+        self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
+        self.logger.start_sim()
         self.body.set_meals(self.get_meals(state_vec))
-                
-        predictions = [0] * num_points        
+        self.cgm.set_config(self.get_config(state_vec))
+        
         for i in tqdm(range(0, num_points)):
             
             self.logger.tick()
@@ -235,20 +262,16 @@ class ArtificialPancreasAgent(BaseAgent):
             current_time = i * time_step
             events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time)
             bolus, meal = events
-            bg = int(GluMeas)
-            self.cgm.post_reading(bg, current_time)
-            bg = self.cgm.get_reading(current_time)
-            
-            state_vec[state_indices['GluMeas']] = bg
+            bg_raw = int(GluMeas)
+            bg = self.cgm.get_reading(bg_raw)
+
                          
             # handle meal/bolus
             if bolus:
                 (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
+                print(bg_raw, bolus_bg)
                 self.pump.send_bolus_command(bolus_bg, bolus)
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
-            
-            if dose < 1 and bg < 60:
-                dose = 0
             
             self.logger.write_dose(current_time, dose)
             
@@ -260,21 +283,8 @@ class ArtificialPancreasAgent(BaseAgent):
             # body state
             state_vec[:self.body.num_variables] = final
             
-            # pump state
-            pump_state = self.pump.extract_state()
-            state_vec[state_indices["iob"]] = pump_state[0]         
+            # self.apply_analyses(current_time, state_vec)
             
-            # scenario state is unchanged
-            
-            # derived state
-            # state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
-            prediction = pump_state[1]
-            predictions[i] = prediction
-            # prediction is 30 mins into the future
-            
-            # 30 min buffer for predictions to stabilize (this is more than necessary)
-            if i >= 60 and predictions[i - 30] != -1:
-                state_vec[state_indices["prediction_error"]] =  predictions[i - 30] - state_vec[state_indices['G']]
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
         return trace

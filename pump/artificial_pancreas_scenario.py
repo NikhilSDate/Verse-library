@@ -30,6 +30,11 @@ class Meal:
     time: int
     carbs: Union[int, Tuple[int, int]]
     TauM: float
+    
+@dataclass(eq=True, frozen=True)
+class CGMConfig:
+    bias: Union[float, Tuple[float, float]]
+    offset: Union[float, Tuple[float, float]]
 
     
 def get_meal_range(meals: List[Meal]):
@@ -66,6 +71,7 @@ class SimulationScenario:
         errors: List[float],
         settings,
         params,
+        cgm_config,
         sim_duration=24 * 60,
     ):
 
@@ -86,6 +92,7 @@ class SimulationScenario:
         self.init_bg = init_bg
         self.settings = settings
         self.params = params
+        self.cgm_config = cgm_config
 
     def get_events(self, time):
         bolus = self.get_bolus(time)

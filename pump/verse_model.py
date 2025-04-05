@@ -70,6 +70,10 @@ class State:
     # meal_8_time: float
     # meal_9_time: float
     
+    # CGM
+    cgm_config_a: float
+    cgm_config_b: float
+    
     agent_mode: PumpMode
 
     def __init__(self, x, agent_mode: PumpMode):

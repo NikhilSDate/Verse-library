@@ -251,6 +251,8 @@ def verify():
     ERROR_HIGH = 1.1
         
     PATIENT_BASAL_GLUCOSE = 6.5
+    CGM_ERROR_LOW = 0
+    CGM_ERROR_HIGH = 1.2
     
     meal_ranges = get_allowed_meal_carb_ranges(100, 350)
     
@@ -283,6 +285,8 @@ def verify():
         settings = get_recommended_settings(TDD=39.22, BW=74.9)
         settings['basal_rate'] = patient_params['Ub']
         settings['basal_iq'] = True
+        
+        cgm_error = []
         
         scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings, settings], patient_params)
         

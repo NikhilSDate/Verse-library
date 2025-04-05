@@ -7,9 +7,9 @@ num_continuous_variables = len(state_indices) - num_discrete_variables
 num_meals = 10
 
 
-def set(init, field, value):
-    init[state_indices[field]] = value
+def state_set(state_vec, field, value):
+    state_vec[state_indices[field]] = value
 
 
-def get(init, field):
-    return init[state_indices[field]]
+def state_get(state_vec, field):
+    return state_vec[state_indices[field]]

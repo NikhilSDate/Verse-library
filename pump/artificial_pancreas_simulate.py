@@ -65,6 +65,11 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, erro
 
     return traces
 
+def get_cgm_error_range(cgm_config: CGMConfig):
+    error_low = [cgm_config.bias[0], cgm_config.offset[0]]
+    error_high = [cgm_config.bias[1], cgm_config.offset[1]]
+    return error_low, error_high
+
 
 # TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
 # That's a much cleaner abstraction
@@ -82,8 +87,8 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     settings_low, settings_high = simulation_scenario.settings
     errors_low, errors_high = simulation_scenario.errors
     meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
-    init_state = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high)
-    init = init_state
+    cgm_low, cgm_high = get_cgm_error_range(simulation_scenario.cgm_config)
+    init = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high, cgm_low, cgm_high)    
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
     scenario.set_init_single(
@@ -209,9 +214,12 @@ if __name__ == "__main__":
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
-    meals = [Meal(60, (80, 100), DEFAULT_MEAL), Meal(240, (40, 50), DEFAULT_MEAL)]
-    boluses = [Bolus(55, None, BolusType.Simple, 0, True, None), Bolus(235, None, BolusType.Simple, 1, True, None)]
-    traces = verify_multi_meal_scenario((70, 120), params, False, boluses, meals, [0.9, 1.1], duration=8 * 60, settings=[settings, settings], logging=False)
+    settings['basal_iq'] = True
+    meals = [Meal(10, (40, 120), DEFAULT_MEAL)]
+    boluses = [Bolus(5, None, BolusType.Simple, 0, True, None)]
+    cgm_config = CGMConfig((0.9, 1,1), (0, 0))
+    scenario = SimulationScenario([70, 180], boluses, meals, [1, 1], [settings, settings], params, cgm_config, sim_duration=180)
+    traces = verify_multi_meal_scenario(scenario)
     fig = plot_variable(traces, 'G')
     print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
     
