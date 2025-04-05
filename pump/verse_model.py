@@ -70,6 +70,9 @@ class State:
     meal_8_time: float
     meal_9_time: float
     
+    # CGM
+    # cgm_error: float
+    
     agent_mode: PumpMode
 
     def __init__(self, x, agent_mode: PumpMode):

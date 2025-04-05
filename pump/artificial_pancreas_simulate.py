@@ -54,7 +54,7 @@ def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, erro
     init_state = agent.get_init_state(init_bg, meals, settings, errors)
     init = [init_state, init_state]  # TODO why twice?
 
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=True))
     scenario.add_agent(agent)
     scenario.set_init_single(
         "pump", init, (PumpMode.default,)
@@ -84,7 +84,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
     init_state = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high)
     init = init_state
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=True))
     scenario.add_agent(agent)
     scenario.set_init_single(
         "pump", init, (PumpMode.default,)
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
     settings['basal_iq'] = False
-    meals = [Meal((10, 240), (40, 40), DEFAULT_MEAL)]
+    meals = [Meal((0, 120), (40, 40), DEFAULT_MEAL)]
     # boluses = [Bolus(30, None, BolusType.Simple, 0, True, None)]
     boluses = []
     scenario = SimulationScenario([110, 110], boluses, meals, [1, 1], [settings, settings], params, sim_duration=10 * 60)
