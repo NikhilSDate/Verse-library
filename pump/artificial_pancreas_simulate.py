@@ -90,7 +90,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
         "pump", init, (PumpMode.default,)
     )  # TODO what's the other half of the tuple?
 
-    time_step = 1
+    time_step = 0.05
     traces = scenario.verify(simulation_scenario.sim_duration, time_step)
     return traces
 
@@ -209,9 +209,10 @@ if __name__ == "__main__":
     basal = 0  # units
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
-    settings['basal_iq'] = True
-    meals = [Meal((10, 240), (60, 60), DEFAULT_MEAL)]
-    boluses = [Bolus(30, None, BolusType.Simple, 0, True, None)]
+    settings['basal_iq'] = False
+    meals = [Meal((10, 240), (40, 40), DEFAULT_MEAL)]
+    # boluses = [Bolus(30, None, BolusType.Simple, 0, True, None)]
+    boluses = []
     scenario = SimulationScenario([110, 110], boluses, meals, [1, 1], [settings, settings], params, sim_duration=10 * 60)
     traces = verify_multi_meal_scenario(scenario)
     fig = plot_variable(traces, 'G')

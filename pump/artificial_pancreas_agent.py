@@ -242,25 +242,23 @@ class ArtificialPancreasAgent(BaseAgent):
             
             GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
 
+            
+            
             current_time = i * time_step
-            events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time, state_vec)
-            bolus = events
-            bg = int(GluMeas)
-            self.cgm.post_reading(bg, current_time)
-            bg = self.cgm.get_reading(current_time)
-            
-            state_vec[state_indices['GluMeas']] = bg
-                         
-            # handle meal/bolus
-            if bolus:
-                (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
-                self.pump.send_bolus_command(bolus_bg, bolus)
-            dose = self.pump.pump_emulator.delay_minute(bg=bg)
-            
-            if dose < 1 and bg < 60:
-                dose = 0
-            
-            self.logger.write_dose(current_time, dose)
+            if abs(int(current_time) - current_time) < time_step * 1e-4:
+                events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time, state_vec)
+                bolus = events
+                bg = int(GluMeas)
+                self.cgm.post_reading(bg, current_time)
+                bg = self.cgm.get_reading(current_time)
+                state_vec[state_indices['GluMeas']] = bg
+                            
+                # handle meal/bolus
+                if bolus:
+                    (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
+                    self.pump.send_bolus_command(bolus_bg, bolus)
+                dose = self.pump.pump_emulator.delay_minute(bg=bg)
+                self.logger.write_dose(current_time, dose)
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose))
             r.set_initial_value(state_vec[:self.body.num_variables])
@@ -271,20 +269,20 @@ class ArtificialPancreasAgent(BaseAgent):
             state_vec[:self.body.num_variables] = final
             
             # pump state
-            pump_state = self.pump.extract_state()
-            state_vec[state_indices["iob"]] = pump_state[0]         
+            # pump_state = self.pump.extract_state()
+            # state_vec[state_indices["iob"]] = pump_state[0]         
             
             # scenario state is unchanged
             
             # derived state
             # state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
-            prediction = pump_state[1]
-            predictions[i] = prediction
+            # prediction = pump_state[1]
+            # predictions[i] = prediction
             # prediction is 30 mins into the future
             
             # 30 min buffer for predictions to stabilize (this is more than necessary)
-            if i >= 60 and predictions[i - 30] != -1:
-                state_vec[state_indices["prediction_error"]] =  predictions[i - 30] - state_vec[state_indices['G']]
+            # if i >= 60 and predictions[i - 30] != -1:
+            #     state_vec[state_indices["prediction_error"]] =  predictions[i - 30] - state_vec[state_indices['G']]
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
         return trace
