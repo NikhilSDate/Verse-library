@@ -215,7 +215,7 @@ if __name__ == "__main__":
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
     settings['basal_iq'] = True
-    meals = [Meal(10, (40, 120), DEFAULT_MEAL)]
+    meals = [Meal(10, (120, 120), DEFAULT_MEAL)]
     boluses = [Bolus(5, None, BolusType.Simple, 0, True, None)]
     cgm_config = CGMConfig((0.9, 1,1), (0, 0))
     scenario = SimulationScenario([70, 180], boluses, meals, [1, 1], [settings, settings], params, cgm_config, sim_duration=180)
