@@ -209,18 +209,11 @@ def get_recommended_settings(TDD, BW, MDI=False):
 
 
 if __name__ == "__main__":
-    settings = get_recommended_settings(TDD=39.22, BW=74.9)
-    BW = 74.9  # kg
-    basal = 0  # units
-    params = patient_original({'basalGlucose': 6.5})
-    settings['basal_rate'] = params['Ub']
-    settings['basal_iq'] = True
-    meals = [Meal(10, (120, 120), DEFAULT_MEAL)]
-    boluses = [Bolus(5, None, BolusType.Simple, 0, True, None)]
-    cgm_config = CGMConfig((0.9, 1,1), (0, 0))
-    scenario = SimulationScenario([70, 180], boluses, meals, [1, 1], [settings, settings], params, cgm_config, sim_duration=180)
+    with open('./results/verification/scenario_0800000000c95a951/scenario.pkl', 'rb') as f:
+        scenario = pickle.load(f)
     traces = verify_multi_meal_scenario(scenario)
-    fig = plot_variable(traces, 'G')
+    fig = plot_variable(traces, 'G', show=False)
+    fig.write_image('extended_fixed.png')
     print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
     
     

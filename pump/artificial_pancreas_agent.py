@@ -253,8 +253,8 @@ class ArtificialPancreasAgent(BaseAgent):
         self.cgm.set_config(self.get_config(state_vec))
         
         process = multiprocessing.current_process()
-        
-        for i in tqdm(range(0, num_points), position=process._identity[0]):
+        position = process._identity[0] if len(process._identity) > 0 else 0
+        for i in tqdm(range(0, num_points), position=position):
             
             self.logger.tick()
 
