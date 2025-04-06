@@ -7,6 +7,7 @@ from tqdm import tqdm
 from scipy.integrate import ode
 from dotenv import load_dotenv
 from cgm import CGM
+import multiprocessing
 
 load_dotenv()
 EMULATOR_PATH = os.environ["EMULATOR_PATH"]
@@ -251,7 +252,9 @@ class ArtificialPancreasAgent(BaseAgent):
         self.body.set_meals(self.get_meals(state_vec))
         self.cgm.set_config(self.get_config(state_vec))
         
-        for i in tqdm(range(0, num_points)):
+        process = multiprocessing.current_process()
+        
+        for i in tqdm(range(0, num_points), position=process._identity[0]):
             
             self.logger.tick()
 
@@ -269,7 +272,6 @@ class ArtificialPancreasAgent(BaseAgent):
             # handle meal/bolus
             if bolus:
                 (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
-                print(bg_raw, bolus_bg)
                 self.pump.send_bolus_command(bolus_bg, bolus)
             dose = self.pump.pump_emulator.delay_minute(bg=bg)
             

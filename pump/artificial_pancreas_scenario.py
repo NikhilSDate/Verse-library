@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 import dataclasses
 import numpy as np
+from pyrsistent import freeze
 
 class BolusType(str, Enum):
     Simple = 'Simple'
@@ -35,6 +36,18 @@ class Meal:
 class CGMConfig:
     bias: Union[float, Tuple[float, float]]
     offset: Union[float, Tuple[float, float]]
+    
+@dataclass(eq=True)
+class ScenarioData:
+    init_bg: Tuple[int, int]
+    meals: List[Meal]
+    boluses: List[Bolus]
+    errors: List[float]
+    settings: Dict
+    params: Dict
+    cgm_config: CGMConfig
+    sim_duration: int
+    
 
     
 def get_meal_range(meals: List[Meal]):
@@ -91,7 +104,6 @@ class SimulationScenario:
         self.errors = errors
         self.init_bg = init_bg
         self.settings = settings
-        self.params = params
         self.cgm_config = cgm_config
 
     def get_events(self, time):
@@ -112,12 +124,24 @@ class SimulationScenario:
     def get_meals(self) -> List[Meal]:
         return [self.meals[t] for t in sorted(self.meals.keys())]
     
+    def get_boluses(self) -> List[Meal]:
+        return [self.boluses[t] for t in sorted(self.boluses.keys())]
+    
     def get_bolus_meal_mapping(self):
         # maps meal index to bolus
         mapping = {}
         for bolus in self.boluses.values():
             mapping[bolus.meal_index] = bolus
         return mapping
+    
+    def get_data(self):
+        return ScenarioData(self.init_bg, self.get_meals(), self.get_boluses(), self.errors, self.settings, self.params, self.cgm_config, self.sim_duration)
+    
+    def __key(self):
+        return freeze((self.init_bg, self.meals, self.boluses, self.errors, self.params, self.sim_duration, self.settings, self.cgm_config))
+    
+    def __hash__(self):
+        return hash(self.__key)
     
     def __repr__(self):
         return f'Scenario{self.get_meals(), self.boluses.values()}'
