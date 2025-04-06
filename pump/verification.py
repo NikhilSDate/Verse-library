@@ -297,9 +297,14 @@ if __name__ == '__main__':
     #     scenarios.append(s)
     # verify(scenarios, pool_size=2)    
 
+    parser = argparse.ArgumentParser('pumpverif')
+    parser.add_argument('-p', '--processes', default=1, type=int)
+    args = parser.parse_args()
+    
     signal.signal(signal.SIGINT, sigint)
     np.random.seed(42)
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)  
-    verify(scenarios, pool_size=1)
+    print(args.processes)
+    verify(scenarios, pool_size=args.processes)
         
