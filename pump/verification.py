@@ -21,6 +21,7 @@ import threading
 import os
 import signal
 import itertools
+import ast
 
 
 # TODO: this function is a bit of a hack
@@ -285,6 +286,32 @@ def sigint(signum, frame):
 def verify(scenarios: List[SimulationScenario], pool_size: int):
     with Pool(pool_size) as p:
         p.map(run_verification_scenario, scenarios)
+
+# load all results
+# there is no point trying to optimize this, since this is not really the bottleneck
+def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
+    results = []
+    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    for scenario_dir in scenario_dirs:
+        with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
+            scenario = pickle.load(f)
+        with open(os.path.join(scenario_dir.path, 'traces.pkl'), 'rb') as f:
+            traces = pickle.load(f)
+        with open(os.path.join(scenario_dir.path, 'safety.txt')) as f:
+            safety = ast.literal_eval(f.read())
+        results.append((scenario, traces, safety))
+    return results  
+    
+def verify_wrapper():
+    parser = argparse.ArgumentParser('pumpverif')
+    parser.add_argument('-p', '--processes', default=1, type=int)
+    args = parser.parse_args()
+    signal.signal(signal.SIGINT, sigint)
+    np.random.seed(42)
+    scenarios = gen_verification_scenarios()
+    np.random.shuffle(scenarios)  
+    print(args.processes)
+    verify(scenarios, pool_size=args.processes)  
     
 if __name__ == '__main__':
     # random.seed(42)
@@ -295,16 +322,14 @@ if __name__ == '__main__':
     #     s = next(g)
     #     s.sim_duration = 60
     #     scenarios.append(s)
-    # verify(scenarios, pool_size=2)    
-
-    parser = argparse.ArgumentParser('pumpverif')
-    parser.add_argument('-p', '--processes', default=1, type=int)
-    args = parser.parse_args()
-    
-    signal.signal(signal.SIGINT, sigint)
-    np.random.seed(42)
-    scenarios = gen_verification_scenarios()
-    np.random.shuffle(scenarios)  
-    print(args.processes)
-    verify(scenarios, pool_size=args.processes)
-        
+    # verify(scenarios, pool_size=2)   
+    results = load_results('results/verification')
+    count = 0
+    for r in results:
+        boluses = r[0].boluses.values()
+        for b in boluses:
+            if b.type == BolusType.Extended:
+                count += 1
+                break
+    print(count)
+    breakpoint()
