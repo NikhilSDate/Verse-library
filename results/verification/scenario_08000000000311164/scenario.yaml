@@ -1,0 +1,111 @@
+boluses:
+- carbs: null
+  config:
+    deliver_now_perc: 50
+    duration: 180
+  correction: true
+  meal_index: 0
+  time: 115
+  type: Extended
+- carbs: null
+  config: null
+  correction: true
+  meal_index: 1
+  time: 595
+  type: Simple
+- carbs: null
+  config: null
+  correction: true
+  meal_index: 2
+  time: 655
+  type: Simple
+- carbs: null
+  config: null
+  correction: true
+  meal_index: 3
+  time: 835
+  type: Simple
+cgm_config:
+  bias: !!python/tuple
+  - 0.9
+  - 1.1
+  offset: !!python/tuple
+  - 0
+  - 0
+errors:
+- 0.9
+- 1.1
+init_bg:
+- 70
+- 180
+meals:
+- TauM: 120
+  carbs: !!python/tuple
+  - 50
+  - 100
+  time: 120
+- TauM: 40
+  carbs: !!python/tuple
+  - 100
+  - 150
+  time: 600
+- TauM: 40
+  carbs: !!python/tuple
+  - 0
+  - 50
+  time: 660
+- TauM: 40
+  carbs: !!python/tuple
+  - 0
+  - 50
+  time: 840
+params:
+  Bio: 0.8
+  EGP0: 16.9
+  F01: 11.1
+  GBasal: 6.5
+  MCHO: 180.1577
+  MCRGlu: 0.012
+  RCl: 0.01
+  RTh: 9
+  Sd: 0.000505
+  Se: 0.019
+  St: 0.001841
+  TDD: 39.22
+  TGlu: 0.0012
+  TauGlu: 19
+  TauM: 40.0
+  TauS: 10.718808477734166
+  Ub: 0.9097168337052114
+  Vg: 160
+  Vi: 120
+  carbF: 11.5
+  carbFactors:
+    time: 0
+    value: 11.5
+  k12: 0.06
+  ka: 0.018
+  ka1: 0.0034
+  ka2: 0.056
+  ka3: 0.024
+  ke: 0.14
+  pumpBasals:
+    time: 0
+    value: 0.9097168337052114
+  w: 74.9
+settings:
+- basal_iq: true
+  basal_rate: 0.8187451503346903
+  carb_ratio: 11
+  correction_factor: 43
+  insulin_duration: 300
+  max_bolus: 10
+  target_bg: 110
+- basal_iq: true
+  basal_rate: 1.0006885170757327
+  carb_ratio: 11
+  correction_factor: 43
+  insulin_duration: 300
+  max_bolus: 10
+  target_bg: 110
+sim_duration: 1440
