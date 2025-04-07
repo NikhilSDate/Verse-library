@@ -313,23 +313,11 @@ def verify_wrapper():
     print(args.processes)
     verify(scenarios, pool_size=args.processes)  
     
+def compute_proof_statistics(results):
+    totals = np.zeros_like(results[0][2])
+    for result in results:
+        totals += np.array(result[2])
+    return totals / len(results)
+    
 if __name__ == '__main__':
-    # random.seed(42)
-    # np.random.seed(42)
-    # scenarios = []
-    # g = gen_verification_scenarios()
-    # for i in range(2):
-    #     s = next(g)
-    #     s.sim_duration = 60
-    #     scenarios.append(s)
-    # verify(scenarios, pool_size=2)   
-    results = load_results('results/verification')
-    count = 0
-    for r in results:
-        boluses = r[0].boluses.values()
-        for b in boluses:
-            if b.type == BolusType.Extended:
-                count += 1
-                break
-    print(count)
-    breakpoint()
+    verify_wrapper()
