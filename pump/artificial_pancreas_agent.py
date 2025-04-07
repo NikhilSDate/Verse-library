@@ -11,7 +11,6 @@ import multiprocessing
 
 load_dotenv()
 EMULATOR_PATH = os.environ["EMULATOR_PATH"]
-print(EMULATOR_PATH)
 sys.path.insert(1, EMULATOR_PATH)
 from pump_wrapper import Pump
 

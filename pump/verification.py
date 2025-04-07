@@ -274,9 +274,9 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
     with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
         pickle.dump(scenario, f)
 
-def run_verification_scenario(scenario):
+def run_verification_scenario(scenario, logging=False):
     tqdm.write(str(scenario))
-    traces = verify_multi_meal_scenario(scenario)
+    traces = verify_multi_meal_scenario(scenario, logging=logging)
     safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
     save_scenario_results(scenario, traces, safety_results, 'results/verification')
 
@@ -293,15 +293,29 @@ def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
     results = []
     scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
     for scenario_dir in scenario_dirs:
-        with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
-            scenario = pickle.load(f)
-        with open(os.path.join(scenario_dir.path, 'traces.pkl'), 'rb') as f:
-            traces = pickle.load(f)
-        with open(os.path.join(scenario_dir.path, 'safety.txt')) as f:
-            safety = ast.literal_eval(f.read())
-        results.append((scenario, traces, safety))
+        try:
+            with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
+                scenario = pickle.load(f)
+            with open(os.path.join(scenario_dir.path, 'traces.pkl'), 'rb') as f:
+                traces = pickle.load(f)
+            with open(os.path.join(scenario_dir.path, 'safety.txt')) as f:
+                safety = ast.literal_eval(f.read())
+            results.append((scenario, traces, safety))
+        except FileNotFoundError:
+            pass
     return results  
-    
+
+def debug_scenario(scenario_path):
+    with open(os.path.join(scenario_path, 'scenario.pkl'), 'rb') as f:
+        scenario = pickle.load(f)
+    signal.signal(signal.SIGINT, sigint)
+    traces = run_verification_scenario(scenario, logging=True)
+    fig1 = plot_variable(traces, 'G', show=True)
+    fig2 = plot_variable(traces, 'InsSub1', show=True)
+    fig1.write_image('debug_G.png')
+    fig2.write_image('debug_InsSub.png')
+            
+            
 def verify_wrapper():
     parser = argparse.ArgumentParser('pumpverif')
     parser.add_argument('-p', '--processes', default=1, type=int)
@@ -314,10 +328,18 @@ def verify_wrapper():
     verify(scenarios, pool_size=args.processes)  
     
 def compute_proof_statistics(results):
-    totals = np.zeros_like(results[0][2])
+    totals = np.zeros_like(results[0][2], dtype=int)
+    perfect = 0
     for result in results:
-        totals += np.array(result[2])
-    return totals / len(results)
+        totals += np.array(result[2], dtype=int)
+        perfect += np.min(np.array(result[2], dtype=int))
+    return totals / len(results), perfect / len(results)
     
 if __name__ == '__main__':
-    verify_wrapper()
+    
+    # with open('results/verification/scenario_080000000000d3c9b/traces.pkl', 'rb') as f:
+    #     traces = pickle.load(f)
+    # plot_variable(traces, 'G')
+    results = load_results('results/verification')
+    stats = compute_proof_statistics(results)    
+    print(stats)

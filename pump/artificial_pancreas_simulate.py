@@ -73,7 +73,7 @@ def get_cgm_error_range(cgm_config: CGMConfig):
 
 # TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
 # That's a much cleaner abstraction
-def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None, logging=False):
+def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir='./debug', logging=False):
     pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
