@@ -214,9 +214,13 @@ if __name__ == "__main__":
     boluses = [Bolus(-5, None, BolusType.Simple, 0, True, None, True), Bolus(300, None, BolusType.Simple, 1, True, None, False)]
     scenario = SimulationScenario([110, 110], boluses, meals, [1, 1], [settings, settings], params, sim_duration=12 * 60)
     traces = verify_multi_meal_scenario(scenario)
-    fig = plot_variable(traces, 'time_out_of_range')
-    breakpoint()
-    # print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
+    fig1 = plot_variable(traces, 'time_out_of_range')
+    fig2 = plot_variable(traces, 'G')
+    fig1.write_image('results/hidden/time_out_of_range.png')
+    fig2.write_image('results/hidden/glucose.png')
+    print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose)))
+    with open('results/hidden/traces.pkl', 'wb') as f:
+        pickle.dump(traces, f)
     
     
     # (70, 180): True, True, False, False, False
