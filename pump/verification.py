@@ -377,12 +377,15 @@ def unsafe_analysis(results: List[Tuple[Scenario, object, object]], index):
     # plt.legend()
     # plt.show()
 
-def overlay_simulation_traces(scenario, verification_traces):
+def overlay_simulation_traces(args):
+    (log_dir, scenario_dir) = args
+    scenario, verification_traces, safety = load_from_dir(log_dir, scenario_dir)
     fig = plot_variable(verification_traces, 'G', show=False)
     inits = verify_multi_meal_scenario(scenario, track_inits=True)
     for init in inits:
         traces = simulate_from_init(scenario, init)
         plot_variable(traces, 'G', show=False, fig=fig)
+    fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims.png'))
     return fig
     
 if __name__ == '__main__':
@@ -393,7 +396,7 @@ if __name__ == '__main__':
     # stats = compute_proof_statistics(results)    
     # plot_verification_results(results, 0)
     # results/perfectly_unsafe/scenario_0800000001e04ba8e
-    scenario, traces, safety = load_from_dir('results/perfectly_unsafe', 'scenario_0800000001e04ba8e')
-    fig = overlay_simulation_traces(scenario, traces)
-    fig.show()
-    breakpoint()
+    log_dir = 'results/perfectly_unsafe'
+    perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
+    with Pool(24) as p:
+        p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
