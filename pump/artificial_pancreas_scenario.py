@@ -135,13 +135,19 @@ class SimulationScenario:
         return mapping
     
     def get_total_carb_range(self):
-        total_low = [meal.carbs[0] for meal in self.meals]
-        total_high = [meal.carbs[1] for meal in self.meals]
+        total_low = sum([meal.carbs[0] for meal in self.get_meals()])
+        total_high = sum([meal.carbs[1] for meal in self.get_meals()])
         return (total_low, total_high)
 
     def get_data(self):
         return ScenarioData(self.init_bg, self.get_meals(), self.get_boluses(), self.errors, self.settings, self.params, self.cgm_config, self.sim_duration)
     
+    def get_largest_meal(self):
+        return max([meal.carbs[1] for meal in self.get_meals()])
+
+    def get_smallest_meal(self):
+        return min([meal.carbs[0] for meal in self.get_meals()])
+
     def __key(self):
         return freeze((self.init_bg, self.meals, self.boluses, self.errors, self.params, self.sim_duration, self.settings, self.cgm_config))
     

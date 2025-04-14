@@ -306,6 +306,16 @@ def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
             pass
     return results  
 
+def load_from_dir(log_dir, scenario_dir):
+    scenario_dir = os.path.join(log_dir, scenario_dir)
+    with open(os.path.join(scenario_dir, 'scenario.pkl'), 'rb') as f:
+        scenario = pickle.load(f)
+    with open(os.path.join(scenario_dir, 'traces.pkl'), 'rb') as f:
+        traces = pickle.load(f)
+    with open(os.path.join(scenario_dir, 'safety.txt')) as f:
+        safety = ast.literal_eval(f.read())
+    return (scenario, traces, safety)    
+
 def debug_scenario(scenario_path):
     with open(os.path.join(scenario_path, 'scenario.pkl'), 'rb') as f:
         scenario = pickle.load(f)
@@ -331,32 +341,59 @@ def verify_wrapper():
 def compute_proof_statistics(results):
     totals = np.zeros_like(results[0][2], dtype=int)
     perfect = 0
+    perfectly_unsafe = 0
     for result in tqdm(results):
         totals += np.array(result[2], dtype=int)
         perfect += np.min(np.array(result[2], dtype=int))
-    return totals / len(results), perfect / len(results)
+        perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
+    return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
 
-def plot_verification_results(results: List[Tuple[Scenario, object, object]], index):
+def save_perfectly_unsafe(results, log_dir):
+    for result in results:
+        if np.min(1 - np.array(result[2], dtype=int)) > 0:
+            save_scenario_results(result[0], result[1], result[2], log_dir)
+
+def unsafe_analysis(results: List[Tuple[Scenario, object, object]], index):
     points_safe = []
     points_unsafe = []
+
+    unsafe_map = {}
+    safe_map = {}
+
     for result in results:
         point = [result[0].get_largest_meal(), result[0].get_total_carb_range()[1]]
+        map_idx = 1
         if result[2][index]:
             points_safe.append(point)
+            safe_map[point[map_idx]] = safe_map.get(point[map_idx], 0) + 1
         else:
-            points_unsafe.append(point)
-    points_safe = np.array(points_safe)
-    points_unsafe = np.array(points_unsafe)
-    plt.scatter(points_safe[:][0], points_safe[:][1], c='green')
-    plt.scatter(points_unsafe[:][0], points_unsafe[:][1], c='red')
-    plt.legend()
-    plt.show()
+            unsafe_map[point[map_idx]] = unsafe_map.get(point[map_idx], 0) + 1
+    
+    return safe_map, unsafe_map
+    # points_safe = np.array(points_safe)
+    # points_unsafe = np.array(points_unsafe)
+    # plt.scatter(points_safe[:, 0], points_safe[:, 1], c='green')
+    # plt.scatter(points_unsafe[:, 0], points_unsafe[:, 1], c='red')
+    # plt.legend()
+    # plt.show()
+
+def overlay_simulation_traces(scenario, verification_traces):
+    fig = plot_variable(verification_traces, 'G', show=False)
+    inits = verify_multi_meal_scenario(scenario, track_inits=True)
+    for init in inits:
+        traces = simulate_from_init(scenario, init)
+        plot_variable(traces, 'G', show=False, fig=fig)
+    return fig
     
 if __name__ == '__main__':
     
     # with open('results/verification/scenario_080000000000d3c9b/traces.pkl', 'rb') as f:
     #     traces = pickle.load(f)
     # plot_variable(traces, 'G')
-    results = load_results('results/verification')
     # stats = compute_proof_statistics(results)    
-    plot_verification_results(results, 0)
+    # plot_verification_results(results, 0)
+    # results/perfectly_unsafe/scenario_0800000001e04ba8e
+    scenario, traces, safety = load_from_dir('results/perfectly_unsafe', 'scenario_0800000001e04ba8e')
+    fig = overlay_simulation_traces(scenario, traces)
+    fig.show()
+    breakpoint()

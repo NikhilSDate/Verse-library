@@ -35,6 +35,29 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 ##############
 
 
+def simulate_from_init(simulation_scenario: SimulationScenario, init, logging=False, log_dir=''):
+    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
+    body = HovorkaModel(simulation_scenario.params)
+    cgm = CGM()
+    if logging:
+        logger = Logger(log_dir=log_dir)
+    else:
+        logger = NotLogger()
+    agent = ArtificialPancreasAgent(
+        "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
+    )
+    init = [init, init]
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+    scenario.add_agent(agent)
+    scenario.set_init_single(
+        "pump", init, (PumpMode.default,)
+    )  # TODO what's the other half of the tuple?
+
+    time_step = 1
+    traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
+    return traces
+
+
 def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, errors=None, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False):
 
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
@@ -73,7 +96,8 @@ def get_cgm_error_range(cgm_config: CGMConfig):
 
 # TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
 # That's a much cleaner abstraction
-def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir='./debug', logging=False):
+# track_inits is a hack: if set to True, no actual verification will be performed, and the function will just return the initial values that DryVR chooses
+def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir='./debug', logging=False, track_inits=False):
     pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
@@ -82,7 +106,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     else:
         logger = NotLogger()
     agent = ArtificialPancreasAgent(
-        "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
+        "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py", track_inits=track_inits
     )
     settings_low, settings_high = simulation_scenario.settings
     errors_low, errors_high = simulation_scenario.errors
@@ -97,6 +121,8 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
 
     time_step = 1
     traces = scenario.verify(simulation_scenario.sim_duration, time_step)
+    if track_inits:
+        return agent.inits
     return traces
 
 def evaluate_safety_constraint(traces, variable, safety_func):
@@ -154,7 +180,7 @@ def plot_variable(tree, var, show=True, fig = None):
     if tree.root.type == AnalysisTreeNodeType.REACH_TUBE:
         fig = reachtube_tree(tree, None, fig, 0, idx)
     else:
-        fig = simulation_tree(tree, None, fig, 0, idx)
+        fig = simulation_tree(tree, None, fig, 0, idx, plot_color=[['black']])
     fig.update_xaxes(showgrid=True)
     fig.update_yaxes(showgrid=True)
     if show:

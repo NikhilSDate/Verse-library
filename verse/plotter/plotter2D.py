@@ -1072,7 +1072,7 @@ def simulation_tree_single(
             count_dict[time] = 1
         start_list.append(start)
         end_list.append(end)
-
+        
         fig.add_trace(
             go.Scatter(
                 x=trace[:, x_dim],

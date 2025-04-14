@@ -98,6 +98,7 @@ class ArtificialPancreasAgent(BaseAgent):
         cgm: CGM,
         simulation_scenario: SimulationScenario,
         logger: Logger,
+        track_inits = False,
         code=None,
         file_name=None,
     ):
@@ -110,6 +111,8 @@ class ArtificialPancreasAgent(BaseAgent):
         self.scenario = simulation_scenario
         self.logger = logger
         self.pump.pump_emulator.link_output_buffer(logger.output_buffer)
+        self.inits = []
+        self.track_inits = track_inits
 
     # exclude from picling
     # TODO: we can probably make this more fine-grainged
@@ -235,13 +238,19 @@ class ArtificialPancreasAgent(BaseAgent):
     
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
-        init = np.abs(init)
+
+        
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
         state_vec = init
+
+
+        if self.track_inits:
+            self.inits.append(init)
+            return trace
 
 
         self.reset_pump()
