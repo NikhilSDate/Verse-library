@@ -268,7 +268,6 @@ class ArtificialPancreasAgent(BaseAgent):
         self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
         self.logger.start_sim()
         self.body.set_meals(self.get_meals(state_vec))
-        print(self.body.meals)
         predictions = [0] * num_points        
         for i in tqdm(range(0, num_points)):
             
@@ -286,8 +285,7 @@ class ArtificialPancreasAgent(BaseAgent):
                 events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time, state_vec)
                 bolus = events
                 bg = int(GluMeas)
-                self.cgm.post_reading(bg, current_time)
-                bg = self.cgm.get_reading(current_time)
+                bg = self.cgm.get_reading(bg)
                 state_vec[state_indices['GluMeas']] = bg
                             
                 # handle meal/bolus

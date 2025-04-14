@@ -74,8 +74,8 @@ class State:
     # cgm_error: float
     
     # CGM
-    cgm_config_a: float
-    cgm_config_b: float
+    # cgm_config_a: float
+    # cgm_config_b: float
     
     agent_mode: PumpMode
 

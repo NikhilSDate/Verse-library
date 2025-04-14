@@ -113,6 +113,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
     cgm_low, cgm_high = get_cgm_error_range(simulation_scenario.cgm_config)
     init = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high, cgm_low, cgm_high)    
+    breakpoint()
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
     scenario.set_init_single(

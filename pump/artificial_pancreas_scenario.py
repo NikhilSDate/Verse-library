@@ -109,7 +109,7 @@ class SimulationScenario:
         for bolus in self.boluses:
             if not bolus.relative and np.isclose(bolus.time, time):
                 return bolus
-            elif bolus.relative and np.isclose(bolus.time + np.round(get(state_vec, f'meal_{bolus.meal_index}_time')), time):
+            elif bolus.relative and np.isclose(bolus.time + np.round(state_get(state_vec, f'meal_{bolus.meal_index}_time')), time):
                 return bolus
         return None
         
