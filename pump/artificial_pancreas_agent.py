@@ -160,11 +160,20 @@ class ArtificialPancreasAgent(BaseAgent):
         pump_state = self.pump.get_init_state()
         meal_state_low = [0] * num_meals
         meal_state_high = [0] * num_meals
+        
+        meal_times_low = [0] * num_meals
+        meal_times_high = [0] * num_meals
+        
         for i in range(len(ml)):
             mli = np.minimum(ml[i].carbs, mh[i].carbs)
             mhi = np.maximum(ml[i].carbs, mh[i].carbs)
+            mtl = np.minimum(ml[i].time, mh[i].time)
+            mth = np.maximum(ml[i].time, mh[i].time)
             meal_state_low[i] = mli
             meal_state_high[i] = mhi
+            meal_times_low[i] = mtl
+            meal_times_high[i] = mth
+            
         scenario_state = self.get_scenario_state()
         settings_low = self.get_settings_state(sl)
         settings_high = self.get_settings_state(sh)
@@ -174,7 +183,7 @@ class ArtificialPancreasAgent(BaseAgent):
         errors_low = self.get_error_state(el, num_meals)
         errors_high = self.get_error_state(eh, num_meals)
         
-        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low) + cgm_low, list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high) + cgm_high]
+        return [list(real_lo) + pump_state + meal_state_low + scenario_state + settings_low + list(errors_low) + meal_times_low, list(real_hi) + pump_state + meal_state_high + scenario_state + settings_high + list(errors_high) + meal_times_high]
         
     def get_bg(self, Q1):
         return Q1 * 18 / self.body.param['Vg']
@@ -188,7 +197,8 @@ class ArtificialPancreasAgent(BaseAgent):
         meals = []
         for i, orig_meal in enumerate(raw_meals):
             carbs = state_vec[state_indices[f'carbs_{i}']]
-            meals.append(dataclasses.replace(orig_meal, carbs=carbs))
+            time = state_vec[state_indices[f'meal_{i}_time']]
+            meals.append(dataclasses.replace(orig_meal, time=time, carbs=carbs))
         return meals
     
     def process_bolus(self, bolus, bg, state_vec):
@@ -258,32 +268,35 @@ class ArtificialPancreasAgent(BaseAgent):
         self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
         self.logger.start_sim()
         self.body.set_meals(self.get_meals(state_vec))
-        self.cgm.set_config(self.get_config(state_vec))
-        
-        process = multiprocessing.current_process()
-        position = process._identity[0] if len(process._identity) > 0 else 0
-        for i in tqdm(range(0, num_points), position=position):
+        print(self.body.meals)
+        predictions = [0] * num_points        
+        for i in tqdm(range(0, num_points)):
             
             self.logger.tick()
 
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["GluPlas"]])
             
             GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
-
-            current_time = i * time_step
-            events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time)
-            bolus, meal = events
-            bg_raw = int(GluMeas)
-            bg = self.cgm.get_reading(bg_raw)
-
-                         
-            # handle meal/bolus
-            if bolus:
-                (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
-                self.pump.send_bolus_command(bolus_bg, bolus)
-            dose = self.pump.pump_emulator.delay_minute(bg=bg)
+            if state_vec[state_indices["G"]] > 180 or state_vec[state_indices["G"]] < 70:
+                state_vec[state_indices["time_out_of_range"]] += 1
             
-            self.logger.write_dose(current_time, dose)
+            
+            current_time = i * time_step
+            if abs(int(current_time) - current_time) < time_step * 1e-4:
+                events: Tuple[Bolus, Meal] = self.scenario.get_events(current_time, state_vec)
+                bolus = events
+                bg = int(GluMeas)
+                self.cgm.post_reading(bg, current_time)
+                bg = self.cgm.get_reading(current_time)
+                state_vec[state_indices['GluMeas']] = bg
+                            
+                # handle meal/bolus
+                if bolus:
+                    print(current_time, bolus)
+                    (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
+                    self.pump.send_bolus_command(bolus_bg, bolus)
+                dose = self.pump.pump_emulator.delay_minute(bg=bg)
+                self.logger.write_dose(current_time, dose)
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose))
             r.set_initial_value(state_vec[:self.body.num_variables])
@@ -292,9 +305,22 @@ class ArtificialPancreasAgent(BaseAgent):
             
             # body state
             state_vec[:self.body.num_variables] = final
+            # pump state
+            # pump_state = self.pump.extract_state()
+            # state_vec[state_indices["iob"]] = pump_state[0]         
             
-            # self.apply_analyses(current_time, state_vec)
+            # scenario state is unchanged
             
+            # derived state
+            # state_vec[state_indices["iob_error"]] = (state_vec[state_indices["iob"]] * 0.12 * 70 - state_vec[state_indices["I"]])
+            # prediction = pump_state[1]
+            # predictions[i] = prediction
+            # prediction is 30 mins into the future
+            
+            # 30 min buffer for predictions to stabilize (this is more than necessary)
+            # if i >= 60 and predictions[i - 30] != -1:
+            #     state_vec[state_indices["prediction_error"]] =  predictions[i - 30] - state_vec[state_indices['G']]
             trace[i + 1, 0] = time_step * (i + 1)
+            # hidden_vec = np.concatenate((state_vec[:1], trace[i, 2:]))
             trace[i + 1, 1:] = state_vec
         return trace

@@ -41,7 +41,7 @@ class State:
     carbs_9: float
     
     # derived state
-    iob_error: float
+    time_out_of_range: float
     prediction_error: float
     
     # settings
@@ -59,16 +59,19 @@ class State:
     meal_9_error: float
     
     # experimental
-    # meal_0_time: float
-    # meal_1_time: float
-    # meal_2_time: float
-    # meal_3_time: float
-    # meal_4_time: float
-    # meal_5_time: float
-    # meal_6_time: float
-    # meal_7_time: float
-    # meal_8_time: float
-    # meal_9_time: float
+    meal_0_time: float
+    meal_1_time: float
+    meal_2_time: float
+    meal_3_time: float
+    meal_4_time: float
+    meal_5_time: float
+    meal_6_time: float
+    meal_7_time: float
+    meal_8_time: float
+    meal_9_time: float
+    
+    # CGM
+    # cgm_error: float
     
     # CGM
     cgm_config_a: float

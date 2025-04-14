@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 import dataclasses
 import numpy as np
-from pyrsistent import freeze
+from state_utils import *
 
 class BolusType(str, Enum):
     Simple = 'Simple'
@@ -25,6 +25,7 @@ class Bolus:
     meal_index: int 
     correction: bool
     config: ExtendedBolusConfig
+    relative: bool
 
 @dataclass(eq=True, frozen=True)
 class Meal:
@@ -55,8 +56,8 @@ def get_meal_range(meals: List[Meal]):
     meals_high = []
     
     for m in meals:
-        meals_low.append(dataclasses.replace(m, carbs=m.carbs[0]))
-        meals_high.append(dataclasses.replace(m, carbs=m.carbs[1]))
+        meals_low.append(dataclasses.replace(m, carbs=m.carbs[0], time=m.time[0]))
+        meals_high.append(dataclasses.replace(m, carbs=m.carbs[1], time=m.time[1]))
     return (meals_low, meals_high)
 
 def get_bolus_config(bolus: Bolus):
@@ -88,16 +89,11 @@ class SimulationScenario:
         sim_duration=24 * 60,
     ):
 
-        self.boluses: Dict[int, Bolus] = {}
-        self.meals = {}
-
         # currently assumes that there are not multiple meals/boluses at the same time
-        for bolus in boluses:
-            self.boluses[bolus.time] = bolus
+        self.boluses = boluses
 
-        for meal in meals:
-            if (np.ndim(meal.carbs) == 0 and meal.carbs > 0) or (meal.carbs[1] > 0):       
-                self.meals[meal.time] = meal
+        self.meals = meals
+
 
         self.sim_duration = sim_duration
         self.params = params
@@ -106,23 +102,19 @@ class SimulationScenario:
         self.settings = settings
         self.cgm_config = cgm_config
 
-    def get_events(self, time):
-        bolus = self.get_bolus(time)
-        meal = self.get_meal(time)
-        return bolus, meal
+    def get_events(self, time, state_vec):
+        return self.get_bolus(time, state_vec)
 
-    def get_bolus(self, time):
-        if time in self.boluses:
-            return self.boluses[time]
+    def get_bolus(self, time, state_vec):
+        for bolus in self.boluses:
+            if not bolus.relative and np.isclose(bolus.time, time):
+                return bolus
+            elif bolus.relative and np.isclose(bolus.time + np.round(get(state_vec, f'meal_{bolus.meal_index}_time')), time):
+                return bolus
         return None
-
-    def get_meal(self, time):
-        if time in self.meals:
-            return self.meals[time]
-        return None
-    
+        
     def get_meals(self) -> List[Meal]:
-        return [self.meals[t] for t in sorted(self.meals.keys())]
+        return self.meals
     
     def get_boluses(self) -> List[Meal]:
         return [self.boluses[t] for t in sorted(self.boluses.keys())]
@@ -130,9 +122,10 @@ class SimulationScenario:
     def get_bolus_meal_mapping(self):
         # maps meal index to bolus
         mapping = {}
-        for bolus in self.boluses.values():
+        for bolus in self.boluses:
             mapping[bolus.meal_index] = bolus
         return mapping
+            
     
     def get_total_carb_range(self):
         total_low = sum([meal.carbs[0] for meal in self.get_meals()])
@@ -155,7 +148,7 @@ class SimulationScenario:
         return hash(self.__key)
     
     def __repr__(self):
-        return f'Scenario{self.get_meals(), self.boluses.values()}'
+        return f'Scenario{self.get_meals(), self.boluses}'
     
     def __str__(self):
         return self.__repr__()
