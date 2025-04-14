@@ -134,6 +134,11 @@ class SimulationScenario:
             mapping[bolus.meal_index] = bolus
         return mapping
     
+    def get_total_carb_range(self):
+        total_low = [meal.carbs[0] for meal in self.meals]
+        total_high = [meal.carbs[1] for meal in self.meals]
+        return (total_low, total_high)
+
     def get_data(self):
         return ScenarioData(self.init_bg, self.get_meals(), self.get_boluses(), self.errors, self.settings, self.params, self.cgm_config, self.sim_duration)
     

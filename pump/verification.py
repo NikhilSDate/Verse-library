@@ -22,6 +22,7 @@ import os
 import signal
 import itertools
 import ast
+from tqdm import tqdm
 
 
 # TODO: this function is a bit of a hack
@@ -292,7 +293,7 @@ def verify(scenarios: List[SimulationScenario], pool_size: int):
 def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
     results = []
     scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
-    for scenario_dir in scenario_dirs:
+    for scenario_dir in tqdm(scenario_dirs):
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
                 scenario = pickle.load(f)
@@ -330,10 +331,26 @@ def verify_wrapper():
 def compute_proof_statistics(results):
     totals = np.zeros_like(results[0][2], dtype=int)
     perfect = 0
-    for result in results:
+    for result in tqdm(results):
         totals += np.array(result[2], dtype=int)
         perfect += np.min(np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results)
+
+def plot_verification_results(results: List[Tuple[Scenario, object, object]], index):
+    points_safe = []
+    points_unsafe = []
+    for result in results:
+        point = [result[0].get_largest_meal(), result[0].get_total_carb_range()[1]]
+        if result[2][index]:
+            points_safe.append(point)
+        else:
+            points_unsafe.append(point)
+    points_safe = np.array(points_safe)
+    points_unsafe = np.array(points_unsafe)
+    plt.scatter(points_safe[:][0], points_safe[:][1], c='green')
+    plt.scatter(points_unsafe[:][0], points_unsafe[:][1], c='red')
+    plt.legend()
+    plt.show()
     
 if __name__ == '__main__':
     
@@ -341,5 +358,5 @@ if __name__ == '__main__':
     #     traces = pickle.load(f)
     # plot_variable(traces, 'G')
     results = load_results('results/verification')
-    stats = compute_proof_statistics(results)    
-    print(stats)
+    # stats = compute_proof_statistics(results)    
+    plot_verification_results(results, 0)
