@@ -241,7 +241,8 @@ class ArtificialPancreasAgent(BaseAgent):
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["GluPlas"]])
             
             GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
-
+            if state_vec[state_indices["G"]] > 180 or state_vec[state_indices["G"]] < 70:
+                state_vec[state_indices["time_out_of_range"]] += 1
             
             
             current_time = i * time_step
@@ -255,6 +256,7 @@ class ArtificialPancreasAgent(BaseAgent):
                             
                 # handle meal/bolus
                 if bolus:
+                    print(current_time, bolus)
                     (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
                     self.pump.send_bolus_command(bolus_bg, bolus)
                 dose = self.pump.pump_emulator.delay_minute(bg=bg)
@@ -267,7 +269,6 @@ class ArtificialPancreasAgent(BaseAgent):
             
             # body state
             state_vec[:self.body.num_variables] = final
-            
             # pump state
             # pump_state = self.pump.extract_state()
             # state_vec[state_indices["iob"]] = pump_state[0]         
@@ -284,5 +285,6 @@ class ArtificialPancreasAgent(BaseAgent):
             # if i >= 60 and predictions[i - 30] != -1:
             #     state_vec[state_indices["prediction_error"]] =  predictions[i - 30] - state_vec[state_indices['G']]
             trace[i + 1, 0] = time_step * (i + 1)
+            # hidden_vec = np.concatenate((state_vec[:1], trace[i, 2:]))
             trace[i + 1, 1:] = state_vec
         return trace

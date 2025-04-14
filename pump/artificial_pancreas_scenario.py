@@ -25,6 +25,7 @@ class Bolus:
     meal_index: int 
     correction: bool
     config: ExtendedBolusConfig
+    relative: bool
 
 @dataclass(eq=True, frozen=True)
 class Meal:
@@ -70,16 +71,11 @@ class SimulationScenario:
         sim_duration=24 * 60,
     ):
 
-        self.boluses: Dict[int, Bolus] = {}
-        self.meals = {}
-
         # currently assumes that there are not multiple meals/boluses at the same time
-        for bolus in boluses:
-            self.boluses[bolus.time] = bolus
+        self.boluses = boluses
 
-        for meal in meals:
-            if (np.ndim(meal.carbs) == 0 and meal.carbs > 0) or (meal.carbs[1] > 0):       
-                self.meals[meal.time] = meal
+        self.meals = meals
+
 
         self.sim_duration = sim_duration
         self.params = params
@@ -89,31 +85,29 @@ class SimulationScenario:
         self.params = params
 
     def get_events(self, time, state_vec):
-        return self.get_bolus(time)
+        return self.get_bolus(time, state_vec)
 
-    def get_bolus(self, time):
-        if time in self.boluses:
-            return self.boluses[time]
+    def get_bolus(self, time, state_vec):
+        for bolus in self.boluses:
+            if not bolus.relative and np.isclose(bolus.time, time):
+                return bolus
+            elif bolus.relative and np.isclose(bolus.time + np.round(get(state_vec, f'meal_{bolus.meal_index}_time')), time):
+                return bolus
         return None
-
-    def get_meal(self, time):
-        if time in self.meals:
-            return self.meals[time]
-        return None
-    
+        
     def get_meals(self) -> List[Meal]:
-        return [self.meals[t] for t in sorted(self.meals.keys())]
+        return self.meals
     
     def get_bolus_meal_mapping(self):
         # maps meal index to bolus
         mapping = {}
-        for bolus in self.boluses.values():
+        for bolus in self.boluses:
             mapping[bolus.meal_index] = bolus
         return mapping
             
     
     def __repr__(self):
-        return f'Scenario{self.get_meals(), self.boluses.values()}'
+        return f'Scenario{self.get_meals(), self.boluses}'
     
     def __str__(self):
         return self.__repr__()

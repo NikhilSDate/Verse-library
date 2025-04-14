@@ -41,7 +41,7 @@ class State:
     carbs_9: float
     
     # derived state
-    iob_error: float
+    time_out_of_range: float
     prediction_error: float
     
     # settings
