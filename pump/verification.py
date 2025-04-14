@@ -385,7 +385,16 @@ def overlay_simulation_traces(args):
     for init in inits:
         traces = simulate_from_init(scenario, init)
         plot_variable(traces, 'G', show=False, fig=fig)
-    fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims.png'))
+
+    y_mins = []
+    y_maxs = []
+    for trace_data in fig.data:
+        y_mins.append(min(trace_data.y))
+        y_maxs.append(max(trace_data.y))
+    y_min = min(y_mins)
+    y_max = max(y_maxs)
+    fig.update_layout(yaxis_range=[-y_min, y_max])
+    fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims_fixed.png'))
     return fig
     
 if __name__ == '__main__':
@@ -396,7 +405,8 @@ if __name__ == '__main__':
     # stats = compute_proof_statistics(results)    
     # plot_verification_results(results, 0)
     # results/perfectly_unsafe/scenario_0800000001e04ba8e
+    signal.signal(signal.SIGINT, sigint)    
     log_dir = 'results/perfectly_unsafe'
     perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
-    with Pool(24) as p:
+    with Pool(20) as p:
         p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
