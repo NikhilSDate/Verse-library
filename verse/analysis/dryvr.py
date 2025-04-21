@@ -298,7 +298,6 @@ def calc_bloated_tube(
             max_idx = max(max_idx, ret_idx + 1)
         for i in range(len(traces)):
             traces[i] = traces[i][:max_idx]
-
     # The major
     if bloating_method == GLOBAL:
         cur_reach_tube: np.ndarray = get_reachtube_segment(

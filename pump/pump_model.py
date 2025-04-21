@@ -36,11 +36,11 @@ class InsulinPumpModel:
             pump.set_settings(carb_ratio=settings['carb_ratio'], correction_factor=settings['correction_factor'], target_bg=settings['target_bg'], max_bolus=settings['max_bolus'], insulin_duration=settings['insulin_duration'], basal_rate=settings['basal_rate'])
         return pump
 
-    def send_bolus_command(self, bg, bolus: Bolus):
+    def send_bolus_command(self, bg, bolus: Bolus, resume=False):
         if bolus.type == BolusType.Simple:
-            self.pump_emulator.dose_simple(bg, bolus.carbs)
+            self.pump_emulator.dose_simple(bg, bolus.carbs, resume=resume)
         else:
-            self.pump_emulator.dose_extended(bg, bolus.carbs, bolus.config.deliver_now_perc, bolus.config.duration)
+            self.pump_emulator.dose_extended(bg, bolus.carbs, bolus.config.deliver_now_perc, bolus.config.duration, resume=resume)
             
     def extract_state(self) -> Tuple[float]:
         state = self.pump_emulator.get_state()

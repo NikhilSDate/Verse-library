@@ -173,14 +173,14 @@ def extract_variable(traces, agent, index, simulate=False):
     else:
         return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
 
-def plot_variable(tree, var, show=True, fig = None):
+def plot_variable(tree, var, show=True, fig = None, color='red'):
     if fig is None:
         fig = go.Figure()
     idx = state_indices[var] + 1  # time is 0, so 1-index
     if tree.root.type == AnalysisTreeNodeType.REACH_TUBE:
         fig = reachtube_tree(tree, None, fig, 0, idx)
     else:
-        fig = simulation_tree(tree, None, fig, 0, idx, plot_color=[['black']])
+        fig = simulation_tree(tree, None, fig, 0, idx, plot_color=[[color]])
     fig.update_xaxes(showgrid=True)
     fig.update_yaxes(showgrid=True)
     if show:

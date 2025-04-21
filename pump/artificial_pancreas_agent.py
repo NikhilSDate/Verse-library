@@ -280,8 +280,9 @@ class ArtificialPancreasAgent(BaseAgent):
             # handle meal/bolus
             if bolus:
                 (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
-                self.pump.send_bolus_command(bolus_bg, bolus)
-            dose = self.pump.pump_emulator.delay_minute(bg=bg)
+                resume = self.scenario.user_config.resume if hasattr(self.scenario, 'user_config') else None
+                self.pump.send_bolus_command(bolus_bg, bolus, resume)
+            dose = self.pump.pump_emulator.step_minute(bg=bg)
             
             self.logger.write_dose(current_time, dose)
             

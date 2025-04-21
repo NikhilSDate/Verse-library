@@ -23,6 +23,7 @@ import signal
 import itertools
 import ast
 from tqdm import tqdm
+from typing import Any
 
 
 # TODO: this function is a bit of a hack
@@ -306,7 +307,7 @@ def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
             pass
     return results  
 
-def load_from_dir(log_dir, scenario_dir):
+def load_from_dir(log_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
     scenario_dir = os.path.join(log_dir, scenario_dir)
     with open(os.path.join(scenario_dir, 'scenario.pkl'), 'rb') as f:
         scenario = pickle.load(f)
@@ -377,26 +378,79 @@ def unsafe_analysis(results: List[Tuple[Scenario, object, object]], index):
     # plt.legend()
     # plt.show()
 
+def get_init(scenario, index):
+    inits = verify_multi_meal_scenario(scenario, track_inits=True)
+    return inits[index]
+
 def overlay_simulation_traces(args):
+
+    colors = [
+        '#1f77b4',  # muted blue
+        '#ff7f0e',  # safety orange
+        '#2ca02c',  # cooked asparagus green
+        '#9467bd',  # muted purple
+        '#8c564b',  # chestnut brown
+        '#e377c2',  # raspberry yogurt pink
+        '#7f7f7f',  # middle gray
+        '#bcbd22',  # curry yellow-green
+        '#17becf',  # blue-teal
+        '#111111',  # off-white
+        '#ffffff'   # black
+    ]
+
     (log_dir, scenario_dir) = args
     scenario, verification_traces, safety = load_from_dir(log_dir, scenario_dir)
     fig = plot_variable(verification_traces, 'G', show=False)
     inits = verify_multi_meal_scenario(scenario, track_inits=True)
-    for init in inits:
+    for i, init in enumerate(inits):
         traces = simulate_from_init(scenario, init)
-        plot_variable(traces, 'G', show=False, fig=fig)
-    fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims.png'))
+        plot_variable(traces, 'G', show=False, fig=fig, color=colors[i])
+
+        # custom legend
+        fig.add_trace(go.Scatter(
+                x=[None],
+                y=[None],
+                mode="markers",
+                name=f"trace {i}",
+                marker=dict(size=7, color=colors[i], symbol='square'),
+        ))
+    y_mins = []
+    y_maxs = []
+    for trace_data in fig.data:
+        y_mins.append(min(trace_data.y))
+        y_maxs.append(max(trace_data.y))
+    fig.update_layout(showlegend=True)
+    fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims_fixed.png'))
     return fig
     
 if __name__ == '__main__':
     
+    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_0800000001b086758')
+    # scenario.user_config = UserConfig(resume=True)
+    # traces = verify_multi_meal_scenario(scenario)
+    # plot_variable(traces, 'G')
+
     # with open('results/verification/scenario_080000000000d3c9b/traces.pkl', 'rb') as f:
     #     traces = pickle.load(f)
     # plot_variable(traces, 'G')
     # stats = compute_proof_statistics(results)    
     # plot_verification_results(results, 0)
     # results/perfectly_unsafe/scenario_0800000001e04ba8e
+    signal.signal(signal.SIGINT, sigint)    
     log_dir = 'results/perfectly_unsafe'
-    perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
-    with Pool(24) as p:
-        p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
+    scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
+    # perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
+    # with Pool(20) as p:
+    #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
+
+    # fig = overlay_simulation_traces((log_dir, 'scenario_0800000001b50af8a'))
+    # trace 5 is bad
+
+    # print(scenario.settings)
+    scenario.settings[0]['basal_iq'] = True
+    scenario.user_config = UserConfig(resume=True)
+    init = get_init(scenario, 7)
+    print(init)
+    traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
+    breakpoint()
+

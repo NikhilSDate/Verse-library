@@ -47,6 +47,10 @@ class ScenarioData:
     params: Dict
     cgm_config: CGMConfig
     sim_duration: int
+
+@dataclass(eq=True)
+class UserConfig:
+    resume: bool
     
 
     
@@ -86,6 +90,7 @@ class SimulationScenario:
         params,
         cgm_config,
         sim_duration=24 * 60,
+        user_config=UserConfig(False)
     ):
 
         self.boluses: Dict[int, Bolus] = {}
@@ -105,6 +110,7 @@ class SimulationScenario:
         self.init_bg = init_bg
         self.settings = settings
         self.cgm_config = cgm_config
+        self.user_config = user_config
 
     def get_events(self, time):
         bolus = self.get_bolus(time)
