@@ -84,13 +84,13 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
     init_state = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high)
     init = init_state
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=True))
+    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
     scenario.set_init_single(
         "pump", init, (PumpMode.default,)
     )  # TODO what's the other half of the tuple?
 
-    time_step = 0.05
+    time_step = 1
     traces = scenario.verify(simulation_scenario.sim_duration, time_step)
     return traces
 
@@ -210,13 +210,17 @@ if __name__ == "__main__":
     params = patient_original({'basalGlucose': 6.5})
     settings['basal_rate'] = params['Ub']
     settings['basal_iq'] = False
-    meals = [Meal((0, 120), (40, 40), DEFAULT_MEAL)]
-    # boluses = [Bolus(30, None, BolusType.Simple, 0, True, None)]
-    boluses = []
-    scenario = SimulationScenario([110, 110], boluses, meals, [1, 1], [settings, settings], params, sim_duration=10 * 60)
+    meals = [Meal((0, 240), (40, 40), DEFAULT_MEAL), Meal((305, 330), (60, 60), DEFAULT_MEAL)]
+    boluses = [Bolus(-5, None, BolusType.Simple, 0, True, None, True), Bolus(300, None, BolusType.Simple, 1, True, None, False)]
+    scenario = SimulationScenario([110, 110], boluses, meals, [1, 1], [settings, settings], params, sim_duration=12 * 60)
     traces = verify_multi_meal_scenario(scenario)
-    fig = plot_variable(traces, 'G')
-    # print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
+    fig1 = plot_variable(traces, 'time_out_of_range')
+    fig2 = plot_variable(traces, 'G')
+    fig1.write_image('results/hidden/time_out_of_range.png')
+    fig2.write_image('results/hidden/glucose.png')
+    print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose)))
+    with open('results/hidden/traces.pkl', 'wb') as f:
+        pickle.dump(traces, f)
     
     
     # (70, 180): True, True, False, False, False
@@ -227,4 +231,18 @@ if __name__ == "__main__":
 # {'tir': 0.8514920194309508, 'low': 92.32843681295014, 'high': 233.1487607240195}
 # {'tir': 0.8507980569049272, 'low': 91.07826567567132, 'high': 234.21975753031126}
 # {'tir': 0.8015267175572519, 'low': 59.83497960799967, 'high': 197.72905701924455}
+# 
+
+# discrete exhaustive
+# discrete sampled
+# continuous sampled possibly w/ distribution modification (range plus sample)
+# continuous versified possibly w/ distribution (range plus versify)
+
+# discrete variables: can do the reachable set analysis
+
+# are there cases where we are in the too low
+# also do the lethal level analysis (bound + time)
+# hide continuous state other than G
+
+# do the 2D plot
 # 

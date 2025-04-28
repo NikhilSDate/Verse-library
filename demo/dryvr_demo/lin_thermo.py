@@ -81,8 +81,10 @@ def decisionLogic(ego: State):
     output = copy.deepcopy(ego)
 
     if ego.agent_mode == ThermoMode.Heat and ego.x>=75:
+        output.x = ego.x if ego.x >= 75 else 75
         output.agent_mode = ThermoMode.Cool
     if ego.agent_mode == ThermoMode.Cool and ego.x < 65:
+        output.x  = ego.x if ego.x <= 65 else 65
         output.agent_mode = ThermoMode.Heat
 
     return output 
@@ -143,11 +145,9 @@ if __name__ == "__main__":
     #     pickle.dump(fig, f)
     
         
-    res = [0.1]
-    for r in res:
-        traces = scenario.verify(20, r)
-        fig = go.Figure()
-        fig = reachtube_tree(traces, None, fig, 0, 1)
-        fig.show()
+    traces = scenario.verify(100, 0.1)
+    fig = go.Figure()
+    fig = reachtube_tree(traces, None, fig, 0, 1)
+    fig.show()
 
 
