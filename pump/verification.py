@@ -118,7 +118,7 @@ def check_scenario(scenario: SimulationScenario):
     return True
 
 def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
-    meal_carb_ranges = [(0, 50), (50, 100), (100, 150)]
+    meal_carb_ranges = [(0, 30), (30, 60), (60, 90), (90, 120), (120, 150)]
     m = len(meal_carb_ranges)
     good_ranges = []
     for i in range(m ** num_meals):
@@ -134,8 +134,11 @@ def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
         ranges = [meal_carb_ranges[idx0], meal_carb_ranges[idx1], meal_carb_ranges[idx2], meal_carb_ranges[idx3]]
         low_sum = sum([ranges[i][0] for i in range(4)])
         high_sum = sum([ranges[i][1] for i in range(4)])
-        if low_sum >= TOTAL_LOW and high_sum <= TOTAL_HIGH:
-            good_ranges.append(ranges)
+
+        # accept any range that has at least partial overlap with the total range
+        if low_sum >= TOTAL_HIGH or high_sum <= TOTAL_LOW:
+            continue
+        good_ranges.append(ranges)
     return good_ranges
     
 def gen_verification_scenarios():
