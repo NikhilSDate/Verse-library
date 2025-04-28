@@ -18,8 +18,10 @@ def decisionLogic(ego: State, other: State):
     output = copy.deepcopy(ego)
 
     if ego.agent_mode == CellMode.On and ego.u>=0.5:
+        # output.u = ego.u if ego.u >= 0.5 else 0.5
         output.agent_mode = CellMode.Off
-    if ego.agent_mode==CellMode.Off and ego.u<=0:
+    if ego.agent_mode==CellMode.Off and ego.u <= 0:
+        # output.u = ego.u if ego.u <= 0 else 0
         output.agent_mode = CellMode.On
 
     return output 
