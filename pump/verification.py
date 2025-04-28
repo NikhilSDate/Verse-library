@@ -118,7 +118,7 @@ def check_scenario(scenario: SimulationScenario):
     return True
 
 def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
-    meal_carb_ranges = [(0, 30), (30, 60), (60, 90), (90, 120), (120, 150)]
+    meal_carb_ranges = [(0, 37.5), (37.5, 75), (75, 112.5), (112.5, 150)]
     m = len(meal_carb_ranges)
     good_ranges = []
     for i in range(m ** num_meals):
@@ -178,6 +178,8 @@ def gen_verification_scenarios():
     BOLUS_OFFSET = -5
     
     BASAL_RATE_RANGE = 0.1
+
+    RESUME = True
     
     meal_ranges = get_allowed_meal_carb_ranges(100, 350)
     
@@ -233,12 +235,9 @@ def gen_verification_scenarios():
         settings_high['basal_rate'] = settings_high['basal_rate'] * (1 + BASAL_RATE_RANGE)
         
         cgm_config = CGMConfig((1 - CGM_BIAS, 1 + CGM_BIAS), (0, 0))
-        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config)
+        user_config = UserConfig(resume=RESUME)
+        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, user_config)
         scenarios.append(scenario)
-    
-    
-    
-    
     return scenarios        
         
 def get_scenario_directory(scenario: Scenario, log_dir):
@@ -340,6 +339,7 @@ def verify_wrapper():
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)  
     print(args.processes)
+    breakpoint()
     verify(scenarios, pool_size=args.processes)  
     
 def compute_proof_statistics(results):
@@ -427,7 +427,8 @@ def overlay_simulation_traces(args):
     return fig
     
 if __name__ == '__main__':
-    
+    verify_wrapper()
+
     # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_0800000001b086758')
     # scenario.user_config = UserConfig(resume=True)
     # traces = verify_multi_meal_scenario(scenario)
@@ -439,9 +440,9 @@ if __name__ == '__main__':
     # stats = compute_proof_statistics(results)    
     # plot_verification_results(results, 0)
     # results/perfectly_unsafe/scenario_0800000001e04ba8e
-    signal.signal(signal.SIGINT, sigint)    
-    log_dir = 'results/perfectly_unsafe'
-    scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
+    # signal.signal(signal.SIGINT, sigint)    
+    # log_dir = 'results/perfectly_unsafe'
+    # scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
     # perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
     # with Pool(20) as p:
     #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
@@ -450,10 +451,10 @@ if __name__ == '__main__':
     # trace 5 is bad
 
     # print(scenario.settings)
-    scenario.settings[0]['basal_iq'] = True
-    scenario.user_config = UserConfig(resume=True)
-    init = get_init(scenario, 7)
-    print(init)
-    traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
-    breakpoint()
+    # scenario.settings[0]['basal_iq'] = True
+    # scenario.user_config = UserConfig(resume=True)
+    # init = get_init(scenario, 7)
+    # print(init)
+    # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
+    # breakpoint()
 
