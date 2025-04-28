@@ -427,8 +427,8 @@ def overlay_simulation_traces(args):
     return fig
     
 if __name__ == '__main__':
-    verify_wrapper()
-
+    results = load_results('results/verification')
+    save_perfectly_unsafe(results, 'results/perfectly_unsafe')
     # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_0800000001b086758')
     # scenario.user_config = UserConfig(resume=True)
     # traces = verify_multi_meal_scenario(scenario)
