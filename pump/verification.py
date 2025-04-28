@@ -167,7 +167,9 @@ def gen_verification_scenarios():
     
     
     # TODO: CGM errors
-    
+
+    DURATION = 24 * 60
+
     ERROR_LOW = 0.9
     ERROR_HIGH = 1.1
         
@@ -236,7 +238,7 @@ def gen_verification_scenarios():
         
         cgm_config = CGMConfig((1 - CGM_BIAS, 1 + CGM_BIAS), (0, 0))
         user_config = UserConfig(resume=RESUME)
-        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, user_config)
+        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, sim_duration=DURATION, user_config=user_config)
         scenarios.append(scenario)
     return scenarios        
         
@@ -338,8 +340,6 @@ def verify_wrapper():
     np.random.seed(42)
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)  
-    print(args.processes)
-    breakpoint()
     verify(scenarios, pool_size=args.processes)  
     
 def compute_proof_statistics(results):
