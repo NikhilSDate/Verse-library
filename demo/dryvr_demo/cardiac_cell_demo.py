@@ -27,11 +27,11 @@ if __name__ == "__main__":
 
     scenario.add_agent(cell) ### need to add breakpoint around here to check decision_logic of agents
 
-    init_cell = [[0, 0], [1, 1]]
+    init_cell = [[0.2, 0.2], [0.49, 0.49]]
     # # -----------------------------------------
 
     scenario.set_init_single(
-        'cell', init_cell,(CellMode.On,)
+        'cell', init_cell, (CellMode.On,)
     )
 
 
@@ -58,5 +58,15 @@ if __name__ == "__main__":
 
     trace = scenario.verify(7, 0.01)
     fig = reachtube_tree(trace, None, go.Figure(), 0, 1)
+
+    starts = np.linspace(0.2, 0.49, 20)
+    for start in starts:
+        init = [[start, start], [start, start]]
+        scenario.set_init_single(
+            'cell', init, (CellMode.Off,)
+        )
+        traces = scenario.simulate(7, 0.01)
+        fig = simulation_tree(traces, None, fig, 0, 1)
+
     fig.show()
     ### this works, but takes around a minute
