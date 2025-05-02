@@ -112,7 +112,7 @@ class ArtificialPancreasAgent(BaseAgent):
         self.logger = logger
         self.pump.pump_emulator.link_output_buffer(logger.output_buffer)
         self.inits = []
-        self.track_inits = track_inits
+        self.track_inits = False
 
     # exclude from picling
     # TODO: we can probably make this more fine-grainged

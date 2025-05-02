@@ -48,8 +48,15 @@ def range_bounds(glucose_reachtube, lb, ub, relative=True):
         return (low_count / len(glucose_reachtube), high_count / len(glucose_reachtube))
     else:
         return (low_count, high_count)
-    
-def AGP_report(glucose_reachtube, AGP_config=[(-np.inf, 54), (54, 70), (70, 180), (180, 250), (250, np.inf)]):
+
+def range_perc(glucose_trace, lb, ub, relative=True):
+    count = 0
+    for g in glucose_trace:
+        if lb <= g <= ub:
+            count += 1
+    return count / len(glucose_trace)
+
+def AGP_report(glucose_reachtube, AGP_config=[(-np.inf, 54), (54, 70), (70, 180), (180, 250), (250, np.inf)], type='verif'):
     percs = []
     for (low, high) in AGP_config:
         percs.append(range_bounds(glucose_reachtube, low, high))

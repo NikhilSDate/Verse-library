@@ -88,6 +88,8 @@ class AnalysisTreeNode:
     id: int
     """Integer ID for the current node. Unique amongst all nodes in the AnalysisTree"""
 
+    sims: Dict[str, TraceType]
+
     def __init__(
         self,
         trace: Dict[str, TraceType],
@@ -103,6 +105,7 @@ class AnalysisTreeNode:
         ndigits: int,
         type: AnalysisTreeNodeType,
         id: int,
+        sims = None,
     ) -> None:
         self.trace = trace
         self.init = init
@@ -117,6 +120,7 @@ class AnalysisTreeNode:
         self.uncertain_param = uncertain_param
         self.id = id
         self.ndigits = ndigits
+        self.sims = sims
 
     @staticmethod
     def root_from_inits(

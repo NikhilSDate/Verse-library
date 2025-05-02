@@ -371,15 +371,20 @@ def unsafe_analysis(results: List[Tuple[Scenario, object, object]], index):
             points_safe.append(point)
             safe_map[point[map_idx]] = safe_map.get(point[map_idx], 0) + 1
         else:
+            points_unsafe.append(point)
             unsafe_map[point[map_idx]] = unsafe_map.get(point[map_idx], 0) + 1
     
+    print(len(points_safe))
+    print(len(points_unsafe))
+    points_safe = np.array(points_safe)
+    points_unsafe = np.array(points_unsafe)
+    plt.scatter(points_safe[:, 0], points_safe[:, 1], c='green', alpha=0.1)
+    plt.scatter(points_unsafe[:, 0], points_unsafe[:, 1], c='red', alpha=0.1)
+    plt.legend()
+    plt.xlabel('Largest meal (g)')
+    plt.ylabel('Total carbs upper bound (g)')
+    plt.savefig('unsafe.png')
     return safe_map, unsafe_map
-    # points_safe = np.array(points_safe)
-    # points_unsafe = np.array(points_unsafe)
-    # plt.scatter(points_safe[:, 0], points_safe[:, 1], c='green')
-    # plt.scatter(points_unsafe[:, 0], points_unsafe[:, 1], c='red')
-    # plt.legend()
-    # plt.show()
 
 def get_init(scenario, index):
     inits = verify_multi_meal_scenario(scenario, track_inits=True)
@@ -427,9 +432,9 @@ def overlay_simulation_traces(args):
     return fig
     
 if __name__ == '__main__':
-    results = load_results('results/verification')
-    save_perfectly_unsafe(results, 'results/perfectly_unsafe')
-    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_0800000001b086758')
+    # results = load_results('results/verification')
+    # save_perfectly_unsafe(results, 'results/perfectly_unsafe')
+
     # scenario.user_config = UserConfig(resume=True)
     # traces = verify_multi_meal_scenario(scenario)
     # plot_variable(traces, 'G')
@@ -441,20 +446,22 @@ if __name__ == '__main__':
     # plot_verification_results(results, 0)
     # results/perfectly_unsafe/scenario_0800000001e04ba8e
     # signal.signal(signal.SIGINT, sigint)    
-    # log_dir = 'results/perfectly_unsafe'
     # scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
     # perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
     # with Pool(20) as p:
-    #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
-
-    # fig = overlay_simulation_traces((log_dir, 'scenario_0800000001b50af8a'))
+    # #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
+    # log_dir = 'results/perfectly_unsafe'
+    # fig = overlay_simulation_traces((log_dir, 'scenario_080000000071e0c19'))
+    # fig.show()
     # trace 5 is bad
-
     # print(scenario.settings)
     # scenario.settings[0]['basal_iq'] = True
     # scenario.user_config = UserConfig(resume=True)
-    # init = get_init(scenario, 7)
-    # print(init)
-    # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
-    # breakpoint()
-
+    log_dir = 'results/perfectly_unsafe'
+    scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
+    init = get_init(scenario, 1)
+    print(init)
+    traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
+    plot_variable(traces, 'G')
+    # results = load_results('results/verification')
+    # print(unsafe_analysis(results, 2))

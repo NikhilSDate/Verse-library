@@ -287,7 +287,6 @@ def calc_bloated_tube(
     for i in range(sim_trace_num):
         new_init_point = randomPoint(initial_set[0], initial_set[1], i)
         traces.append(sim_func(mode_label, new_init_point, time_horizon, time_step, lane_map))
-
     # Trim the trace to the same length
     traces = trimTraces(traces)
     if guard_checker is not None:
@@ -315,4 +314,4 @@ def calc_bloated_tube(
     final_tube[0::2, :] = cur_reach_tube[:, 0, :]
     final_tube[1::2, :] = cur_reach_tube[:, 1, :]
     # print(final_tube.tolist()[-2], final_tube.tolist()[-1])
-    return final_tube
+    return final_tube, traces

@@ -97,7 +97,7 @@ def get_cgm_error_range(cgm_config: CGMConfig):
 # TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
 # That's a much cleaner abstraction
 # track_inits is a hack: if set to True, no actual verification will be performed, and the function will just return the initial values that DryVR chooses
-def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir='./debug', logging=False, track_inits=False):
+def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir='./debug', logging=False):
     pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
@@ -106,7 +106,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
     else:
         logger = NotLogger()
     agent = ArtificialPancreasAgent(
-        "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py", track_inits=track_inits
+        "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
     settings_low, settings_high = simulation_scenario.settings
     errors_low, errors_high = simulation_scenario.errors
@@ -121,13 +121,27 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
 
     time_step = 1
     traces = scenario.verify(simulation_scenario.sim_duration, time_step)
-    if track_inits:
-        return agent.inits
     return traces
 
 def evaluate_safety_constraint(traces, variable, safety_func):
-    variable_trace = extract_variable(traces, 'pump', state_indices[variable] + 1)
-    return safety_func(variable_trace)
+    reachtube_trace = extract_variable(traces, 'pump', state_indices[variable] + 1)
+    reachtube_safety = safety_func(reachtube_trace)
+    
+    sim_safety = np.array([True] * len(reachtube_safety))
+    for sim in traces.root.sims:
+        trace = extract_variable(sim, 'pump', state_indices[variable] + 1,simulate=True, raw=True)
+        trace = np.column_stack((trace, trace))
+        sim_safety = np.logical_and(sim_safety, safety_func(trace))
+    
+    result = [None] * len(reachtube_safety)
+    for i in range(len(reachtube_safety)):
+        if reachtube_safety[i]:
+            result[i] = True
+            assert(sim_safety[i])
+        if not sim_safety[i]:
+            result[i] = False
+    return result
+    
 
 
 def save_traces(traces: AnalysisTree, filename, trace_directory=TRACES_PATH):
@@ -166,8 +180,11 @@ def linear_transform_trace(traces, agent, index, a, b):
     for i in range(len(traces.root.trace[agent])):
         traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
 
-def extract_variable(traces, agent, index, simulate=False):
-    raw_trace = np.array(traces.root.trace[agent])
+def extract_variable(traces, agent, index, simulate=False, raw=False):
+    if not raw:
+        raw_trace = np.array(traces.root.trace[agent])
+    else:
+        raw_trace = traces
     if simulate:
         return raw_trace.reshape((-1, raw_trace.shape[1]))[:, index]
     else:
@@ -235,7 +252,7 @@ def get_recommended_settings(TDD, BW, MDI=False):
 
 
 if __name__ == "__main__":
-    with open('./results/verification/scenario_0800000000c95a951/scenario.pkl', 'rb') as f:
+    with open('./results/perfectly_unsafe/scenario_080000000071e0c19/scenario.pkl', 'rb') as f:
         scenario = pickle.load(f)
     traces = verify_multi_meal_scenario(scenario)
     fig = plot_variable(traces, 'G', show=False)

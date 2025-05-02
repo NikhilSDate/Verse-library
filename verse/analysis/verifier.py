@@ -343,7 +343,7 @@ class Verifier:
                     combined_rect[0, :] = np.minimum(combined_rect[0, :], rect[0, :])
                     combined_rect[1, :] = np.maximum(combined_rect[1, :], rect[1, :])
             combined_rect = combined_rect.tolist()
-            cur_bloated_tube = calc_bloated_tube(
+            cur_bloated_tube, sims = calc_bloated_tube(
                 mode_label,
                 combined_rect,
                 time_horizon,
@@ -371,7 +371,7 @@ class Verifier:
                 res_tube[combine_seg_idx * 2 + 1 :: 2, 1:] = np.maximum(
                     res_tube[combine_seg_idx * 2 + 1 :: 2, 1:], cur_bloated_tube[1::2, 1:]
                 )
-        return res_tube.tolist(), cache_tube_updates
+        return res_tube.tolist(), cache_tube_updates, sims
 
     @staticmethod
     def compute_full_reachtube_step(
@@ -410,6 +410,7 @@ class Verifier:
                     (
                         cur_bloated_tube,
                         cache_tube_update,
+                        sims
                     ) = Verifier.calculate_full_bloated_tube_simple(
                         agent_id,
                         cached_tubes[agent_id] if config.incremental else None,
@@ -425,6 +426,7 @@ class Verifier:
                         combine_seg_length=consts.init_seg_length,
                         lane_map=consts.lane_map,
                     )
+                    node.sims = sims
                     if config.incremental:
                         cache_tube_updates.extend(cache_tube_update)
                 elif consts.reachability_method == ReachabilityMethod.STAR_SETS:

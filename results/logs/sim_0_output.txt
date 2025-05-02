@@ -131,24 +131,24 @@ BACK
 DONE
 Enter Carbs
 DONE
-2
+6
 DONE
-21
+64
 NEXT
 CARBS
 grams
 units
-21
+64
 BG
 EXTENDED
-1.91
+5.82
 mg/dL
 DONE
 BACK
 Enter BG
 1
-11
-114
+12
+127
 Your BG is Above Target
 Add Correction Bolus?
 Add Correction Bolus?
@@ -156,120 +156,51 @@ Current IOB
 0 u
 0 u
 Current BG
-114 mg/dL
-114 mg/dL
+127 mg/dL
+127 mg/dL
 NO
 NO
 YES
 NEXT
-114
+127
 CARBS
 grams
 units
-21
+64
 BG
 EXTENDED
-2
+6.22
 Confirm Request?
 Carbs
-21 g
+64 g
 BG
-114 mg/dL
+127 mg/dL
 Units To Deliver
-2 u
+6.22 u
 NO
 YES
 Correction
-0.09 u
+0.4 u
 Food
-1.91 u
-Deliver 2 u Bolus?
+5.82 u
+Deliver 6.22 u Bolus?
 EXTENDED
 BACK
 DELIVER
-NEXT
-Extend Food Bolus?
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+6.22 u
+6.22 u
+6.22 u
 Correction
-0.09 u
+0.4 u
 Food
-1.91 u
-Extend Food Bolus?
+5.82 u
+Deliver 6.22 u Bolus?
 EXTENDED
 BACK
-NEXT
-2 hrs
-DELIVER NOW
-DELIVER LATER
-DURATION
-NEXT
-50%
-50%
-1.91
-%
-DONE
-BACK
-50
-5
-50
-2 hrs
-DELIVER NOW
-DELIVER LATER
-DURATION
-NEXT
-50%
-50%
-1.91
-DONE
-BACK
-2
-00
-0
-03
-0
-30
-3
-00
-3 hrs
-DELIVER NOW
-DELIVER LATER
-DURATION
-NEXT
-50%
-50%
-1.91
-Confirm Request?
-Deliver Now
-50%
-Deliver Later
-50%
-Duration
-3 hrs
-NO
-YES
-Now + Correction
-1.045 u
-0.955 u
-3 hrs
-Duration
-Later
-BACK
 DELIVER
-Deliver 2 u Bolus?
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-1.045 u Now + 0.955 u Later
-1.045 u Now + 0.955 u Later
-1.045 u Now + 0.955 u Later
-Now + Correction
-1.045 u
-0.955 u
-3 hrs
-Duration
-Later
-BACK
-DELIVER
-Deliver 2 u Bolus?
 100 u
 BOLUS
 3
@@ -574,116 +505,6 @@ HRS
 ==========time=413==========
 ==========time=414==========
 ==========time=415==========
-0.3
-2:59 hrs
-2:59 hrs
-100 u
-6:55 AM
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-grams
-+/=
-DONE
-BACK
-DONE
-Enter Carbs
-DONE
-1
-DONE
-12
-DONE
-125
-NEXT
-CARBS
-grams
-units
-125
-BG
-EXTENDED
-11.36
-mg/dL
-DONE
-BACK
-Enter BG
-1
-11
-112
-Your BG is Above Target
-Due to IOB, no correction will be
-Due to IOB, no correction will be
-calculated. Re-test BG as necessary.
-Current IOB
-0.3 u
-0.3 u
-Current BG
-112 mg/dL
-112 mg/dL
-CLOSE
-CLOSE
-NEXT
-112
-CARBS
-grams
-units
-125
-BG
-EXTENDED
-11.36
-Confirm Request?
-Carbs
-125 g
-BG
-112 mg/dL
-Units To Deliver
-11.36 u
-NO
-YES
-BACK
-CONTINUE
-MAX BOLUS ALERT
-Your 10 u Max Bolus setting has
-been exceeded.
-Press CONTINUE to confirm a
-bolus of 10 u.
-BACK
-CONTINUE
-MAX BOLUS ALERT
-Your 10 u Max Bolus setting has
-been exceeded.
-Press CONTINUE to confirm a
-bolus of 10 u.
-Adjusted Correction
-0 u
-Adjusted Food
-10 u
-Deliver 10 u Bolus?
-EXTENDED
-BACK
-DELIVER
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-10 u
-10 u
-10 u
-Adjusted Correction
-0 u
-Adjusted Food
-10 u
-Deliver 10 u Bolus?
-EXTENDED
-BACK
-DELIVER
-100 u
-BOLUS
-3
-HRS
 ==========time=416==========
 ==========time=417==========
 ==========time=418==========
@@ -864,6 +685,85 @@ HRS
 ==========time=593==========
 ==========time=594==========
 ==========time=595==========
+100 u
+9:55 AM
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+2
+DONE
+23
+NEXT
+CARBS
+grams
+units
+23
+BG
+EXTENDED
+2.09
+mg/dL
+DONE
+BACK
+Enter BG
+1
+11
+110
+NEXT
+110
+CARBS
+grams
+units
+23
+BG
+EXTENDED
+2.09
+Confirm Request?
+Carbs
+23 g
+BG
+110 mg/dL
+Units To Deliver
+2.09 u
+NO
+YES
+Correction
+NA
+Food
+2.09 u
+Deliver 2.09 u Bolus?
+EXTENDED
+BACK
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+2.09 u
+2.09 u
+2.09 u
+Correction
+NA
+Food
+2.09 u
+Deliver 2.09 u Bolus?
+EXTENDED
+BACK
+DELIVER
+100 u
+BOLUS
+3
+HRS
 ==========time=596==========
 ==========time=597==========
 ==========time=598==========
@@ -1044,90 +944,114 @@ HRS
 ==========time=773==========
 ==========time=774==========
 ==========time=775==========
-BOLUS
-All Deliveries Stopped
-All Deliveries Stopped
-OPTIONS
-ALL DELIVERIES STOPPED
-0
-0:00 min
-0:00 min
+0.68
+2:03 hrs
+2:03 hrs
 100 u
 12:55 PM
-Options
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
 BACK
-RESUME INSULIN
-My Pump
-My CGM
-Temp Rate
-Options
-RESUME INSULIN
-My Pump
-My CGM
-Temp Rate
-This will resume all deliveries.
-Resume insulin now?
+DONE
+Enter Carbs
+DONE
+1
+DONE
+13
+DONE
+131
+NEXT
+CARBS
+grams
+units
+131
+BG
+EXTENDED
+11.91
+mg/dL
+DONE
 BACK
-RESUME
-RESUMING INSULIN
-RESUMING INSULIN
-RESUMING INSULIN
-This will resume all deliveries.
-Resume insulin now?
+Enter BG
+1
+14
+149
+Your BG is Above Target
+Add Correction Bolus?
+Add Correction Bolus?
+Current IOB
+0.68 u
+0.68 u
+Current BG
+149 mg/dL
+149 mg/dL
+NO
+NO
+YES
+NEXT
+149
+CARBS
+grams
+units
+131
+BG
+EXTENDED
+12.14
+Confirm Request?
+Carbs
+131 g
+BG
+149 mg/dL
+Units To Deliver
+12.14 u
+NO
+YES
 BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
 BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+Adjusted Correction
+0.23 u
+Adjusted Food
+9.77 u
+Deliver 10 u Bolus?
+EXTENDED
 BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
+DELIVER
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+10 u
+10 u
+10 u
+Adjusted Correction
+0.23 u
+Adjusted Food
+9.77 u
+Deliver 10 u Bolus?
+EXTENDED
 BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
-This will resume all deliveries.
-Resume insulin now?
-BACK
-RESUME
+DELIVER
 100 u
 BOLUS
-All Deliveries Stopped
-All Deliveries Stopped
 3
 HRS
 ==========time=776==========
@@ -1190,6 +1114,199 @@ HRS
 ==========time=833==========
 ==========time=834==========
 ==========time=835==========
+9.11
+4:03 hrs
+4:03 hrs
+100 u
+1:55 PM
+NEXT
+CARBS
+grams
+units
+0
+BG
+EXTENDED
+0
+grams
++/=
+DONE
+BACK
+DONE
+Enter Carbs
+DONE
+1
+DONE
+11
+DONE
+119
+NEXT
+CARBS
+grams
+units
+119
+BG
+EXTENDED
+10.82
+mg/dL
+DONE
+BACK
+Enter BG
+2
+27
+273
+Insulin On Board (IOB)
+Due to IOB, your BG may drop low. Re-test
+Due to IOB, your BG may drop low. Re-test
+BG as necessary.
+Current IOB
+9.11 u
+9.11 u
+Current BG
+273 mg/dL
+273 mg/dL
+CLOSE
+CLOSE
+NEXT
+273
+CARBS
+grams
+units
+119
+BG
+EXTENDED
+10.82
+Confirm Request?
+Carbs
+119 g
+BG
+273 mg/dL
+Units To Deliver
+10.82 u
+NO
+YES
+BACK
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+BACK
+CONTINUE
+MAX BOLUS ALERT
+Your 10 u Max Bolus setting has
+been exceeded.
+Press CONTINUE to confirm a
+bolus of 10 u.
+BACK
+CONTINUE
+MAX HOURLY BOLUS ALERT
+Your Max Hourly Bolus has been
+exceeded.
+Press CONTINUE to confirm the
+requested 10 u bolus.
+BACK
+CONTINUE
+MAX HOURLY BOLUS ALERT
+Your Max Hourly Bolus has been
+exceeded.
+Press CONTINUE to confirm the
+requested 10 u bolus.
+Adjusted Correction
+0 u
+Adjusted Food
+10 u
+Deliver 10 u Bolus?
+EXTENDED
+BACK
+DELIVER
+NEXT
+Extend Food Bolus?
+Adjusted Correction
+0 u
+Adjusted Food
+10 u
+Extend Food Bolus?
+EXTENDED
+BACK
+NEXT
+2 hrs
+DELIVER NOW
+DELIVER LATER
+DURATION
+NEXT
+50%
+50%
+10
+%
+DONE
+BACK
+50
+5
+50
+2 hrs
+DELIVER NOW
+DELIVER LATER
+DURATION
+NEXT
+50%
+50%
+10
+DONE
+BACK
+2
+00
+0
+03
+0
+30
+3
+00
+3 hrs
+DELIVER NOW
+DELIVER LATER
+DURATION
+NEXT
+50%
+50%
+10
+Confirm Request?
+Deliver Now
+50%
+Deliver Later
+50%
+Duration
+3 hrs
+NO
+YES
+Now
+5 u
+5 u
+3 hrs
+Duration
+Later
+BACK
+DELIVER
+Deliver 10 u Bolus?
+BOLUS INITIATED
+BOLUS INITIATED
+BOLUS INITIATED
+5 u Now + 5 u Later
+5 u Now + 5 u Later
+5 u Now + 5 u Later
+Now
+5 u
+5 u
+3 hrs
+Duration
+Later
+BACK
+DELIVER
+Deliver 10 u Bolus?
+100 u
+BOLUS
+3
+HRS
 ==========time=836==========
 ==========time=837==========
 ==========time=838==========
@@ -1370,97 +1487,6 @@ HRS
 ==========time=1013==========
 ==========time=1014==========
 ==========time=1015==========
-BOLUS
-OPTIONS
-100 u
-4:55 PM
-NEXT
-CARBS
-grams
-units
-0
-BG
-EXTENDED
-0
-grams
-+/=
-DONE
-BACK
-DONE
-Enter Carbs
-DONE
-9
-NEXT
-CARBS
-grams
-units
-9
-BG
-EXTENDED
-0.82
-mg/dL
-DONE
-BACK
-Enter BG
-2
-24
-243
-Your BG is Above Target
-Add Correction Bolus?
-Add Correction Bolus?
-Current IOB
-0 u
-0 u
-Current BG
-243 mg/dL
-243 mg/dL
-NO
-NO
-YES
-NEXT
-243
-CARBS
-grams
-units
-9
-BG
-EXTENDED
-3.91
-Confirm Request?
-Carbs
-9 g
-BG
-243 mg/dL
-Units To Deliver
-3.91 u
-NO
-YES
-Correction
-3.09 u
-Food
-0.82 u
-Deliver 3.91 u Bolus?
-EXTENDED
-BACK
-DELIVER
-BOLUS INITIATED
-BOLUS INITIATED
-BOLUS INITIATED
-3.91 u
-3.91 u
-3.91 u
-Correction
-3.09 u
-Food
-0.82 u
-Deliver 3.91 u Bolus?
-EXTENDED
-BACK
-DELIVER
-100 u
-BOLUS
-3
-HRS
 ==========time=1016==========
 ==========time=1017==========
 ==========time=1018==========
