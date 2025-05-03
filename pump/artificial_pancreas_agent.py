@@ -258,10 +258,6 @@ class ArtificialPancreasAgent(BaseAgent):
         process = multiprocessing.current_process()
         position = process._identity[0] if len(process._identity) > 0 else 0
         for i in tqdm(range(0, num_points), position=position):
-            
-            if i == 700:
-                raise Exception("testing")
-            
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["GluPlas"]])
             
             GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
