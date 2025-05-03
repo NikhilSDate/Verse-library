@@ -466,9 +466,9 @@ if __name__ == '__main__':
     # print(scenario.settings)
     # scenario.settings[0]['basal_iq'] = True
     # scenario.user_config = UserConfig(resume=True)
-    log_dir = 'results/perfectly_unsafe'
-    scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
-    run_verification_scenario(scenario)
+    # log_dir = 'results/perfectly_unsafe'
+    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
+    # run_verification_scenario(scenario)
     # init = get_init(scenario, 1)
     # print(init)
     # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
@@ -476,4 +476,4 @@ if __name__ == '__main__':
     # results = load_results('results/verification')
     # print(unsafe_analysis(results, 2))
 
-    # verify_wrapper()
+    verify_wrapper()
