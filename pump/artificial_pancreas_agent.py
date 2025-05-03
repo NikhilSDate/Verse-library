@@ -37,6 +37,9 @@ class NotLogger:
     def write_dose(self, time, dose):
         pass
 
+    def error_dump(self):
+        return self.output_buffer
+
 class Logger:
     def __init__(self, log_dir):
         self.dir = log_dir
@@ -45,34 +48,32 @@ class Logger:
         self.current_output_file = None
         self.output_buffer = [] # store lines of output from the pump
         self.t = 0
+        self.init = None
         
-    def tick(self, increment=1):
+    def step(self, dose, step=1):
         self.output_buffer.append('=' * 10 + f'time={self.t}' + '=' * 10)
-        self.t += increment
+        self.t += step
+        if self.current_dose_file is not None:
+            self.current_dose_file.write(f'dose({self.t}) = {dose}\n')
         
-    def start_sim(self):
+    def start_sim(self, init):
+        self.flush()
+        if self.dir is not None:
+            dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
+            output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
+            self.current_dose_file = open(dose_path, 'w+')
+            self.current_output_file = open(output_path, 'w+')
+        self.sim_idx += 1
+        self.init = init
+
+    def flush(self):
         if self.current_dose_file is not None:
             self.current_dose_file.close()
         if self.current_output_file is not None:
-            self.flush_all_output()                
+            self.current_output_file.write('\n'.join(self.output_buffer))
             self.current_output_file.close()
-        dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
-        output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
-        self.current_dose_file = open(dose_path, 'w+')
-        self.current_output_file = open(output_path, 'w+')
-        self.sim_idx += 1
-
-    def write_dose(self, time, dose):
-        if self.current_dose_file is None:
-            print("Can't log without starting a simulation")
-        self.current_dose_file.write(f'dose({time}) = {dose}\n')
-
-    def flush_all_output(self):
-        if self.current_output_file is None:
-            return
-        self.current_output_file.write('\n'.join(self.output_buffer))
         self.output_buffer.clear()
-    
+
     def __del__(self):
         if self.current_dose_file is not None:
             self.current_dose_file.flush()
@@ -81,9 +82,12 @@ class Logger:
             self.flush_all_output()
             self.current_output_file.flush()
             self.current_output_file.close()
-        
-        
 
+    def get_output_buffer(self):
+        return self.output_buffer
+
+    def error_dump(self):
+        return ErrorInfo(self.init, '\n'.join(self.output_buffer)) # get any unflushed data
 
 # Combined human body system + insulin pump + scenario system
 
@@ -98,7 +102,6 @@ class ArtificialPancreasAgent(BaseAgent):
         cgm: CGM,
         simulation_scenario: SimulationScenario,
         logger: Logger,
-        track_inits = False,
         code=None,
         file_name=None,
     ):
@@ -112,7 +115,6 @@ class ArtificialPancreasAgent(BaseAgent):
         self.logger = logger
         self.pump.pump_emulator.link_output_buffer(logger.output_buffer)
         self.inits = []
-        self.track_inits = False
 
     # exclude from picling
     # TODO: we can probably make this more fine-grainged
@@ -181,7 +183,7 @@ class ArtificialPancreasAgent(BaseAgent):
     
     def reset_pump(self):
         self.pump.reset_pump()
-        self.pump.pump_emulator.link_output_buffer(self.logger.output_buffer)
+        self.pump.pump_emulator.link_output_buffer(self.logger.get_output_buffer())
 
     def get_meals(self, state_vec):
         raw_meals = self.scenario.get_meals()
@@ -246,17 +248,10 @@ class ArtificialPancreasAgent(BaseAgent):
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
         state_vec = init
-
-
-        if self.track_inits:
-            self.inits.append(init)
-            return trace
-
-
         self.reset_pump()
         basal_rate = init[state_indices['basal_rate']]
         self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
-        self.logger.start_sim()
+        self.logger.start_sim(init)
         self.body.set_meals(self.get_meals(state_vec))
         self.cgm.set_config(self.get_config(state_vec))
         
@@ -264,8 +259,9 @@ class ArtificialPancreasAgent(BaseAgent):
         position = process._identity[0] if len(process._identity) > 0 else 0
         for i in tqdm(range(0, num_points), position=position):
             
-            self.logger.tick()
-
+            if i == 700:
+                raise Exception("testing")
+            
             state_vec[state_indices["G"]] = self.get_bg(state_vec[state_indices["GluPlas"]])
             
             GluMeas = self.body.mmol_to_mgdl(state_vec[state_indices["GluInte"]])
@@ -284,7 +280,7 @@ class ArtificialPancreasAgent(BaseAgent):
                 self.pump.send_bolus_command(bolus_bg, bolus, resume)
             dose = self.pump.pump_emulator.step_minute(bg=bg)
             
-            self.logger.write_dose(current_time, dose)
+            self.logger.step(dose, time_step)
             
             r = ode(lambda t, state: self.body.model(current_time + t, state, dose))
             r.set_initial_value(state_vec[:self.body.num_variables])
@@ -299,3 +295,8 @@ class ArtificialPancreasAgent(BaseAgent):
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
         return trace
+    
+    def get_error_info(self) -> ErrorInfo:
+        err_info = self.logger.error_dump()
+        err_info.scenario = self.scenario
+        return err_info

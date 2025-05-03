@@ -12,6 +12,7 @@ from verse.plotter.plotter2D import reachtube_tree, simulation_tree
 
 from verse_model import *
 from artificial_pancreas_agent import *
+from artificial_pancreas_scenario import ResultType
 from pump_model import *
 from cgm import *
 from hovorka_model import HovorkaModel, patient_original
@@ -97,31 +98,34 @@ def get_cgm_error_range(cgm_config: CGMConfig):
 # TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
 # That's a much cleaner abstraction
 # track_inits is a hack: if set to True, no actual verification will be performed, and the function will just return the initial values that DryVR chooses
-def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir='./debug', logging=False):
+def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None) -> VerificationResult:
     pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
-    if logging:
-        logger = Logger(log_dir=log_dir)
-    else:
-        logger = NotLogger()
+    logger = Logger(log_dir=log_dir)
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
-    settings_low, settings_high = simulation_scenario.settings
-    errors_low, errors_high = simulation_scenario.errors
-    meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
-    cgm_low, cgm_high = get_cgm_error_range(simulation_scenario.cgm_config)
-    init = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high, cgm_low, cgm_high)    
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
-    scenario.add_agent(agent)
-    scenario.set_init_single(
-        "pump", init, (PumpMode.default,)
-    )  # TODO what's the other half of the tuple?
+    try:
+        settings_low, settings_high = simulation_scenario.settings
+        errors_low, errors_high = simulation_scenario.errors
+        meals_low, meals_high = get_meal_range(simulation_scenario.get_meals())
+        cgm_low, cgm_high = get_cgm_error_range(simulation_scenario.cgm_config)
+        init = agent.get_init_range(simulation_scenario.init_bg[0], simulation_scenario.init_bg[1], meals_low, meals_high, settings_low, settings_high, errors_low, errors_high, cgm_low, cgm_high)    
+        scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+        scenario.add_agent(agent)
+        scenario.set_init_single(
+            "pump", init, (PumpMode.default,)
+        )  # TODO what's the other half of the tuple?
 
-    time_step = 1
-    traces = scenario.verify(simulation_scenario.sim_duration, time_step)
-    return traces
+        time_step = 1
+        traces = scenario.verify(simulation_scenario.sim_duration, time_step)    
+        return VerificationResult(ResultType.OK, traces)
+    except Exception as e:
+        err_info = agent.get_error_info()
+        err_info.e = e
+        return VerificationResult(ResultType.ERROR, err_info)
+
 
 def evaluate_safety_constraint(traces, variable, safety_func):
     reachtube_trace = extract_variable(traces, 'pump', state_indices[variable] + 1)
@@ -249,6 +253,7 @@ def get_recommended_settings(TDD, BW, MDI=False):
         'target_bg': 110
     }
     return settings
+
 
 
 if __name__ == "__main__":

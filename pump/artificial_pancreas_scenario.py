@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import dataclasses
 import numpy as np
 from pyrsistent import freeze
+import pickle
 
 class BolusType(str, Enum):
     Simple = 'Simple'
@@ -51,9 +52,37 @@ class ScenarioData:
 @dataclass(eq=True)
 class UserConfig:
     resume: bool
-    
 
+class ResultType(str, Enum):
+    OK = 'OK'
+    ERROR = 'ERROR'
+
+@dataclass(eq=True)
+class VerificationResult:
+    type: ResultType
+    payload: object
+
+class ErrorInfo:
+    def __init__(self, init=None, output=None, e=None, scenario=None):
+        self.init = init
+        self.output = output
+        self.e = e
+        self.scenario = scenario
     
+    def save(self, dir):
+        if self.init is not None:
+            with open(os.path.join(dir, 'init.pkl'), 'wb') as f:
+                pickle.dump(self.init, f)
+        if self.output is not None:
+            with open(os.path.join(dir, 'output.txt'), 'w') as f:
+                f.write(self.output)
+        if self.e is not None:
+            with open(os.path.join(dir, 'except.txt'), 'w') as f:
+                f.write(repr(self.e))
+        if self.scenario is not None:
+            with open(os.path.join(dir, 'scenario.pkl'), 'wb') as f:
+                pickle.dump(self.scenario, f)
+
 def get_meal_range(meals: List[Meal]):
     meals_low = []
     meals_high = []

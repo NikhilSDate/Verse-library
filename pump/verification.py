@@ -1,6 +1,7 @@
 from artificial_pancreas_simulate import *
 from verse_model import *
 from artificial_pancreas_agent import *
+from artificial_pancreas_scenario import *
 from pump_model import *
 from cgm import *
 from simutils import *
@@ -280,11 +281,19 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
     with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
         pickle.dump(scenario, f)
 
-def run_verification_scenario(scenario, logging=False):
+def save_crash(scenario, payload, log_dir):
+    scenario_directory = get_scenario_directory(scenario, log_dir)
+    payload.save(scenario_directory)
+
+def run_verification_scenario(scenario):
     tqdm.write(str(scenario))
-    traces = verify_multi_meal_scenario(scenario, logging=logging)
-    safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
-    save_scenario_results(scenario, traces, safety_results, 'results/verification')
+    res = verify_multi_meal_scenario(scenario)
+    if res.type == ResultType.OK:
+        traces = res.payload
+        safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
+        save_scenario_results(scenario, traces, safety_results, 'results/verification')
+    else:
+        save_crash(scenario, res.payload, 'results/verification')
 
 def sigint(signum, frame):
     os.kill(0, signal.SIGKILL)
@@ -457,8 +466,9 @@ if __name__ == '__main__':
     # print(scenario.settings)
     # scenario.settings[0]['basal_iq'] = True
     # scenario.user_config = UserConfig(resume=True)
-    # log_dir = 'results/perfectly_unsafe'
-    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
+    log_dir = 'results/perfectly_unsafe'
+    scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
+    run_verification_scenario(scenario)
     # init = get_init(scenario, 1)
     # print(init)
     # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
@@ -466,4 +476,4 @@ if __name__ == '__main__':
     # results = load_results('results/verification')
     # print(unsafe_analysis(results, 2))
 
-    verify_wrapper()
+    # verify_wrapper()
