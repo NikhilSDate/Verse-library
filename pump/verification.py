@@ -322,13 +322,33 @@ def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
 
 def load_from_dir(log_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
     scenario_dir = os.path.join(log_dir, scenario_dir)
-    with open(os.path.join(scenario_dir, 'scenario.pkl'), 'rb') as f:
-        scenario = pickle.load(f)
-    with open(os.path.join(scenario_dir, 'traces.pkl'), 'rb') as f:
-        traces = pickle.load(f)
-    with open(os.path.join(scenario_dir, 'safety.txt')) as f:
-        safety = ast.literal_eval(f.read())
+    scenario, traces, safety = None, None, None
+    scenario_path = os.path.join(scenario_dir, 'scenario.pkl')
+    traces_path = os.path.join(scenario_dir, 'traces.pkl')
+    safety_path = os.path.join(scenario_dir, 'safety.txt')
+    if os.path.exists(scenario_path):
+        with open(scenario_path, 'rb') as f:
+            scenario = pickle.load(f)
+    if os.path.exists(traces_path):
+        with open(traces_path, 'rb') as f:
+            traces = pickle.load(f)
+    if os.path.exists(safety_path):
+        with open(safety_path) as f:
+            safety = ast.literal_eval(f.read())
     return (scenario, traces, safety)    
+
+def load_from_dir_err(log_dir, scenario_dir) -> Tuple[SimulationScenario, List]:
+    scenario_dir = os.path.join(log_dir, scenario_dir)
+    scenario, init = None, None
+    scenario_path = os.path.join(scenario_dir, 'scenario.pkl')
+    init_path = os.path.join(scenario_dir, 'init.pkl')
+    if os.path.exists(scenario_path):
+        with open(scenario_path, 'rb') as f:
+            scenario = pickle.load(f)
+    if os.path.exists(init_path):
+        with open(init_path, 'rb') as f:
+            init = pickle.load(f)
+    return scenario, init
 
 def debug_scenario(scenario_path):
     with open(os.path.join(scenario_path, 'scenario.pkl'), 'rb') as f:
@@ -439,9 +459,9 @@ def overlay_simulation_traces(args):
     fig.update_layout(showlegend=True)
     fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims_fixed.png'))
     return fig
-    
-if __name__ == '__main__':
-    # results = load_results('results/verification')
+
+def snippets():
+        # results = load_results('results/verification')
     # save_perfectly_unsafe(results, 'results/perfectly_unsafe')
 
     # scenario.user_config = UserConfig(resume=True)
@@ -475,5 +495,9 @@ if __name__ == '__main__':
     # plot_variable(traces, 'G')
     # results = load_results('results/verification')
     # print(unsafe_analysis(results, 2))
+    pass 
 
+if __name__ == '__main__':
+    # scenario, init = load_from_dir_err('results/verification', 'scenario_0800000000003fe3b')
+    # traces = simulate_from_init(scenario, init, log_dir='results/logs')
     verify_wrapper()

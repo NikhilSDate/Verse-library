@@ -30,14 +30,14 @@ class NotLogger:
     def __init__(self):
         self.output_buffer = []
         pass
-    def tick(self, increment=1):
+    def start_sim(self, init):
         pass
-    def start_sim(self):
+    def step(self, dose, step=1):
         pass
-    def write_dose(self, time, dose):
-        pass
-
     def error_dump(self):
+        return self.output_buffer
+    
+    def get_output_buffer(self):
         return self.output_buffer
 
 class Logger:
@@ -79,7 +79,7 @@ class Logger:
             self.current_dose_file.flush()
             self.current_dose_file.close()
         if self.current_output_file is not None:
-            self.flush_all_output()
+            self.flush()
             self.current_output_file.flush()
             self.current_output_file.close()
 
@@ -240,8 +240,6 @@ class ArtificialPancreasAgent(BaseAgent):
     
     # TODO should mode be an enum?
     def TC_simulate(self, mode: List[str], init, time_bound, time_step, lane_map=None) -> TraceType:
-
-        
         time_bound = float(time_bound)
         num_points = int(np.ceil(time_bound / time_step))
         trace = np.zeros((num_points + 1, 1 + len(init)))

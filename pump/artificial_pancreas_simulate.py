@@ -37,7 +37,7 @@ SCENARIO: PUMP'S TARGET BG NOT EQUAL TO BODY'S BASAL BG
 
 
 def simulate_from_init(simulation_scenario: SimulationScenario, init, logging=False, log_dir=''):
-    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
+    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0], trace=True) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
     if logging:
@@ -55,14 +55,18 @@ def simulate_from_init(simulation_scenario: SimulationScenario, init, logging=Fa
     )  # TODO what's the other half of the tuple?
 
     time_step = 1
-    traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
-    return traces
+    try:
+        traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
+        return traces
+    except:
+        pump.write_trace(log_dir)
+        pass
 
 
-def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, errors=None, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False):
+def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, errors=None, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False, trace=False):
 
     simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings)
+    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings, trace=trace)
     body = HovorkaModel(params)
     if not cgm_error:
         cgm = CGM()
