@@ -268,7 +268,6 @@ if __name__ == "__main__":
     fig.write_image('extended_fixed.png')
     print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
     
-    
     # (70, 180): True, True, False, False, False
     # (70, 100): True True, False, False, False
     
