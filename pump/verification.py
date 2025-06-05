@@ -119,7 +119,7 @@ def check_scenario(scenario: SimulationScenario):
     return True
 
 def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
-    meal_carb_ranges = [(0, 37.5), (37.5, 75), (75, 112.5), (112.5, 150)]
+    meal_carb_ranges = [(0, 30), (30, 60), (60, 90), (90, 120), (120, 150)]
     m = len(meal_carb_ranges)
     good_ranges = []
     for i in range(m ** num_meals):
