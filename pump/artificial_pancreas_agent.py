@@ -8,6 +8,7 @@ from scipy.integrate import ode
 from dotenv import load_dotenv
 from cgm import CGM
 import multiprocessing
+from matlab.adapter import MatlabData
 
 load_dotenv()
 EMULATOR_PATH = os.environ["EMULATOR_PATH"]
@@ -48,16 +49,19 @@ class Logger:
         self.current_output_file = None
         self.output_buffer = [] # store lines of output from the pump
         self.t = 0
+        self.doses = {} # store doses for each time step
         self.init = None
         
     def step(self, dose, step=1):
         self.output_buffer.append('=' * 10 + f'time={self.t}' + '=' * 10)
-        self.t += step
         if self.current_dose_file is not None:
             self.current_dose_file.write(f'dose({self.t}) = {dose}\n')
+        self.doses[self.t] = dose
+        self.t += step
         
     def start_sim(self, init):
         self.flush()
+        self.doses.clear()
         if self.dir is not None:
             dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
             output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
@@ -76,11 +80,9 @@ class Logger:
 
     def __del__(self):
         if self.current_dose_file is not None:
-            self.current_dose_file.flush()
             self.current_dose_file.close()
         if self.current_output_file is not None:
             self.flush()
-            self.current_output_file.flush()
             self.current_output_file.close()
 
     def get_output_buffer(self):
@@ -89,8 +91,10 @@ class Logger:
     def error_dump(self):
         return ErrorInfo(self.init, '\n'.join(self.output_buffer)) # get any unflushed data
 
-# Combined human body system + insulin pump + scenario system
+    def get_infusions(self):
+        return self.doses
 
+# Combined human body system + insulin pump + scenario system
 
 class ArtificialPancreasAgent(BaseAgent):
 
@@ -103,6 +107,7 @@ class ArtificialPancreasAgent(BaseAgent):
         simulation_scenario: SimulationScenario,
         logger: Logger,
         code=None,
+        matlab_export=False,
         file_name=None,
     ):
 
@@ -115,6 +120,9 @@ class ArtificialPancreasAgent(BaseAgent):
         self.logger = logger
         self.pump.pump_emulator.link_output_buffer(logger.output_buffer)
         self.inits = []
+        self.matlab_export = matlab_export
+        if self.matlab_export:
+            self.sims = []
 
     # exclude from picling
     # TODO: we can probably make this more fine-grainged
@@ -126,14 +134,14 @@ class ArtificialPancreasAgent(BaseAgent):
     def __setstate__(self, state):
         pass    
 
-    def get_init_state(self, G, meals, settings, errors):
+    def get_init_state(self, G, meals, settings, errors, cgm):
         body_init_state = self.body.get_init_state(G)
         pump_init_state = self.pump.get_init_state()
         scenario_state = self.get_scenario_state()
         meal_state = self.get_meal_state(meals)
         settings_state = self.get_settings_state(settings)
         error_state = self.get_error_state(errors, num_meals)
-        return list(body_init_state) + pump_init_state + meal_state + scenario_state + settings_state + list(error_state)
+        return list(body_init_state) + pump_init_state + meal_state + scenario_state + settings_state + list(error_state) + cgm
     
     
     def get_meal_state(self, meals):
@@ -265,8 +273,7 @@ class ArtificialPancreasAgent(BaseAgent):
             bolus, meal = events
             bg_raw = int(GluMeas)
             bg = self.cgm.get_reading(bg_raw)
-
-                         
+            
             # handle meal/bolus
             if bolus:
                 (bolus_bg, bolus) = self.process_bolus(bolus, bg, state_vec)
@@ -288,8 +295,27 @@ class ArtificialPancreasAgent(BaseAgent):
             
             trace[i + 1, 0] = time_step * (i + 1)
             trace[i + 1, 1:] = state_vec
+        
+        if self.matlab_export:
+            sim_data = self.export_sim_data()
+            sim_data.trace = trace
+            self.sims.append(sim_data)
+
         return trace
     
+    '''
+    exports all data needed to recreate/validate simulation. This includes:
+        - meals: [(time, value, TauM, glycemic load)]
+        - insulin infusion: [(time, value)]
+        - patient parameters/options
+    '''
+    def export_sim_data(self):
+        meals = self.body.get_meals()
+        infusions = self.logger.get_infusions()
+        options = self.body.opt
+        scenario = (self.scenario.sim_duration, 1) # force step size = 1 for now
+        return MatlabData(meals, infusions, options, scenario, None)
+
     def get_error_info(self) -> ErrorInfo:
         err_info = self.logger.error_dump()
         err_info.scenario = self.scenario

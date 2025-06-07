@@ -5,4 +5,6 @@ load_dotenv()
 
 eng = matlab.engine.start_matlab()
 eng.addpath(os.environ['MATLAB_PATH'])
-eng.simulation()
+eng.configurePaths(nargout=0)
+patient = eng.HovorkaPatient()
+eng.quit()

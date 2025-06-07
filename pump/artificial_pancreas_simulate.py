@@ -63,41 +63,38 @@ def simulate_from_init(simulation_scenario: SimulationScenario, init, logging=Fa
         pass
 
 
-def simulate_multi_meal_scenario(init_bg, params, basal_iq, boluses, meals, errors=None, duration=24 * 60, settings=None, logging=True, model_params='2004', cgm_error=False, trace=False):
-
-    simulation_scenario = SimulationScenario(basal_iq, boluses, meals, sim_duration=duration)
-    pump = InsulinPumpModel(simulation_scenario, basal_iq=basal_iq, settings=settings, trace=trace)
-    body = HovorkaModel(params)
-    if not cgm_error:
-        cgm = CGM()
-    else:
-        cgm = VettorettiCGM({'start_day': 5})
-    if logging:
-        logger = Logger('results/logs')
-    else:
-        logger = NotLogger()
+def simulate_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None):
+    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings) 
+    body = HovorkaModel(simulation_scenario.params)
+    cgm = CGM()
+    logger = Logger(log_dir=log_dir)
     agent = ArtificialPancreasAgent(
         "pump", body, pump, cgm, simulation_scenario, logger, file_name=PUMP_PATH + "verse_model.py"
     )
-    init_state = agent.get_init_state(init_bg, meals, settings, errors)
-    init = [init_state, init_state]  # TODO why twice?
+    try:
+        init = agent.get_init_state(simulation_scenario.init_bg, simulation_scenario.get_meals(), simulation_scenario.settings, simulation_scenario.errors, get_cgm_error(simulation_scenario.cgm_config))
+        scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
+        scenario.add_agent(agent)
+        scenario.set_init_single(
+            "pump", [init, init], (PumpMode.default,)
+        )  # TODO what's the other half of the tuple?
 
-    scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
-    scenario.add_agent(agent)
-    scenario.set_init_single(
-        "pump", init, (PumpMode.default,)
-    )  # TODO what's the other half of the tuple?
-
-    time_step = 1
-    traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
-
-    return traces
+        time_step = simulation_scenario.time_step
+        traces = scenario.simulate(simulation_scenario.sim_duration, time_step)    
+        print(agent.export_sim_data())
+        return VerificationResult(ResultType.OK, traces)
+    except Exception as e:
+        err_info = agent.get_error_info()
+        err_info.e = e
+        return VerificationResult(ResultType.ERROR, err_info)
 
 def get_cgm_error_range(cgm_config: CGMConfig):
     error_low = [cgm_config.bias[0], cgm_config.offset[0]]
     error_high = [cgm_config.bias[1], cgm_config.offset[1]]
     return error_low, error_high
 
+def get_cgm_error(cgm_config: CGMConfig):
+    return [cgm_config.bias, cgm_config.offset]
 
 # TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
 # That's a much cleaner abstraction
@@ -122,7 +119,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
             "pump", init, (PumpMode.default,)
         )  # TODO what's the other half of the tuple?
 
-        time_step = 1
+        time_step = simulation_scenario.time_step
         traces = scenario.verify(simulation_scenario.sim_duration, time_step)    
         return VerificationResult(ResultType.OK, traces)
     except Exception as e:
@@ -261,13 +258,27 @@ def get_recommended_settings(TDD, BW, MDI=False):
 
 
 if __name__ == "__main__":
-    with open('./results/perfectly_unsafe/scenario_080000000071e0c19/scenario.pkl', 'rb') as f:
-        scenario = pickle.load(f)
-    traces = verify_multi_meal_scenario(scenario)
-    fig = plot_variable(traces, 'G', show=False)
-    fig.write_image('extended_fixed.png')
-    print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
-    
+    # with open('./results/perfectly_unsafe/scenario_080000000071e0c19/scenario.pkl', 'rb') as f:
+    #     scenario = pickle.load(f)
+    # traces = verify_multi_meal_scenario(scenario)
+    # fig = plot_variable(traces, 'G', show=False)
+    # fig.write_image('extended_fixed.png')
+    # print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
+    settings = get_recommended_settings(TDD=39.22, BW=74.9)
+    settings['basal_iq'] = False
+    scenario = SimulationScenario(
+        init_bg=120,
+        boluses=[Bolus(0, 0, BolusType.Simple, 0, True, None)],
+        meals=[Meal(0, 75, DEFAULT_MEAL)],
+        errors=1,
+        settings=settings,
+        params=patient_original({'basalGlucose': 6.5}),
+        cgm_config=CGMConfig(1, 0),
+        sim_duration=1 * 60,
+        time_step=1
+    )
+
+    res = simulate_multi_meal_scenario(scenario, log_dir='results/logs')
     # (70, 180): True, True, False, False, False
     # (70, 100): True True, False, False, False
     

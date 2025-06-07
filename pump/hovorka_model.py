@@ -4,7 +4,7 @@ from tqdm import tqdm
 from state_utils import state_indices
 import random
 
-# implementation from https://github.com/jonasnm/svelte-flask-hovorka-simulator/blob/master/hovorka_simulator.py
+# implementation translated from McGill Diabetes Simulator
 
 # matlab code refers to parameters from here https://pmc.ncbi.nlm.nih.gov/articles/PMC2825634/
 
@@ -36,7 +36,7 @@ class HovorkaModel:
         # Default options
         self.opt = {
             "name": "HovorkaPatient",
-            "patient": ["patientAvg"],
+            "patient": ["patientOriginal"],
             "sensorNoiseType": "none",
             "sensorNoiseValue": 0.4,
             "intraVariability": 0.0,
@@ -128,62 +128,7 @@ class HovorkaModel:
             1.0, 1.0, 1e-6 * 60 * self.param["ke"] * (self.param["Vi"] * self.param["w"]),
             1.0, 1.0, 1.0, 60 / self.param["Vg"], 1 / self.param["Vg"],
             1 / self.param["Vg"], 1.0, 1.0
-        ])
-
-    def load_patient_parameters(self, patient_name):
-        pass
-
-    def apply_wrong_pump_param(self):
-        pass
-
-    def apply_carbs_counting_errors(self):
-        pass
-
-    def apply_intra_variability(self, t):
-        for key in self.variability:
-            if isinstance(self.variability[key], dict):
-                self.variability[key]["target"] = self.param[key]
-
-        if self.opt["intraVariability"] > 0:
-            for key in self.variability:
-                if isinstance(self.variability[key], dict):
-                    self.variability[key]["target"] = self.param[key] * (
-                        1 + 0.2 * self.opt["intraVariability"] * np.sin(2 * np.pi * (t + self.variability[key]["phase"]) / self.variability[key]["period"])
-                    )
-
-        exerc_int = 0
-        exerc_type = "aerobic"
-        for exercise in self.exercises:
-            if exercise["time"] <= t < exercise["time"] + exercise["duration"]:
-                exerc_int = exercise["intensity"]
-                exerc_type = ExercisePlan.types_of_exercise[exercise["type"]]
-
-        if exerc_int > 0:
-            self.variability["ka"]["target"] = self.param["ka"] * (1 + 2 * exerc_int)
-            self.variability["ka1"]["target"] = self.param["ka1"] * (1 + 4 * exerc_int)
-            self.variability["ka2"]["target"] = self.param["ka2"] * (1 + 4 * exerc_int)
-            self.variability["ka3"]["target"] = self.param["ka3"] * (1 + 4 * exerc_int)
-
-            if exerc_type == "mixed":
-                mixing_effect = -0.7 + (0.7 + 0.7) * np.random.rand()
-                mixing_coeff = [1 + mixing_effect, 1 - mixing_effect]
-            else:
-                mixing_coeff = [1, 1]
-
-            if exerc_type in ["aerobic", "mixed"]:
-                self.variability["St"]["target"] = self.param["St"] * (1 + 5 * mixing_coeff[0] * exerc_int)
-                self.variability["Sd"]["target"] = self.param["Sd"] * (1 + 10 * mixing_coeff[0] * exerc_int)
-
-            if exerc_type in ["anaerobic", "mixed"]:
-                self.variability["EGP0"]["target"] = self.param["EGP0"] * (1 + mixing_coeff[1] * exerc_int)
-                self.variability["Se"]["target"] = self.param["Se"] / (1 + 6 * mixing_coeff[1] * exerc_int)
-
-        alpha = 0.7
-        for key in self.variability:
-            if isinstance(self.variability[key], dict):
-                self.variability[key]["val"] = (1 - alpha) * self.variability[key]["val"] + alpha * self.variability[key]["target"]
-
-    
+        ])    
     
     def gut2comp_model(self, t, meal):
         if t > (meal["time"] + meal["Delay"]):
@@ -269,6 +214,9 @@ class HovorkaModel:
     def set_meals(self, meals):
         self.meals = [self.construct_meal(meal) for meal in meals] 
     
+    def get_meals(self):
+        return self.meals
+
     def get_init_state(self, G):
         G = self.mgdl_to_mmol(G)
         state = self._get_initial_state({'initialGlucose': G})
