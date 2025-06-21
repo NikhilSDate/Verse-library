@@ -357,7 +357,6 @@ class Scenario:
             type=AnalysisTreeNodeType.REACH_TUBE,
             ndigits=10,
         )
-
         tree = self.verifier.compute_full_reachtube(
             root,
             self.sensor,

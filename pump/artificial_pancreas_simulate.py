@@ -119,7 +119,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
         )  # TODO what's the other half of the tuple?
 
         time_step = 1
-        traces = scenario.verify(simulation_scenario.sim_duration, time_step)    
+        traces = scenario.verify(simulation_scenario.sim_duration, time_step)  
         return VerificationResult(ResultType.OK, traces)
     except Exception as e:
         err_info = agent.get_error_info()

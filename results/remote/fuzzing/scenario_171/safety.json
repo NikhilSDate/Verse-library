@@ -1,1 +1,3 @@
-{"safety": {"tir": {"low": 0.5054864667154353, "high": 0.8332114118507681}, "lub": 67.69849351026605, "hlb": 451.2217409197414}, "realism": {"carbs_high": 399, "carbs_low": 234, "low_distance": 0, "high_distance": 0}}
+version https://git-lfs.github.com/spec/v1
+oid sha256:68be367388bd5bf9847af0e2e2c280221ce989f41816e60808d24ed3115c7e68
+size 217

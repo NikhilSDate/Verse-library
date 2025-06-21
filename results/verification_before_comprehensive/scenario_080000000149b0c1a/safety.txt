@@ -1,1 +1,3 @@
-[False, False, False, True, False]
+version https://git-lfs.github.com/spec/v1
+oid sha256:0671a92f8c7af7a1f7eb15bac60a2e337bf50e4b3ea842911bf50ca5f2e5fe2c
+size 34
