@@ -102,9 +102,6 @@ class HovorkaModel:
         self.param["carbFactors"] = {"value": self.param["carbF"], "time": 0}
         self.param["pumpBasals"] = {"value": self.param["Ub"], "time": 0}
 
-        self.apply_wrong_pump_param()
-        self.apply_carbs_counting_errors()
-
         self.CGM = {
             "lambda": 15.96,
             "epsilon": -5.471,

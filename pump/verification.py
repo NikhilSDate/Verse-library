@@ -23,6 +23,7 @@ import itertools
 import ast
 from tqdm import tqdm
 from typing import Any
+from functools import partial
 
 
 # TODO: this function is a bit of a hack
@@ -168,7 +169,7 @@ def gen_verification_scenarios():
         
         cgm_config = CGMConfig((1 - CGM_BIAS, 1 + CGM_BIAS), (0, 0))
         user_config = UserConfig(resume=RESUME)
-        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, sim_duration=DURATION, user_config=user_config)
+        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, sim_duration=60, user_config=user_config)
         scenarios.append(scenario)
     return scenarios        
         
@@ -183,7 +184,9 @@ def get_scenario_directory(scenario: SimulationScenario, output_dir):
             with open(os.path.join(attempt, 'scenario.pkl'), 'rb') as f:
                 collision = pickle.load(attempt)
             if collision == scenario:
-                return None
+                # last time we tried to verif this scenario, we were not successful
+                result = attempt
+                break
             else:
                 idx += 1
         else:
@@ -214,13 +217,8 @@ def save_crash(scenario, payload, output_dir):
     scenario_directory = get_scenario_directory(scenario, output_dir)
     payload.save(scenario_directory)
 
-def scenario_exists(scenario, output_dir):
-
 
 def run_verification_scenario(scenario, output_dir):
-    if scenario_exists(output_dir):
-        pass
-
     res = verify_multi_meal_scenario(scenario)
     if res.type == ResultType.OK:
         traces = res.payload
@@ -233,8 +231,8 @@ def sigint(signum, frame):
     os.kill(0, signal.SIGKILL)
 
 def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int):
+    run_func = partial(run_verification_scenario, output_dir=output_dir)
     with Pool(pool_size) as p:
-        run_func = lambda scenario: run_verification_scenario(scenario, output_dir)
         p.map(run_func, scenarios)
 
 # load all results
@@ -315,7 +313,7 @@ def verify_wrapper():
     # don't want to redo existing scenarios
     results = load_results(output_dir)
     existing = set(result[0] for result in results)
-    print('found {} existing results')
+    print(f'found {len(results)} existing results')
     scenarios = set(scenarios).difference(existing)
 
     verify(scenarios, output_dir, pool_size=processes)  
