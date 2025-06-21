@@ -8,7 +8,6 @@ from scipy.integrate import ode
 from dotenv import load_dotenv
 from cgm import CGM
 import multiprocessing
-from matlab.adapter import MatlabData
 
 load_dotenv()
 EMULATOR_PATH = os.environ["EMULATOR_PATH"]

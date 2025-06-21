@@ -266,7 +266,8 @@ if __name__ == "__main__":
     # print(evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))) # glucose shouldn't be >= 250 for > 30min
     settings = get_recommended_settings(TDD=39.22, BW=74.9)
     settings['basal_iq'] = False
-    scenario = SimulationScenario(
+    
+    scenario1 = SimulationScenario(
         init_bg=120,
         boluses=[Bolus(0, 0, BolusType.Simple, 0, True, None)],
         meals=[Meal(0, 75, DEFAULT_MEAL)],
@@ -278,7 +279,20 @@ if __name__ == "__main__":
         time_step=1
     )
 
-    res = simulate_multi_meal_scenario(scenario, log_dir='results/logs')
+    scenario2 = SimulationScenario(
+        init_bg=120,
+        boluses=[Bolus(0, 0, BolusType.Simple, 0, True, None)],
+        meals=[Meal(0, 75, DEFAULT_MEAL)],
+        errors=1,
+        settings=settings,
+        params=patient_original({'basalGlucose': 6.5}),
+        cgm_config=CGMConfig(1, 0),
+        sim_duration=1 * 60,
+        time_step=1
+    )
+
+    breakpoint()
+
     # (70, 180): True, True, False, False, False
     # (70, 100): True True, False, False, False
     

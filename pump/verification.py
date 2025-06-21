@@ -5,10 +5,9 @@ from artificial_pancreas_scenario import *
 from pump_model import *
 from cgm import *
 from simutils import *
-from hovorka_model import HovorkaModel, patient_original
+from hovorka_model import patient_original
 import pickle
 import random
-import json
 from pyrsistent import freeze, thaw
 from dataclasses import asdict
 import yaml
@@ -18,7 +17,6 @@ from simutils import FORGOT_BOLUS
 from safety.safety import realism
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
-import threading
 import os
 import signal
 import itertools
@@ -49,74 +47,6 @@ def custom_asdict_factory(data):
             return obj.value
         return obj
     return dict((k, convert_value(v)) for k, v in data)
-
-def check_scenario(scenario: SimulationScenario):
-    # source: https://www.mayoclinic.org/healthy-lifestyle/nutrition-and-healthy-eating/in-depth/carbohydrates/art-20045705
-    TOTAL_CARBS_LOW = 100
-    TOTAL_CARBS_HIGH = 350
-    MEAL_TIME_RANGES = [(60, 360), (360, 600), (600, 840), (840, 1080)]
-    INTER_MEAL_TIME = 30
-    ALLOWED_TMAX = [DEFAULT_MEAL, HIGH_FAT_MEAL]
-    TMAX_TO_CONFIG = {DEFAULT_MEAL: [(BolusType.Simple, None)], HIGH_FAT_MEAL: [(BolusType.Extended, ExtendedBolusConfig(50, 180))]}
-    BOLUS_MEAL_DELTA = 20
-    
-    meals = scenario.get_meals()
-    if not (len(meals) == 4):
-        print('bad number of meals')
-        return False
-    
-    # M1
-    total_carbs_low = 0
-    total_carbs_high = 0
-    for meal in meals:
-        total_carbs_low += meal.carbs[0]
-        total_carbs_high += meal.carbs[1]
-    if not (total_carbs_low >= TOTAL_CARBS_LOW and total_carbs_high <= TOTAL_CARBS_HIGH):
-        print('bad total carbs: ', total_carbs_low, total_carbs_high)
-        return False
-    
-    # M3
-    # we will start scenario at 5 AM
-    for i in range(len(MEAL_TIME_RANGES)):
-        if not (meals[i].time >= MEAL_TIME_RANGES[i][0] and meals[i].time <= MEAL_TIME_RANGES[i][1]):
-            print('bad meal times')
-            return False
-    
-    # M4
-    for i in range(len(meals) - 1):
-        if not (meals[i + 1].time - meals[i].time) >= INTER_MEAL_TIME:
-            print('bad inter-meal times')
-            return False
-    
-    for i in range(len(meals)):
-        if not (meals[i].TauM in ALLOWED_TMAX):
-            print('bad t_max')
-            return False
-    
-    meal_index_to_bolus = scenario.get_bolus_meal_mapping()    
-    # B1    
-    for i in range(len(meals)):
-        bolus = meal_index_to_bolus[i]
-        meal = meals[i]
-        allowed_configs = TMAX_TO_CONFIG[meal.TauM]
-        if not get_bolus_config(bolus) in allowed_configs:
-            print(get_bolus_config(bolus), allowed_configs)
-            print('bad bolus config')
-            return False
-    
-    for i in range(len(meals)):
-        bolus = meal_index_to_bolus[i]
-        meal = meals[i]
-        if not abs(bolus.time - meal.time) <= BOLUS_MEAL_DELTA:
-            print('bad bolus meal delta')
-            return False
-        
-    for bolus in meal_index_to_bolus.values():
-        if not bolus.correction:
-            print('bad bolus correction')
-            return False
-        
-    return True
 
 def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
     meal_carb_ranges = [(0, 30), (30, 60), (60, 90), (90, 120), (120, 150)]
@@ -163,10 +93,9 @@ def gen_verification_scenarios():
     # G1: starting BG is in the normal range (70, 180)
     
     # for now take this and run it through the AGP report
-    
-    # we might be able to do interesting caching with 
-    
-    
+        
+    # source: https://www.mayoclinic.org/healthy-lifestyle/nutrition-and-healthy-eating/in-depth/carbohydrates/art-20045705
+
     # TODO: CGM errors
 
     DURATION = 24 * 60
@@ -243,13 +172,13 @@ def gen_verification_scenarios():
         scenarios.append(scenario)
     return scenarios        
         
-def get_scenario_directory(scenario: Scenario, log_dir):
+def get_scenario_directory(scenario: SimulationScenario, output_dir):
     idx = 0
     h = hex(hash(scenario) + sys.maxsize + 1)[2:]
     result = ''
     while True:
         prefix = hex(idx)[2:]
-        attempt = os.path.join(log_dir, f'scenario_{prefix}{h}')
+        attempt = os.path.join(output_dir, f'scenario_{prefix}{h}')
         if os.path.exists(attempt):
             with open(os.path.join(attempt, 'scenario.pkl'), 'rb') as f:
                 collision = pickle.load(attempt)
@@ -263,9 +192,9 @@ def get_scenario_directory(scenario: Scenario, log_dir):
     os.makedirs(result)
     return result
 
-def save_scenario_results(scenario: SimulationScenario, traces, safety_results, log_dir):
-    # create a directory in log_dir using hash of scenario
-    scenario_directory = get_scenario_directory(scenario, log_dir)
+def save_scenario_results(scenario: SimulationScenario, traces, safety_results, output_dir):
+    # create a directory in output_dir using hash of scenario
+    scenario_directory = get_scenario_directory(scenario, output_dir)
     if scenario_directory is None:
         print('redundant scenario')
         return
@@ -281,32 +210,38 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
     with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
         pickle.dump(scenario, f)
 
-def save_crash(scenario, payload, log_dir):
-    scenario_directory = get_scenario_directory(scenario, log_dir)
+def save_crash(scenario, payload, output_dir):
+    scenario_directory = get_scenario_directory(scenario, output_dir)
     payload.save(scenario_directory)
 
-def run_verification_scenario(scenario):
-    tqdm.write(str(scenario))
+def scenario_exists(scenario, output_dir):
+
+
+def run_verification_scenario(scenario, output_dir):
+    if scenario_exists(output_dir):
+        pass
+
     res = verify_multi_meal_scenario(scenario)
     if res.type == ResultType.OK:
         traces = res.payload
         safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
-        save_scenario_results(scenario, traces, safety_results, 'results/verification')
+        save_scenario_results(scenario, traces, safety_results, output_dir)
     else:
-        save_crash(scenario, res.payload, 'results/verification')
+        save_crash(scenario, res.payload, output_dir)
 
 def sigint(signum, frame):
     os.kill(0, signal.SIGKILL)
 
-def verify(scenarios: List[SimulationScenario], pool_size: int):
+def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int):
     with Pool(pool_size) as p:
-        p.map(run_verification_scenario, scenarios)
+        run_func = lambda scenario: run_verification_scenario(scenario, output_dir)
+        p.map(run_func, scenarios)
 
 # load all results
 # there is no point trying to optimize this, since this is not really the bottleneck
-def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
+def load_results(output_dir) -> List[Tuple[Scenario, object, object]]:
     results = []
-    scenario_dirs = [ f for f in os.scandir(log_dir) if f.is_dir() ]
+    scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
     for scenario_dir in tqdm(scenario_dirs):
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
@@ -320,8 +255,8 @@ def load_results(log_dir) -> List[Tuple[Scenario, object, object]]:
             pass
     return results  
 
-def load_from_dir(log_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
-    scenario_dir = os.path.join(log_dir, scenario_dir)
+def load_from_dir(output_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
+    scenario_dir = os.path.join(output_dir, scenario_dir)
     scenario, traces, safety = None, None, None
     scenario_path = os.path.join(scenario_dir, 'scenario.pkl')
     traces_path = os.path.join(scenario_dir, 'traces.pkl')
@@ -337,8 +272,8 @@ def load_from_dir(log_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
             safety = ast.literal_eval(f.read())
     return (scenario, traces, safety)    
 
-def load_from_dir_err(log_dir, scenario_dir) -> Tuple[SimulationScenario, List]:
-    scenario_dir = os.path.join(log_dir, scenario_dir)
+def load_from_dir_err(output_dir, scenario_dir) -> Tuple[SimulationScenario, List]:
+    scenario_dir = os.path.join(output_dir, scenario_dir)
     scenario, init = None, None
     scenario_path = os.path.join(scenario_dir, 'scenario.pkl')
     init_path = os.path.join(scenario_dir, 'init.pkl')
@@ -364,140 +299,31 @@ def debug_scenario(scenario_path):
 def verify_wrapper():
     parser = argparse.ArgumentParser('pumpverif')
     parser.add_argument('-p', '--processes', default=1, type=int)
+    parser.add_argument('-s', '--seed', default=42, type=int)
+    parser.add_argument('-o', '--output-dir', default='results/verification', type=str)
     args = parser.parse_args()
+    seed = args.seed
+    processes = args.processes
+    output_dir = args.output_dir
     signal.signal(signal.SIGINT, sigint)
-    np.random.seed(42)
+    np.random.seed(seed)
+    random.seed(seed)
+
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)  
-    verify(scenarios, pool_size=args.processes)  
     
-def compute_proof_statistics(results):
-    totals = np.zeros_like(results[0][2], dtype=int)
-    perfect = 0
-    perfectly_unsafe = 0
-    for result in tqdm(results):
-        totals += np.array(result[2], dtype=int)
-        perfect += np.min(np.array(result[2], dtype=int))
-        perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
-    return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
+    # don't want to redo existing scenarios
+    results = load_results(output_dir)
+    existing = set(result[0] for result in results)
+    print('found {} existing results')
+    scenarios = set(scenarios).difference(existing)
 
-def save_perfectly_unsafe(results, log_dir):
+    verify(scenarios, output_dir, pool_size=processes)  
+
+def save_perfectly_unsafe(results, output_dir):
     for result in results:
         if np.min(1 - np.array(result[2], dtype=int)) > 0:
-            save_scenario_results(result[0], result[1], result[2], log_dir)
-
-def unsafe_analysis(results: List[Tuple[Scenario, object, object]], index):
-    points_safe = []
-    points_unsafe = []
-
-    unsafe_map = {}
-    safe_map = {}
-
-    for result in results:
-        point = [result[0].get_largest_meal(), result[0].get_total_carb_range()[1]]
-        map_idx = 1
-        if result[2][index]:
-            points_safe.append(point)
-            safe_map[point[map_idx]] = safe_map.get(point[map_idx], 0) + 1
-        else:
-            points_unsafe.append(point)
-            unsafe_map[point[map_idx]] = unsafe_map.get(point[map_idx], 0) + 1
-    
-    print(len(points_safe))
-    print(len(points_unsafe))
-    points_safe = np.array(points_safe)
-    points_unsafe = np.array(points_unsafe)
-    plt.scatter(points_safe[:, 0], points_safe[:, 1], c='green', alpha=0.1)
-    plt.scatter(points_unsafe[:, 0], points_unsafe[:, 1], c='red', alpha=0.1)
-    plt.legend()
-    plt.xlabel('Largest meal (g)')
-    plt.ylabel('Total carbs upper bound (g)')
-    plt.savefig('unsafe.png')
-    return safe_map, unsafe_map
-
-def get_init(scenario, index):
-    inits = verify_multi_meal_scenario(scenario, track_inits=True)
-    return inits[index]
-
-def overlay_simulation_traces(args):
-
-    colors = [
-        '#1f77b4',  # muted blue
-        '#ff7f0e',  # safety orange
-        '#2ca02c',  # cooked asparagus green
-        '#9467bd',  # muted purple
-        '#8c564b',  # chestnut brown
-        '#e377c2',  # raspberry yogurt pink
-        '#7f7f7f',  # middle gray
-        '#bcbd22',  # curry yellow-green
-        '#17becf',  # blue-teal
-        '#111111',  # off-white
-        '#ffffff'   # black
-    ]
-
-    (log_dir, scenario_dir) = args
-    scenario, verification_traces, safety = load_from_dir(log_dir, scenario_dir)
-    fig = plot_variable(verification_traces, 'G', show=False)
-    inits = verify_multi_meal_scenario(scenario, track_inits=True)
-    for i, init in enumerate(inits):
-        traces = simulate_from_init(scenario, init)
-        plot_variable(traces, 'G', show=False, fig=fig, color=colors[i])
-
-        # custom legend
-        fig.add_trace(go.Scatter(
-                x=[None],
-                y=[None],
-                mode="markers",
-                name=f"trace {i}",
-                marker=dict(size=7, color=colors[i], symbol='square'),
-        ))
-    y_mins = []
-    y_maxs = []
-    for trace_data in fig.data:
-        y_mins.append(min(trace_data.y))
-        y_maxs.append(max(trace_data.y))
-    fig.update_layout(showlegend=True)
-    fig.write_image(os.path.join(log_dir, scenario_dir, 'plot_with_sims_fixed.png'))
-    return fig
-
-def snippets():
-        # results = load_results('results/verification')
-    # save_perfectly_unsafe(results, 'results/perfectly_unsafe')
-
-    # scenario.user_config = UserConfig(resume=True)
-    # traces = verify_multi_meal_scenario(scenario)
-    # plot_variable(traces, 'G')
-
-    # with open('results/verification/scenario_080000000000d3c9b/traces.pkl', 'rb') as f:
-    #     traces = pickle.load(f)
-    # plot_variable(traces, 'G')
-    # stats = compute_proof_statistics(results)    
-    # plot_verification_results(results, 0)
-    # results/perfectly_unsafe/scenario_0800000001e04ba8e
-    # signal.signal(signal.SIGINT, sigint)    
-    # scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
-    # perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
-    # with Pool(20) as p:
-    # #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
-    # log_dir = 'results/perfectly_unsafe'
-    # fig = overlay_simulation_traces((log_dir, 'scenario_080000000071e0c19'))
-    # fig.show()
-    # trace 5 is bad
-    # print(scenario.settings)
-    # scenario.settings[0]['basal_iq'] = True
-    # scenario.user_config = UserConfig(resume=True)
-    # log_dir = 'results/perfectly_unsafe'
-    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
-    # run_verification_scenario(scenario)
-    # init = get_init(scenario, 1)
-    # print(init)
-    # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
-    # plot_variable(traces, 'G')
-    # results = load_results('results/verification')
-    # print(unsafe_analysis(results, 2))
-    pass 
+            save_scenario_results(result[0], result[1], result[2], output_dir)
 
 if __name__ == '__main__':
-    # scenario, init = load_from_dir_err('results/verification', 'scenario_0800000000003fe3b')
-    # traces = simulate_from_init(scenario, init, log_dir='results/logs')
     verify_wrapper()
