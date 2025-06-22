@@ -21,17 +21,18 @@ class InsulinPumpEvent:
 
 class InsulinPumpModel:
 
-    def __init__(self, sim_scenario, settings=None):
+    def __init__(self, sim_scenario, settings=None, trace=False):
 
         self.settings = settings
         self.basal_iq = settings['basal_iq']        
-        self.pump_emulator = self.get_pump(self.basal_iq, settings)
+        self.trace = trace
+        self.pump_emulator = self.get_pump(self.basal_iq, settings, trace=trace)
     
     def reset_pump(self):
-        self.pump_emulator = self.get_pump(self.basal_iq, self.settings)
+        self.pump_emulator = self.get_pump(self.basal_iq, self.settings, trace=self.trace)
     
-    def get_pump(self, basal_iq, settings):
-        pump = Pump(basal_iq=basal_iq)
+    def get_pump(self, basal_iq, settings, trace=False):
+        pump = Pump(basal_iq=basal_iq, trace=trace)
         if settings is not None:
             pump.set_settings(carb_ratio=settings['carb_ratio'], correction_factor=settings['correction_factor'], target_bg=settings['target_bg'], max_bolus=settings['max_bolus'], insulin_duration=settings['insulin_duration'], basal_rate=settings['basal_rate'])
         return pump
@@ -48,6 +49,11 @@ class InsulinPumpModel:
     
     def get_init_state(self):
         return [0]
+    
+    def write_trace(self, dir):
+        os.makedirs(dir, exist_ok=True)
+        with open(os.path.join(dir, 'calls.pkl'), 'wb') as f:
+            pickle.dump(self.pump_emulator.calls, f)
 
 
 ###################################

@@ -1,4 +1,4 @@
-from typing import List, Union, Tuple, Dict
+from typing import List, Union, Tuple, Dict, Optional
 from enum import Enum
 import os
 from dataclasses import dataclass
@@ -25,8 +25,7 @@ class Bolus:
     type: BolusType
     meal_index: int 
     correction: bool
-    config: ExtendedBolusConfig
-
+    config: Optional[ExtendedBolusConfig]
 @dataclass(eq=True, frozen=True)
 class Meal:
     time: int
@@ -111,19 +110,20 @@ class SimulationScenario:
 
     def __init__(
         self,
-        init_bg,
+        init_bg: Tuple[int, int] | int,
         boluses: List[Bolus],
         meals: List[Meal],
-        errors: List[float],
+        errors: List[float] | float,
         settings,
         params,
         cgm_config,
         sim_duration=24 * 60,
+        time_step=1,
         user_config=UserConfig(False)
     ):
 
         self.boluses: Dict[int, Bolus] = {}
-        self.meals = {}
+        self.meals: Dict[int, Meal] = {}
 
         # currently assumes that there are not multiple meals/boluses at the same time
         for bolus in boluses:
@@ -134,6 +134,8 @@ class SimulationScenario:
                 self.meals[meal.time] = meal
 
         self.sim_duration = sim_duration
+        self.time_step = time_step
+        
         self.params = params
         self.errors = errors
         self.init_bg = init_bg
@@ -189,21 +191,12 @@ class SimulationScenario:
     def __hash__(self):
         return hash(self.__key)
     
+    def __eq__(self, other):
+        return self.__key() == other.__key()
+    
     def __repr__(self):
         return f'Scenario{self.get_meals(), self.boluses.values()}'
     
     def __str__(self):
         return self.__repr__()
     
-    def scenario_export():
-        '''
-        TODO: fill this out for writing scenarios to a file
-        '''
-        pass
-    
-    def scenario_import():
-        '''
-        TODO: fill this out for reading scenario from a file
-        '''
-        pass
-            

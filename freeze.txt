@@ -95,7 +95,6 @@ typing_extensions==4.12.2
 tzdata==2024.2
 unicorn==2.0.1.post1
 urllib3==2.2.2
--e git+https://github.com/NikhilSDate/Verse-library@68f2456a5effe462db08d46047fc67e44478d9b5#egg=verse
 virtualenv==20.21.0
 vtk==9.3.1
 wcwidth==0.2.13
