@@ -30,3 +30,5 @@ test/
 my_notes/
 plots/
 .env
+
+results/
