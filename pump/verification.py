@@ -308,6 +308,7 @@ def verify_wrapper():
     random.seed(seed)
 
     scenarios = gen_verification_scenarios()
+    
     np.random.shuffle(scenarios)  
     
     # don't want to redo existing scenarios

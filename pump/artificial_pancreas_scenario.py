@@ -189,7 +189,7 @@ class SimulationScenario:
         return freeze((self.init_bg, self.meals, self.boluses, self.errors, self.params, self.sim_duration, self.settings, self.cgm_config))
     
     def __hash__(self):
-        return hash(self.__key)
+        return hash(self.__key())
     
     def __eq__(self, other):
         return self.__key() == other.__key()
