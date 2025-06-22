@@ -169,29 +169,20 @@ def gen_verification_scenarios():
         
         cgm_config = CGMConfig((1 - CGM_BIAS, 1 + CGM_BIAS), (0, 0))
         user_config = UserConfig(resume=RESUME)
-        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, sim_duration=60, user_config=user_config)
+        scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, sim_duration=DURATION, user_config=user_config)
         scenarios.append(scenario)
     return scenarios        
-        
+
+# TODO: this is completely broken, figure out a way to fix it   
 def get_scenario_directory(scenario: SimulationScenario, output_dir):
     idx = 0
-    h = hex(hash(scenario) + sys.maxsize + 1)[2:]
     result = ''
     while True:
-        prefix = hex(idx)[2:]
-        attempt = os.path.join(output_dir, f'scenario_{prefix}{h}')
-        if os.path.exists(attempt):
-            with open(os.path.join(attempt, 'scenario.pkl'), 'rb') as f:
-                collision = pickle.load(attempt)
-            if collision == scenario:
-                # last time we tried to verif this scenario, we were not successful
-                result = attempt
-                break
-            else:
-                idx += 1
-        else:
+        attempt = os.path.join(output_dir, f'scenario_{idx}')
+        if not os.path.exists(attempt):
             result = attempt
             break
+        idx += 1
     os.makedirs(result)
     return result
 
@@ -308,14 +299,15 @@ def verify_wrapper():
     random.seed(seed)
 
     scenarios = gen_verification_scenarios()
-    
     np.random.shuffle(scenarios)  
 
     # don't want to redo existing scenarios
     results = load_results(output_dir)
-    existing = set(result[0] for result in results)
+    existing = list(result[0] for result in results) # can probably make this a set without losing determinism
     print(f'found {len(results)} existing results')
-    scenarios = set(scenarios).difference(existing)
+
+    # want to maintain determinism, so use list comprehension instead of set difference
+    scenarios = [scenario for scenario in scenarios if scenario not in existing]
 
     verify(scenarios, output_dir, pool_size=processes)  
 
@@ -476,7 +468,10 @@ if __name__ == '__main__':
     # init = get_init(traces, 7)
     # print(init)
     # simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
-    results = load_results('results/verification')
-    titles = ['G < 54mg/dL for less than 1% of time', '54mg/dL <= G <= 70mg/dL for less than 4% of time', '70mg/dL <= G <= 180 mg/dL for at least 70% of time', '180mg/dL <= G <= 250 mg/dL for less than 25% of time', ' G > 250 mg/dL for < 5% of time']
-    for i in range(5):
-        table_analysis(results, i, f'table_{i}', titles[i])
+    # results = load_results('results/verification')
+    # print(results)
+    # titles = ['G < 54mg/dL for less than 1% of time', '54mg/dL <= G <= 70mg/dL for less than 4% of time', '70mg/dL <= G <= 180 mg/dL for at least 70% of time', '180mg/dL <= G <= 250 mg/dL for less than 25% of time', ' G > 250 mg/dL for < 5% of time']
+    # for i in range(5):
+    #     table_analysis(results, i, f'table_{i}', titles[i])
+
+    verify_wrapper()
