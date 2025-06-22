@@ -310,7 +310,7 @@ def verify_wrapper():
     scenarios = gen_verification_scenarios()
     
     np.random.shuffle(scenarios)  
-    
+
     # don't want to redo existing scenarios
     results = load_results(output_dir)
     existing = set(result[0] for result in results)
@@ -319,10 +319,164 @@ def verify_wrapper():
 
     verify(scenarios, output_dir, pool_size=processes)  
 
-def save_perfectly_unsafe(results, output_dir):
-    for result in results:
-        if np.min(1 - np.array(result[2], dtype=int)) > 0:
-            save_scenario_results(result[0], result[1], result[2], output_dir)
+def compute_proof_statistics(results):
+    totals = np.zeros((len(results[0][2]), 3), dtype=int)
+    perfect = 0
+    perfectly_unsafe = 0
+    for result in tqdm(results):
+        res = result[2]
+        safe = get_safe(res)
+        unsafe = get_unsafe(res)
+        unknown = get_unknown(res)
+        combined = np.array([safe, unsafe, unknown]).T
+        totals += combined
+        perfect += np.min(safe)
+        perfectly_unsafe += np.min(unsafe)
+    return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
 
+def get_safe(safety):
+    return np.array(np.array(safety) == True, dtype=int)
+
+def get_unsafe(safety):
+    return np.array(np.array(safety) == False, dtype=int)
+
+def get_unknown(safety):
+    return np.array(np.array(safety) == None, dtype=int)
+
+def save_perfectly_unsafe(results, log_dir):
+    for result in results:
+        if np.min(1 - np.array(np.array(result[2]) == True, dtype=int)) > 0:
+            save_scenario_results(result[0], result[1], result[2], log_dir)
+
+def table_analysis(results: List[Tuple[Scenario, object, object]], index, figname='table.png', title='Table'):
+    data = {}
+    for result in results:
+        safety = result[2]
+        key = (result[0].get_largest_meal(), result[0].get_total_carb_range()[1])
+        if key not in data:
+            data[key] = np.zeros((3,))
+        data[key] += np.array([get_safe(safety)[index], get_unsafe(safety[index]), get_unknown(safety)[index]])
+
+    x_values = sorted(set(key[0] for key in data))
+    y_values = sorted(set(key[1] for key in data), reverse=True)
+    df = pd.DataFrame(index=y_values, columns=x_values)
+
+    # Fill DataFrame with formatted values
+    for (x, y), vals in data.items():
+        df.at[y, x] = f"[{int(vals[0])}, {int(vals[1])}, {int(vals[2])}]"
+    df = df.fillna("--")
+
+    # Create the figure and axis
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.axis('off')
+    print(len(x_values))
+    print(len(y_values))
+    # Create table without row and column labels
+    table = ax.table(
+        cellText=df.values,
+        cellLoc='center',
+        loc='center', 
+        rowLabels=y_values,
+        colLabels=x_values
+    )
+
+    # Style table
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 1.5)
+
+    # Add axis labels
+    plt.title(title)
+    plt.figtext(0.5, 0.2, 'Max single-meal carbs', ha='center', va='center', fontsize=12)
+    plt.figtext(0.02, 0.5, 'Max total carbs', ha='center', va='center', rotation='vertical', fontsize=12)
+    plt.savefig(figname)
+    return data
+
+def get_init(traces, index):
+    return traces.root.sims[index][0][1:]
+
+def get_index(var):
+    return state_indices[var] + 1
+
+def overlay_simulation_traces(args):
+
+    colors = [
+        '#1f77b4',  # muted blue
+        '#ff7f0e',  # safety orange
+        '#2ca02c',  # cooked asparagus green
+        '#9467bd',  # muted purple
+        '#8c564b',  # chestnut brown
+        '#e377c2',  # raspberry yogurt pink
+        '#7f7f7f',  # middle gray
+        '#bcbd22',  # curry yellow-green
+        '#17becf',  # blue-teal
+        '#111111',  # off-white
+        '#ffffff'   # black
+    ]
+
+    (log_dir, scenario_dir) = args
+    scenario, traces, safety = load_from_dir(log_dir, scenario_dir)
+    fig = plot_variable(traces, 'G', show=False)
+    sims = traces.root.sims
+    for i, sim in enumerate(sims):
+        y = extract_variable(sim, 'pump', get_index('G'), simulate=True, raw=True)
+        x = np.arange(len(y))
+        # custom legend
+        fig.add_trace(go.Scatter(
+                x=x,
+                y=y,
+                mode="lines",
+                name=f"trace {i}",
+                marker=dict(color=colors[i]),
+        ))
+    y_mins = []
+    y_maxs = []
+    for trace_data in fig.data:
+        y_mins.append(min(trace_data.y))
+        y_maxs.append(max(trace_data.y))
+    fig.update_layout(showlegend=True)
+    return fig
+    
 if __name__ == '__main__':
-    verify_wrapper()
+    # results = load_results('results/verification')
+    # save_perfectly_unsafe(results, 'results/perfectly_unsafe')
+
+    # scenario.user_config = UserConfig(resume=True)
+    # traces = verify_multi_meal_scenario(scenario)
+    # plot_variable(traces, 'G')
+
+    # with open('results/verification/scenario_080000000000d3c9b/traces.pkl', 'rb') as f:
+    #     traces = pickle.load(f)
+    # plot_variable(traces, 'G')
+    # stats = compute_proof_statistics(results)    
+    # plot_verification_results(results, 0)
+    # results/perfectly_unsafe/scenario_0800000001e04ba8e
+    # signal.signal(signal.SIGINT, sigint)    
+    # scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
+    # perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
+    # with Pool(20) as p:
+    # #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
+    # log_dir = 'results/perfectly_unsafe'
+    # fig = overlay_simulation_traces((log_dir, 'scenario_080000000071e0c19'))
+    # fig.show()
+    # trace 5 is bad
+    # print(scenario.settings)
+    # scenario.settings[0]['basal_iq'] = True
+    # scenario.user_config = UserConfig(resume=True)
+    # log_dir = 'results/perfectly_unsafe'
+    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
+    # run_verification_scenario(scenario)
+    # init = get_init(scenario, 1)
+    # print(init)
+    # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
+    # plot_variable(traces, 'G')
+    # results = load_results('results/verification')
+    # print(unsafe_analysis(results, 2))
+    # scenario, traces, safety = load_from_dir('results/perfectly_unsafe', 'scenario_0800000001ab5da68')
+    # init = get_init(traces, 7)
+    # print(init)
+    # simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
+    results = load_results('results/verification')
+    titles = ['G < 54mg/dL for less than 1% of time', '54mg/dL <= G <= 70mg/dL for less than 4% of time', '70mg/dL <= G <= 180 mg/dL for at least 70% of time', '180mg/dL <= G <= 250 mg/dL for less than 25% of time', ' G > 250 mg/dL for < 5% of time']
+    for i in range(5):
+        table_analysis(results, i, f'table_{i}', titles[i])

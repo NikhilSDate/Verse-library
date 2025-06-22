@@ -69,14 +69,15 @@ def AGP_safety(glucose_reachtube, targets=[0.01, 0.04, 0.70, 0.25, 0.05]):
     '''
     report = AGP_report(glucose_reachtube)
     lower_bounds_ranges = [0, 1, 3, 4]
-    results = [True] * len(targets)
+    results = [False] * len(targets)
     for idx in lower_bounds_ranges:
-        if report[idx][1] >= targets[idx]:
-            results[idx] = False
+        if report[idx][1] < targets[idx]:
+            results[idx] = True
+    
     upper_bound_ranges = [2]
     for idx in upper_bound_ranges:
-        if report[idx][0] < targets[idx]:
-            results[idx] = False
+        if report[idx][0] >= targets[idx]:
+            results[idx] = True
     return results
 
 def range_time_safety(glucose_reachtube, range, time_bound):

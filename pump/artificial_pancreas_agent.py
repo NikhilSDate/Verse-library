@@ -78,11 +78,7 @@ class Logger:
         self.output_buffer.clear()
 
     def __del__(self):
-        if self.current_dose_file is not None:
-            self.current_dose_file.close()
-        if self.current_output_file is not None:
-            self.flush()
-            self.current_output_file.close()
+        self.flush()
 
     def get_output_buffer(self):
         return self.output_buffer
