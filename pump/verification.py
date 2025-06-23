@@ -303,7 +303,7 @@ def verify_wrapper():
 
     # don't want to redo existing scenarios
     results = load_results(output_dir)
-    existing = list(result[0] for result in results) # can probably make this a set without losing determinism
+    existing = set(result[0] for result in results)
     print(f'found {len(results)} existing results')
 
     # want to maintain determinism, so use list comprehension instead of set difference
