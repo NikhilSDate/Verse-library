@@ -50,7 +50,7 @@ def custom_asdict_factory(data):
     return dict((k, convert_value(v)) for k, v in data)
 
 def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
-    meal_carb_ranges = [(0, 30), (30, 60), (60, 90), (90, 120), (120, 150)]
+    meal_carb_ranges = [(0, 40), (40, 80), (80, 120), (120, 160)]
     m = len(meal_carb_ranges)
     good_ranges = []
     for i in range(m ** num_meals):
@@ -115,6 +115,7 @@ def gen_verification_scenarios():
     RESUME = True
     
     meal_ranges = get_allowed_meal_carb_ranges(100, 350)
+    print(len(meal_ranges))
     
     meal_1_time = 60 * np.array([2, 5])
     meal_2_time = 60 * np.array([7, 10])
@@ -186,13 +187,33 @@ def get_scenario_directory(scenario: SimulationScenario, output_dir):
     os.makedirs(result)
     return result
 
+def save_result_with_sims(result: Tuple[SimulationScenario, object, object], output_dir):
+    scenario, traces, safety = result
+    scenario_directory = get_scenario_directory(scenario, output_dir)
+    if scenario_directory is None:
+        print('redundant scenario')
+        return
+    fig = plot_variable(traces, 'G', show=False)
+    fig.write_image(os.path.join(scenario_directory, 'plot.png'))
+    with open(os.path.join(scenario_directory, 'traces.pkl'), 'wb') as f:
+        pickle.dump(traces, f)
+    with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
+        f.write(str(safety))
+    with open(os.path.join(scenario_directory, 'scenario.yaml'), 'w') as f:
+        to_dump = denumpify(asdict(scenario.get_data(), dict_factory=custom_asdict_factory))
+        yaml.dump(to_dump, f)
+    with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
+        pickle.dump(scenario, f)
+    fig_with_sims = overlay_simulation_traces(result)
+    fig_with_sims.write_image(os.path.join(scenario_directory, 'plot_with_sims.png'))
+
 def save_scenario_results(scenario: SimulationScenario, traces, safety_results, output_dir):
     # create a directory in output_dir using hash of scenario
     scenario_directory = get_scenario_directory(scenario, output_dir)
     if scenario_directory is None:
         print('redundant scenario')
         return
-    fig = plot_variable(traces, 'G', show=False)
+    fig = overlay_simulation_traces((scenario, traces, safety_results))
     with open(os.path.join(scenario_directory, 'traces.pkl'), 'wb') as f:
         pickle.dump(traces, f)
     fig.write_image(os.path.join(scenario_directory, 'plot.png'))
@@ -207,7 +228,6 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
 def save_crash(scenario, payload, output_dir):
     scenario_directory = get_scenario_directory(scenario, output_dir)
     payload.save(scenario_directory)
-
 
 def run_verification_scenario(scenario, output_dir):
     res = verify_multi_meal_scenario(scenario)
@@ -228,7 +248,7 @@ def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int)
 
 # load all results
 # there is no point trying to optimize this, since this is not really the bottleneck
-def load_results(output_dir) -> List[Tuple[Scenario, object, object]]:
+def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
     results = []
     scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
     for scenario_dir in tqdm(scenario_dirs):
@@ -274,17 +294,13 @@ def load_from_dir_err(output_dir, scenario_dir) -> Tuple[SimulationScenario, Lis
             init = pickle.load(f)
     return scenario, init
 
-def debug_scenario(scenario_path):
-    with open(os.path.join(scenario_path, 'scenario.pkl'), 'rb') as f:
-        scenario = pickle.load(f)
-    signal.signal(signal.SIGINT, sigint)
-    traces = run_verification_scenario(scenario, logging=True)
-    fig1 = plot_variable(traces, 'G', show=True)
-    fig2 = plot_variable(traces, 'InsSub1', show=True)
-    fig1.write_image('debug_G.png')
-    fig2.write_image('debug_InsSub.png')
-            
-            
+def debug_sim(output_dir, result_dir, sim_idx):
+    scenario, traces, safety = load_from_dir(output_dir, result_dir)
+    init = get_init(traces, sim_idx)
+    traces = simulate_from_init(scenario, init, logging=True, log_dir=os.path.join(output_dir, result_dir, 'debug', f'sim_{sim_idx}'))
+    fig = plot_variable(traces, 'G', show=False)
+    fig.write_image(os.path.join(output_dir, result_dir, 'debug', f'sim_{sim_idx}', 'plot.png'))
+
 def verify_wrapper():
     parser = argparse.ArgumentParser('pumpverif')
     parser.add_argument('-p', '--processes', default=1, type=int)
@@ -300,6 +316,9 @@ def verify_wrapper():
 
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)  
+
+    print(len(scenarios))
+    breakpoint()
 
     # don't want to redo existing scenarios
     results = load_results(output_dir)
@@ -387,10 +406,7 @@ def table_analysis(results: List[Tuple[Scenario, object, object]], index, fignam
 def get_init(traces, index):
     return traces.root.sims[index][0][1:]
 
-def get_index(var):
-    return state_indices[var] + 1
-
-def overlay_simulation_traces(args):
+def overlay_simulation_traces(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
 
     colors = [
         '#1f77b4',  # muted blue
@@ -406,12 +422,11 @@ def overlay_simulation_traces(args):
         '#ffffff'   # black
     ]
 
-    (log_dir, scenario_dir) = args
-    scenario, traces, safety = load_from_dir(log_dir, scenario_dir)
+    scenario, traces, safety = result
     fig = plot_variable(traces, 'G', show=False)
     sims = traces.root.sims
     for i, sim in enumerate(sims):
-        y = extract_variable(sim, 'pump', get_index('G'), simulate=True, raw=True)
+        y = extract_variable(sim, 'G', simulate=True)
         x = np.arange(len(y))
         # custom legend
         fig.add_trace(go.Scatter(
@@ -426,7 +441,7 @@ def overlay_simulation_traces(args):
     for trace_data in fig.data:
         y_mins.append(min(trace_data.y))
         y_maxs.append(max(trace_data.y))
-    fig.update_layout(showlegend=True)
+    fig.update_layout(showlegend=True, legend=dict(font=dict(size=12)))
     return fig
     
 if __name__ == '__main__':

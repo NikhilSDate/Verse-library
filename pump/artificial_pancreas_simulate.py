@@ -57,10 +57,14 @@ def simulate_from_init(simulation_scenario: SimulationScenario, init, logging=Fa
     time_step = 1
     try:
         traces = scenario.simulate(simulation_scenario.sim_duration, time_step)
+        traces.metadata = agent.trace_metadata
+        pump.write_trace(log_dir)
         return traces
-    except:
+    except Exception as e:
+        print(e.with_traceback(None))
         pump.write_trace(log_dir)
         pass
+
 
 
 def simulate_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None):
@@ -81,7 +85,7 @@ def simulate_multi_meal_scenario(simulation_scenario: SimulationScenario, log_di
 
         time_step = simulation_scenario.time_step
         traces = scenario.simulate(simulation_scenario.sim_duration, time_step)    
-        print(agent.export_sim_data())
+        traces.metadata = agent.trace_metadata
         return VerificationResult(ResultType.OK, traces)
     except Exception as e:
         err_info = agent.get_error_info()
@@ -120,7 +124,8 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
         )  # TODO what's the other half of the tuple?
 
         time_step = simulation_scenario.time_step
-        traces = scenario.verify(simulation_scenario.sim_duration, time_step)    
+        traces = scenario.verify(simulation_scenario.sim_duration, time_step)  
+        traces.metadata = agent.trace_metadata
         return VerificationResult(ResultType.OK, traces)
     except Exception as e:
         err_info = agent.get_error_info()
@@ -129,12 +134,12 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
 
 
 def evaluate_safety_constraint(traces, variable, safety_func):
-    reachtube_trace = extract_variable(traces, 'pump', state_indices[variable] + 1)
+    reachtube_trace = extract_variable(traces, variable)
     reachtube_safety = safety_func(reachtube_trace)
     
     sim_safety = np.array([True] * len(reachtube_safety))
     for sim in traces.root.sims:
-        trace = extract_variable(sim, 'pump', state_indices[variable] + 1,simulate=True, raw=True)
+        trace = extract_variable(sim, variable, simulate=True)
         trace = np.column_stack((trace, trace))
         sim_safety = np.logical_and(sim_safety, safety_func(trace))
     
@@ -185,15 +190,22 @@ def linear_transform_trace(traces, agent, index, a, b):
     for i in range(len(traces.root.trace[agent])):
         traces.root.trace[agent][i][index] = a * traces.root.trace[agent][i][index] + b
 
-def extract_variable(traces, agent, index, simulate=False, raw=False):
-    if not raw:
+def get_index(var):
+    return state_indices[var] + 1
+
+# TODO: fix this
+def extract_variable(traces: AnalysisTree | np.ndarray, var: str, agent='pump', type=TraceType.VERIF):
+    if isinstance(traces, AnalysisTree):
         raw_trace = np.array(traces.root.trace[agent])
     else:
         raw_trace = traces
-    if simulate:
+    index = get_index(var)
+    if type == TraceType.SIM:
         return raw_trace.reshape((-1, raw_trace.shape[1]))[:, index]
     else:
         return raw_trace.reshape((-1, 2, raw_trace.shape[1]))[:, :, index]
+    
+
 
 def plot_variable(tree, var, show=True, fig = None, color='red'):
     if fig is None:

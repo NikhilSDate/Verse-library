@@ -1,4 +1,5 @@
 import numpy as np
+from simutils import TraceType
 
 # assume bg trace is sampled at regular intervals
 def safety_report(traces, range_low=70, range_high=180, critical_low=40, critical_high=250, agent_name='pump', G_idx=11):
@@ -56,10 +57,13 @@ def range_perc(glucose_trace, lb, ub, relative=True):
             count += 1
     return count / len(glucose_trace)
 
-def AGP_report(glucose_reachtube, AGP_config=[(-np.inf, 54), (-np.inf, 70), (70, 180), (180, np.inf), (250, np.inf)], type='verif'):
+def AGP_report(glucose_reachtube, AGP_config=[(-np.inf, 54), (-np.inf, 70), (70, 180), (180, np.inf), (250, np.inf)], type: TraceType=TraceType.VERIF):
     percs = []
     for (low, high) in AGP_config:
-        percs.append(range_bounds(glucose_reachtube, low, high))
+        if type == TraceType.VERIF:
+            percs.append(range_bounds(glucose_reachtube, low, high))
+        else:
+            percs.append(range_perc(glucose_reachtube, low, high))
     return percs
 
 def AGP_safety(glucose_reachtube, targets=[0.01, 0.04, 0.70, 0.25, 0.05]):

@@ -1,3 +1,5 @@
+from enum import Enum
+
 FORGOT_BOLUS = -2
 HIGH_FAT_MEAL = 120
 DEFAULT_MEAL = 40
@@ -7,3 +9,7 @@ HIGH_FAT_DURATION = 120 # 2 hours
 
 def meal_carbs(idx):
     return -idx
+
+class TraceType(Enum):
+    SIM = 'sim'
+    VERIF = 'verif'

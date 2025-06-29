@@ -1,0 +1,9 @@
+- compare to optimal
+- you can do bad things with things
+- did they do the best they could given the 
+
+- goal
+- 1) find problem cases
+- 2) things that people should be aware of
+- 3) make table of parameters
+- 4) stage 1) just put some results in so that we can look at them, hand-pick itneresting scenarios that exhibit some behavior

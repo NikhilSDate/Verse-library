@@ -1,9 +1,11 @@
 import numpy as np
 from typing import List, Tuple
-from ..artificial_pancreas_scenario import SimulationScenario
+from artificial_pancreas_scenario import SimulationScenario
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+from safety.safety import AGP_report
+from verification import *
+from artificial_pancreas_simulate import extract_variable
 
 def two_way_analysis(results: List[Tuple[SimulationScenario, object, object]], index):
     points_safe = []
@@ -43,3 +45,23 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
         perfect += np.min(np.array(result[2], dtype=int))
         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
+
+# write a function that takes a list of results and 1) sreverse orts results by amount of time traces spend in the lowest element of the AGP report (as calculated by AGP_report function), plots sims for the top 10 results and stores them in results/redzone
+def redzone_analysis(results: List[Tuple[SimulationScenario, object, object]]):
+    def key(result):
+        traces = result[1]
+        sims = traces.sims
+        max_redzone_perc = 0
+        for sim in sims:
+            glucose_trace = extract_variable(sim, 'G', TraceType.SIM)
+            report = AGP_report(glucose_trace)
+            redzone = report[0]
+            max_redzone_perc = max(max_redzone_perc, redzone)
+        return max_redzone_perc
+    
+    results = sorted(results, key=key, reverse=True)
+    for i in range(10):
+        save_result_with_sims(results[i], 'results/redzone')
+
+if __name__ == '__main__':
+    debug_sim('results/redzone', 'scenario_9', 9)

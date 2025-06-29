@@ -40,7 +40,7 @@ class SafetyAnalyzer:
         self.config = config
     
     def analyze(self, traces, scenario):
-        glucose_trace = extract_variable(traces, 'pump', state_indices['G'] + 1)
+        glucose_trace = extract_variable(traces, 'G')
         safety_analysis = tir_analysis(glucose_trace, self.config['safety']['tir']['low'], self.config['safety']['tir']['high'])
         realism_analysis = realism(scenario, config['safety']['realism']['carb_to_weight_low'], config['safety']['realism']['carb_to_weight_high'])
         return {'safety': safety_analysis, 'realism': realism_analysis}
@@ -307,14 +307,14 @@ def find_optimal_extended_settings():
     # simple bolus
     boluses = [Bolus(55, None, BolusType.Simple, 0, True, None)]
     traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=15 * 60, settings=settings, logging=False)
-    tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
+    tir = tir_analysis_simulate(extract_variable(traces, 'G', simulate=True))
     variation = tir['high'] - tir['low']
     print('simple', tir, variation)
     for dn in deliver_now:
         for dur in duration:
             boluses = [Bolus(55, None, BolusType.Extended, 0, True, ExtendedBolusConfig(dn, dur * 60))]
             traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=15 * 60, settings=settings, logging=False)
-            tir = tir_analysis_simulate(extract_variable(traces, 'pump', state_indices['G'] + 1, True))
+            tir = tir_analysis_simulate(extract_variable(traces, 'G', simulate=True))
             variation = tir['high'] - tir['low']
             print(dn, dur, tir, variation)
 

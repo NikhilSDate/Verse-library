@@ -62,6 +62,8 @@ class Logger:
         self.flush()
         self.doses.clear()
         if self.dir is not None:
+            if not os.path.exists(self.dir):
+                os.makedirs(self.dir, exist_ok=True)
             dose_path = os.path.join(self.dir, f'sim_{self.sim_idx}_dose.txt')
             output_path = os.path.join(self.dir, f'sim_{self.sim_idx}_output.txt')
             self.current_dose_file = open(dose_path, 'w+')
@@ -118,13 +120,14 @@ class ArtificialPancreasAgent(BaseAgent):
         self.matlab_export = matlab_export
         if self.matlab_export:
             self.sims = []
+        self.trace_metadata = {'suspended_dose': False}
 
-    # exclude from picling
+    # exclude from pickling
     # TODO: we can probably make this more fine-grainged
     def __getstate__(self):
         return ()
     
-    # exclude from picling
+    # exclude from pickling
     # TODO: we can probably make this more fine-grainged
     def __setstate__(self, state):
         pass    
@@ -296,8 +299,13 @@ class ArtificialPancreasAgent(BaseAgent):
             sim_data.trace = trace
             self.sims.append(sim_data)
 
+        self.update_trace_metadata()
+
         return trace
     
+    def update_trace_metadata(self):
+        self.trace_metadata['suspended_dose'] |= self.pump.pump_emulator.trace_metadata['suspended_dose']
+
     '''
     exports all data needed to recreate/validate simulation. This includes:
         - meals: [(time, value, TauM, glycemic load)]

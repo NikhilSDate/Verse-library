@@ -21,6 +21,7 @@ docs/source/_autosummary/
 **/.ipynb_checkpoints/
 **.whl
 **.tar.gz
+**.sqsh
 gif/
 debug/
 build/
@@ -32,3 +33,4 @@ plots/
 .env
 
 results/
+images/
