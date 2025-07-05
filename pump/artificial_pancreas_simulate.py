@@ -139,7 +139,7 @@ def evaluate_safety_constraint(traces, variable, safety_func):
     
     sim_safety = np.array([True] * len(reachtube_safety))
     for sim in traces.root.sims:
-        trace = extract_variable(sim, variable, simulate=True)
+        trace = extract_variable(sim, variable, type=TraceType.SIM)
         trace = np.column_stack((trace, trace))
         sim_safety = np.logical_and(sim_safety, safety_func(trace))
     
@@ -194,7 +194,7 @@ def get_index(var):
     return state_indices[var] + 1
 
 # TODO: fix this
-def extract_variable(traces: AnalysisTree | np.ndarray, var: str, agent='pump', type=TraceType.VERIF):
+def extract_variable(traces: AnalysisTree | np.ndarray, var: str, type=TraceType.VERIF, agent='pump'):
     if isinstance(traces, AnalysisTree):
         raw_trace = np.array(traces.root.trace[agent])
     else:

@@ -307,14 +307,14 @@ def find_optimal_extended_settings():
     # simple bolus
     boluses = [Bolus(55, None, BolusType.Simple, 0, True, None)]
     traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=15 * 60, settings=settings, logging=False)
-    tir = tir_analysis_simulate(extract_variable(traces, 'G', simulate=True))
+    tir = tir_analysis_simulate(extract_variable(traces, 'G', type=TraceType.SIM))
     variation = tir['high'] - tir['low']
     print('simple', tir, variation)
     for dn in deliver_now:
         for dur in duration:
             boluses = [Bolus(55, None, BolusType.Extended, 0, True, ExtendedBolusConfig(dn, dur * 60))]
             traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=15 * 60, settings=settings, logging=False)
-            tir = tir_analysis_simulate(extract_variable(traces, 'G', simulate=True))
+            tir = tir_analysis_simulate(extract_variable(traces, 'G', type=TraceType.SIM))
             variation = tir['high'] - tir['low']
             print(dn, dur, tir, variation)
 

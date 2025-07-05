@@ -46,22 +46,25 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
 
-# write a function that takes a list of results and 1) sreverse orts results by amount of time traces spend in the lowest element of the AGP report (as calculated by AGP_report function), plots sims for the top 10 results and stores them in results/redzone
-def redzone_analysis(results: List[Tuple[SimulationScenario, object, object]]):
+def redzone_analysis(results: List[Tuple[SimulationScenario, object, object]], low: bool):
     def key(result):
         traces = result[1]
-        sims = traces.sims
+        sims = traces.root.sims
         max_redzone_perc = 0
         for sim in sims:
-            glucose_trace = extract_variable(sim, 'G', TraceType.SIM)
-            report = AGP_report(glucose_trace)
-            redzone = report[0]
+            glucose_trace = extract_variable(sim, 'G', type=TraceType.SIM)
+            report = AGP_report(glucose_trace, type=TraceType.SIM)
+            redzone = report[0] if low else report[-1]
             max_redzone_perc = max(max_redzone_perc, redzone)
         return max_redzone_perc
     
-    results = sorted(results, key=key, reverse=True)
-    for i in range(10):
-        save_result_with_sims(results[i], 'results/redzone')
+    results = sorted(results, key=key, reverse=False)
+    out_dir = 'results/redzone_low' if low else 'results/redzone_high'
+    out_dir = 'results/test'
+    for i in range(20):
+        save_result_with_sims(results[i], out_dir)
+
 
 if __name__ == '__main__':
-    debug_sim('results/redzone', 'scenario_9', 9)
+    results = load_results('results/verification')
+    redzone_analysis(results, low=True)

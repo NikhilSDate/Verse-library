@@ -246,11 +246,24 @@ def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int)
     with Pool(pool_size) as p:
         p.map(run_func, scenarios)
 
-# load all results
-# there is no point trying to optimize this, since this is not really the bottleneck
+# TODO: consider rewriting this with generators
+def load_scenarios(output_dir) -> List[SimulationScenario]:
+    scenarios = []
+    scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
+    for scenario_dir in tqdm(scenario_dirs):
+        try:
+            with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
+                scenario = pickle.load(f)
+            scenarios.append(scenario)
+        except:
+            pass
+    return scenarios
+
+
 def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
     results = []
     scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
+    random.shuffle(scenario_dirs)
     for scenario_dir in tqdm(scenario_dirs):
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
@@ -301,33 +314,39 @@ def debug_sim(output_dir, result_dir, sim_idx):
     fig = plot_variable(traces, 'G', show=False)
     fig.write_image(os.path.join(output_dir, result_dir, 'debug', f'sim_{sim_idx}', 'plot.png'))
 
+def get_scenarios_to_run(output_dir, node_count, node_idx):
+    scenarios = gen_verification_scenarios()
+    np.random.shuffle(scenarios)  
+    scenarios = [scenario for i, scenario in enumerate(scenarios) if i % node_count == node_idx]
+    existing = set(load_scenarios(output_dir))
+    scenarios = [scenario for scenario in scenarios if scenario not in existing]
+    return scenarios
+
+
+
 def verify_wrapper():
     parser = argparse.ArgumentParser('pumpverif')
     parser.add_argument('-p', '--processes', default=1, type=int)
     parser.add_argument('-s', '--seed', default=42, type=int)
     parser.add_argument('-o', '--output-dir', default='results/verification', type=str)
+    parser.add_argument('-n', '--node-count', default=1, type=int)
+    parser.add_argument('-i', '--node-index', default=0, type=int)
     args = parser.parse_args()
     seed = args.seed
     processes = args.processes
     output_dir = args.output_dir
+    node_count = args.node_count
+    node_index = args.node_index
+
+    if (node_index > node_count):
+        print('invalid node index!')
+        exit(0)
+
     signal.signal(signal.SIGINT, sigint)
     np.random.seed(seed)
     random.seed(seed)
 
-    scenarios = gen_verification_scenarios()
-    np.random.shuffle(scenarios)  
-
-    print(len(scenarios))
-    breakpoint()
-
-    # don't want to redo existing scenarios
-    results = load_results(output_dir)
-    existing = set(result[0] for result in results)
-    print(f'found {len(results)} existing results')
-
-    # want to maintain determinism, so use list comprehension instead of set difference
-    scenarios = [scenario for scenario in scenarios if scenario not in existing]
-
+    scenarios = get_scenarios_to_run(output_dir, node_count, node_index)
     verify(scenarios, output_dir, pool_size=processes)  
 
 def compute_proof_statistics(results):
@@ -426,7 +445,7 @@ def overlay_simulation_traces(result: Tuple[SimulationScenario, Any, Any]) -> go
     fig = plot_variable(traces, 'G', show=False)
     sims = traces.root.sims
     for i, sim in enumerate(sims):
-        y = extract_variable(sim, 'G', simulate=True)
+        y = extract_variable(sim, 'G', type=TraceType.SIM)
         x = np.arange(len(y))
         # custom legend
         fig.add_trace(go.Scatter(
