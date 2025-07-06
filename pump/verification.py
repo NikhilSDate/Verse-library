@@ -24,6 +24,7 @@ import ast
 from tqdm import tqdm
 from typing import Any
 from functools import partial
+import time
 
 
 # TODO: this function is a bit of a hack
@@ -187,6 +188,18 @@ def get_scenario_directory(scenario: SimulationScenario, output_dir):
     os.makedirs(result)
     return result
 
+def get_log_directory(scenario: SimulationScenario, output_dir):
+    idx = 0
+    result = ''
+    while True:
+        attempt = os.path.join(output_dir, 'logs', f'log_{idx}')
+        if not os.path.exists(attempt):
+            result = attempt
+            break
+        idx += 1
+    os.makedirs(result)
+    return result
+
 def save_result_with_sims(result: Tuple[SimulationScenario, object, object], output_dir):
     scenario, traces, safety = result
     scenario_directory = get_scenario_directory(scenario, output_dir)
@@ -229,7 +242,13 @@ def save_crash(scenario, payload, output_dir):
     scenario_directory = get_scenario_directory(scenario, output_dir)
     payload.save(scenario_directory)
 
+def save_scenario_runtime(scenario, output_dir, runtime):
+    log_dir = get_log_directory(scenario, output_dir)
+    with open(os.path.join(log_dir, 'runtime.txt'), 'w') as f:
+        f.write(str(runtime))
+
 def run_verification_scenario(scenario, output_dir):
+    start_time = time.time()
     res = verify_multi_meal_scenario(scenario)
     if res.type == ResultType.OK:
         traces = res.payload
@@ -237,6 +256,9 @@ def run_verification_scenario(scenario, output_dir):
         save_scenario_results(scenario, traces, safety_results, output_dir)
     else:
         save_crash(scenario, res.payload, output_dir)
+    end_time = time.time()
+    runtime = end_time - start_time
+    save_scenario_runtime(scenario, output_dir, runtime)
 
 def sigint(signum, frame):
     os.kill(0, signal.SIGKILL)
@@ -263,7 +285,6 @@ def load_scenarios(output_dir) -> List[SimulationScenario]:
 def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
     results = []
     scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
-    random.shuffle(scenario_dirs)
     for scenario_dir in tqdm(scenario_dirs):
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:

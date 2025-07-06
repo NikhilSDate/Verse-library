@@ -1,0 +1,346 @@
+diff --git a/notes/notes_7_1 b/notes/notes_7_1
+new file mode 100644
+index 00000000..1144461f
+--- /dev/null
++++ b/notes/notes_7_1
+@@ -0,0 +1,7 @@
++remove margins from the figure out and make graph as large as possible
++
++table: do projections + summation
++table: 
++
++build a predictor for scenarios
++get to 28k, choose some set of meal parameters, use those when exploring other stuff
+diff --git a/pump/analysis.py b/pump/analysis.py
+index 3cd47567..a60b5905 100644
+--- a/pump/analysis.py
++++ b/pump/analysis.py
+@@ -46,22 +46,25 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
+         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
+     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
+ 
+-# write a function that takes a list of results and 1) sreverse orts results by amount of time traces spend in the lowest element of the AGP report (as calculated by AGP_report function), plots sims for the top 10 results and stores them in results/redzone
+-def redzone_analysis(results: List[Tuple[SimulationScenario, object, object]]):
++def redzone_analysis(results: List[Tuple[SimulationScenario, object, object]], low: bool):
+     def key(result):
+         traces = result[1]
+-        sims = traces.sims
++        sims = traces.root.sims
+         max_redzone_perc = 0
+         for sim in sims:
+-            glucose_trace = extract_variable(sim, 'G', TraceType.SIM)
+-            report = AGP_report(glucose_trace)
+-            redzone = report[0]
++            glucose_trace = extract_variable(sim, 'G', type=TraceType.SIM)
++            report = AGP_report(glucose_trace, type=TraceType.SIM)
++            redzone = report[0] if low else report[-1]
+             max_redzone_perc = max(max_redzone_perc, redzone)
+         return max_redzone_perc
+     
+-    results = sorted(results, key=key, reverse=True)
+-    for i in range(10):
+-        save_result_with_sims(results[i], 'results/redzone')
++    results = sorted(results, key=key, reverse=False)
++    out_dir = 'results/redzone_low' if low else 'results/redzone_high'
++    out_dir = 'results/test'
++    for i in range(20):
++        save_result_with_sims(results[i], out_dir)
++
+ 
+ if __name__ == '__main__':
+-    debug_sim('results/redzone', 'scenario_9', 9)
++    results = load_results('results/verification')
++    redzone_analysis(results, low=True)
+\ No newline at end of file
+diff --git a/pump/artificial_pancreas_simulate.py b/pump/artificial_pancreas_simulate.py
+index d27d661a..4d5b3398 100644
+--- a/pump/artificial_pancreas_simulate.py
++++ b/pump/artificial_pancreas_simulate.py
+@@ -139,7 +139,7 @@ def evaluate_safety_constraint(traces, variable, safety_func):
+     
+     sim_safety = np.array([True] * len(reachtube_safety))
+     for sim in traces.root.sims:
+-        trace = extract_variable(sim, variable, simulate=True)
++        trace = extract_variable(sim, variable, type=TraceType.SIM)
+         trace = np.column_stack((trace, trace))
+         sim_safety = np.logical_and(sim_safety, safety_func(trace))
+     
+@@ -194,7 +194,7 @@ def get_index(var):
+     return state_indices[var] + 1
+ 
+ # TODO: fix this
+-def extract_variable(traces: AnalysisTree | np.ndarray, var: str, agent='pump', type=TraceType.VERIF):
++def extract_variable(traces: AnalysisTree | np.ndarray, var: str, type=TraceType.VERIF, agent='pump'):
+     if isinstance(traces, AnalysisTree):
+         raw_trace = np.array(traces.root.trace[agent])
+     else:
+diff --git a/pump/experiments.py b/pump/experiments.py
+index 92b30ae9..986090f1 100644
+--- a/pump/experiments.py
++++ b/pump/experiments.py
+@@ -307,14 +307,14 @@ def find_optimal_extended_settings():
+     # simple bolus
+     boluses = [Bolus(55, None, BolusType.Simple, 0, True, None)]
+     traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=15 * 60, settings=settings, logging=False)
+-    tir = tir_analysis_simulate(extract_variable(traces, 'G', simulate=True))
++    tir = tir_analysis_simulate(extract_variable(traces, 'G', type=TraceType.SIM))
+     variation = tir['high'] - tir['low']
+     print('simple', tir, variation)
+     for dn in deliver_now:
+         for dur in duration:
+             boluses = [Bolus(55, None, BolusType.Extended, 0, True, ExtendedBolusConfig(dn, dur * 60))]
+             traces = simulate_multi_meal_scenario(120, params, False, boluses, meals, duration=15 * 60, settings=settings, logging=False)
+-            tir = tir_analysis_simulate(extract_variable(traces, 'G', simulate=True))
++            tir = tir_analysis_simulate(extract_variable(traces, 'G', type=TraceType.SIM))
+             variation = tir['high'] - tir['low']
+             print(dn, dur, tir, variation)
+ 
+diff --git a/pump/verification.py b/pump/verification.py
+index ad066f31..17ca86cb 100644
+--- a/pump/verification.py
++++ b/pump/verification.py
+@@ -24,6 +24,7 @@ import ast
+ from tqdm import tqdm
+ from typing import Any
+ from functools import partial
++import time
+ 
+ 
+ # TODO: this function is a bit of a hack
+@@ -187,6 +188,18 @@ def get_scenario_directory(scenario: SimulationScenario, output_dir):
+     os.makedirs(result)
+     return result
+ 
++def get_log_directory(scenario: SimulationScenario, output_dir):
++    idx = 0
++    result = ''
++    while True:
++        attempt = os.path.join(output_dir, 'logs', f'log_{idx}')
++        if not os.path.exists(attempt):
++            result = attempt
++            break
++        idx += 1
++    os.makedirs(result)
++    return result
++
+ def save_result_with_sims(result: Tuple[SimulationScenario, object, object], output_dir):
+     scenario, traces, safety = result
+     scenario_directory = get_scenario_directory(scenario, output_dir)
+@@ -229,7 +242,13 @@ def save_crash(scenario, payload, output_dir):
+     scenario_directory = get_scenario_directory(scenario, output_dir)
+     payload.save(scenario_directory)
+ 
++def save_scenario_runtime(scenario, output_dir, runtime):
++    log_dir = get_log_directory(scenario, output_dir)
++    with open(os.path.join(log_dir, 'runtime.txt'), 'w') as f:
++        f.write(str(runtime))
++
+ def run_verification_scenario(scenario, output_dir):
++    start_time = time.time()
+     res = verify_multi_meal_scenario(scenario)
+     if res.type == ResultType.OK:
+         traces = res.payload
+@@ -237,6 +256,9 @@ def run_verification_scenario(scenario, output_dir):
+         save_scenario_results(scenario, traces, safety_results, output_dir)
+     else:
+         save_crash(scenario, res.payload, output_dir)
++    end_time = time.time()
++    runtime = end_time - start_time
++    save_scenario_runtime(scenario, output_dir, runtime)
+ 
+ def sigint(signum, frame):
+     os.kill(0, signal.SIGKILL)
+@@ -246,11 +268,24 @@ def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int)
+     with Pool(pool_size) as p:
+         p.map(run_func, scenarios)
+ 
+-# load all results
+-# there is no point trying to optimize this, since this is not really the bottleneck
++# TODO: consider rewriting this with generators
++def load_scenarios(output_dir) -> List[SimulationScenario]:
++    scenarios = []
++    scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
++    for scenario_dir in tqdm(scenario_dirs):
++        try:
++            with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
++                scenario = pickle.load(f)
++            scenarios.append(scenario)
++        except:
++            pass
++    return scenarios
++
++
+ def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
+     results = []
+     scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
++    random.shuffle(scenario_dirs)
+     for scenario_dir in tqdm(scenario_dirs):
+         try:
+             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
+@@ -301,33 +336,39 @@ def debug_sim(output_dir, result_dir, sim_idx):
+     fig = plot_variable(traces, 'G', show=False)
+     fig.write_image(os.path.join(output_dir, result_dir, 'debug', f'sim_{sim_idx}', 'plot.png'))
+ 
++def get_scenarios_to_run(output_dir, node_count, node_idx):
++    scenarios = gen_verification_scenarios()
++    np.random.shuffle(scenarios)  
++    scenarios = [scenario for i, scenario in enumerate(scenarios) if i % node_count == node_idx]
++    existing = set(load_scenarios(output_dir))
++    scenarios = [scenario for scenario in scenarios if scenario not in existing]
++    return scenarios
++
++
++
+ def verify_wrapper():
+     parser = argparse.ArgumentParser('pumpverif')
+     parser.add_argument('-p', '--processes', default=1, type=int)
+     parser.add_argument('-s', '--seed', default=42, type=int)
+     parser.add_argument('-o', '--output-dir', default='results/verification', type=str)
++    parser.add_argument('-n', '--node-count', default=1, type=int)
++    parser.add_argument('-i', '--node-index', default=0, type=int)
+     args = parser.parse_args()
+     seed = args.seed
+     processes = args.processes
+     output_dir = args.output_dir
++    node_count = args.node_count
++    node_index = args.node_index
++
++    if (node_index > node_count):
++        print('invalid node index!')
++        exit(0)
++
+     signal.signal(signal.SIGINT, sigint)
+     np.random.seed(seed)
+     random.seed(seed)
+ 
+-    scenarios = gen_verification_scenarios()
+-    np.random.shuffle(scenarios)  
+-
+-    print(len(scenarios))
+-    breakpoint()
+-
+-    # don't want to redo existing scenarios
+-    results = load_results(output_dir)
+-    existing = set(result[0] for result in results)
+-    print(f'found {len(results)} existing results')
+-
+-    # want to maintain determinism, so use list comprehension instead of set difference
+-    scenarios = [scenario for scenario in scenarios if scenario not in existing]
+-
++    scenarios = get_scenarios_to_run(output_dir, node_count, node_index)
+     verify(scenarios, output_dir, pool_size=processes)  
+ 
+ def compute_proof_statistics(results):
+@@ -426,7 +467,7 @@ def overlay_simulation_traces(result: Tuple[SimulationScenario, Any, Any]) -> go
+     fig = plot_variable(traces, 'G', show=False)
+     sims = traces.root.sims
+     for i, sim in enumerate(sims):
+-        y = extract_variable(sim, 'G', simulate=True)
++        y = extract_variable(sim, 'G', type=TraceType.SIM)
+         x = np.arange(len(y))
+         # custom legend
+         fig.add_trace(go.Scatter(
+diff --git a/scratch.ipynb b/scratch.ipynb
+index 1a65767e..5f9ded56 100644
+--- a/scratch.ipynb
++++ b/scratch.ipynb
+@@ -2,28 +2,72 @@
+  "cells": [
+   {
+    "cell_type": "code",
+-   "execution_count": 3,
+-   "id": "24e75217",
++   "execution_count": 8,
++   "id": "76e53b89",
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "import pickle"
++    "import sys\n",
++    "sys.path.insert(0, '/home/ndate/Research/Verse-library/pump/')"
+    ]
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": 7,
++   "execution_count": 11,
++   "id": "24e75217",
++   "metadata": {},
++   "outputs": [
++    {
++     "ename": "ImportError",
++     "evalue": "cannot import name 'Pump' from partially initialized module 'pump_wrapper' (most likely due to a circular import) (/home/ndate/Research/InsulinPump/pump_wrapper.py)",
++     "output_type": "error",
++     "traceback": [
++      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
++      "\u001b[0;31mImportError\u001b[0m                               Traceback (most recent call last)",
++      "Cell \u001b[0;32mIn[11], line 3\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;21;01mpickle\u001b[39;00m\n\u001b[1;32m      2\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mpump\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01martificial_pancreas_scenario\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[0;32m----> 3\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mpump\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01martificial_pancreas_agent\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n",
++      "File \u001b[0;32m~/Research/Verse-library/pump/artificial_pancreas_agent.py:15\u001b[0m\n\u001b[1;32m     13\u001b[0m EMULATOR_PATH \u001b[38;5;241m=\u001b[39m os\u001b[38;5;241m.\u001b[39menviron[\u001b[38;5;124m\"\u001b[39m\u001b[38;5;124mEMULATOR_PATH\u001b[39m\u001b[38;5;124m\"\u001b[39m]\n\u001b[1;32m     14\u001b[0m sys\u001b[38;5;241m.\u001b[39mpath\u001b[38;5;241m.\u001b[39minsert(\u001b[38;5;241m1\u001b[39m, EMULATOR_PATH)\n\u001b[0;32m---> 15\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mpump_wrapper\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m Pump\n\u001b[1;32m     17\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m BaseAgent, Scenario, ScenarioConfig\n\u001b[1;32m     18\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01manalysis_tree\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m TraceType, AnalysisTree\n",
++      "File \u001b[0;32m~/Research/InsulinPump/pump_wrapper.py:5\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[38;5;66;03m# ideas\u001b[39;00m\n\u001b[1;32m      2\u001b[0m \u001b[38;5;66;03m# what happens if i request an extended bolus that fill up half of the IOB array, then another that fills up the array but there's no place for the remaining elements\u001b[39;00m\n\u001b[1;32m      3\u001b[0m \u001b[38;5;66;03m# \u001b[39;00m\n\u001b[0;32m----> 5\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01msimulate\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[1;32m      6\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01manalyzer\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m Analyzer\n\u001b[1;32m      7\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01mcallbacks\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n",
++      "File \u001b[0;32m~/Research/InsulinPump/simulate.py:16\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[38;5;124;03m\"\"\"\u001b[39;00m\n\u001b[1;32m      2\u001b[0m \u001b[38;5;124;03mSome preliminary work on simulating pump operation by providing GUI inputs\u001b[39;00m\n\u001b[1;32m      3\u001b[0m \u001b[38;5;124;03m\"\"\"\u001b[39;00m\n\u001b[1;32m      5\u001b[0m \u001b[38;5;124;03m'''\u001b[39;00m\n\u001b[1;32m      6\u001b[0m \u001b[38;5;124;03mwant:\u001b[39;00m\n\u001b[1;32m      7\u001b[0m \n\u001b[0;32m   (...)\u001b[0m\n\u001b[1;32m     13\u001b[0m \u001b[38;5;124;03m3 and 4 already kinda have, need 1 and 2\u001b[39;00m\n\u001b[1;32m     14\u001b[0m \u001b[38;5;124;03m'''\u001b[39;00m\n\u001b[0;32m---> 16\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01manalyzer\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m Analyzer\n\u001b[1;32m     17\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01mcallbacks\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[1;32m     18\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01mmutex\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n",
++      "File \u001b[0;32m~/Research/Verse-library/pump/analysis.py:7\u001b[0m\n\u001b[1;32m      5\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mtqdm\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m tqdm\n\u001b[1;32m      6\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01msafety\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01msafety\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m AGP_report\n\u001b[0;32m----> 7\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverification\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[1;32m      8\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01martificial_pancreas_simulate\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m extract_variable\n\u001b[1;32m     10\u001b[0m \u001b[38;5;28;01mdef\u001b[39;00m \u001b[38;5;21mtwo_way_analysis\u001b[39m(results: List[Tuple[SimulationScenario, \u001b[38;5;28mobject\u001b[39m, \u001b[38;5;28mobject\u001b[39m]], index):\n",
++      "File \u001b[0;32m~/Research/Verse-library/pump/verification.py:1\u001b[0m\n\u001b[0;32m----> 1\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01martificial_pancreas_simulate\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[1;32m      2\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse_model\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[1;32m      3\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01martificial_pancreas_agent\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n",
++      "File \u001b[0;32m~/Research/Verse-library/pump/artificial_pancreas_simulate.py:14\u001b[0m\n\u001b[1;32m     11\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01mplotter\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01mplotter2D\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m reachtube_tree, simulation_tree\n\u001b[1;32m     13\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse_model\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[0;32m---> 14\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01martificial_pancreas_agent\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n\u001b[1;32m     15\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01martificial_pancreas_scenario\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m ResultType\n\u001b[1;32m     16\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mpump_model\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m \u001b[38;5;241m*\u001b[39m\n",
++      "File \u001b[0;32m~/Research/Verse-library/pump/artificial_pancreas_agent.py:15\u001b[0m\n\u001b[1;32m     13\u001b[0m EMULATOR_PATH \u001b[38;5;241m=\u001b[39m os\u001b[38;5;241m.\u001b[39menviron[\u001b[38;5;124m\"\u001b[39m\u001b[38;5;124mEMULATOR_PATH\u001b[39m\u001b[38;5;124m\"\u001b[39m]\n\u001b[1;32m     14\u001b[0m sys\u001b[38;5;241m.\u001b[39mpath\u001b[38;5;241m.\u001b[39minsert(\u001b[38;5;241m1\u001b[39m, EMULATOR_PATH)\n\u001b[0;32m---> 15\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mpump_wrapper\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m Pump\n\u001b[1;32m     17\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m BaseAgent, Scenario, ScenarioConfig\n\u001b[1;32m     18\u001b[0m \u001b[38;5;28;01mfrom\u001b[39;00m \u001b[38;5;21;01mverse\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01manalysis\u001b[39;00m\u001b[38;5;21;01m.\u001b[39;00m\u001b[38;5;21;01manalysis_tree\u001b[39;00m \u001b[38;5;28;01mimport\u001b[39;00m TraceType, AnalysisTree\n",
++      "\u001b[0;31mImportError\u001b[0m: cannot import name 'Pump' from partially initialized module 'pump_wrapper' (most likely due to a circular import) (/home/ndate/Research/InsulinPump/pump_wrapper.py)"
++     ]
++    }
++   ],
++   "source": [
++    "import pickle\n",
++    "from pump.artificial_pancreas_scenario import *\n",
++    "from pump.artificial_pancreas_agent import *\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "execution_count": 3,
+    "id": "d335ab52",
+    "metadata": {},
+-   "outputs": [],
++   "outputs": [
++    {
++     "ename": "ModuleNotFoundError",
++     "evalue": "No module named 'artificial_pancreas_agent'",
++     "output_type": "error",
++     "traceback": [
++      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
++      "\u001b[0;31mModuleNotFoundError\u001b[0m                       Traceback (most recent call last)",
++      "Cell \u001b[0;32mIn[3], line 2\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[38;5;28;01mwith\u001b[39;00m \u001b[38;5;28mopen\u001b[39m(\u001b[38;5;124m'\u001b[39m\u001b[38;5;124mresults/debug/scenario_0/traces.pkl\u001b[39m\u001b[38;5;124m'\u001b[39m, \u001b[38;5;124m'\u001b[39m\u001b[38;5;124mrb\u001b[39m\u001b[38;5;124m'\u001b[39m) \u001b[38;5;28;01mas\u001b[39;00m f:\n\u001b[0;32m----> 2\u001b[0m     calls \u001b[38;5;241m=\u001b[39m \u001b[43mpickle\u001b[49m\u001b[38;5;241;43m.\u001b[39;49m\u001b[43mload\u001b[49m\u001b[43m(\u001b[49m\u001b[43mf\u001b[49m\u001b[43m)\u001b[49m\n",
++      "\u001b[0;31mModuleNotFoundError\u001b[0m: No module named 'artificial_pancreas_agent'"
++     ]
++    }
++   ],
+    "source": [
+-    "with open('results/redzone/scenario_0/debug/sim_6/calls.pkl', 'rb') as f:\n",
++    "with open('results/debug/scenario_0/traces.pkl', 'rb') as f:\n",
+     "    calls = pickle.load(f)"
+    ]
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": 10,
++   "execution_count": null,
+    "id": "a3eca71c",
+    "metadata": {},
+    "outputs": [
+@@ -38,10 +82,7 @@
+      "output_type": "execute_result"
+     }
+    ],
+-   "source": [
+-    "methods = [call[0] for call in calls]\n",
+-    "set(methods)"
+-   ]
++   "source": []
+   }
+  ],
+  "metadata": {
+diff --git a/scripts/transfer.sh b/scripts/transfer.sh
+new file mode 100755
+index 00000000..279fb532
+--- /dev/null
++++ b/scripts/transfer.sh
+@@ -0,0 +1,2 @@
++#!/bin/bash
++scp insulinpump.sqsh codenimbus:/mnt/shared/gpfs/home/ndate2/images
