@@ -217,7 +217,7 @@ def save_result_with_sims(result: Tuple[SimulationScenario, object, object], out
         yaml.dump(to_dump, f)
     with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
         pickle.dump(scenario, f)
-    fig_with_sims = overlay_simulation_traces(result)
+    fig_with_sims = plot_results(result)
     fig_with_sims.write_image(os.path.join(scenario_directory, 'plot_with_sims.png'))
 
 def save_scenario_results(scenario: SimulationScenario, traces, safety_results, output_dir):
@@ -226,7 +226,7 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
     if scenario_directory is None:
         print('redundant scenario')
         return
-    fig = overlay_simulation_traces((scenario, traces, safety_results))
+    fig = plot_results((scenario, traces, safety_results))
     with open(os.path.join(scenario_directory, 'traces.pkl'), 'wb') as f:
         pickle.dump(traces, f)
     fig.write_image(os.path.join(scenario_directory, 'plot.png'))
@@ -271,7 +271,7 @@ def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int)
 # TODO: consider rewriting this with generators
 def load_scenarios(output_dir) -> List[SimulationScenario]:
     scenarios = []
-    scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ]
+    scenario_dirs = [ f for f in os.scandir(output_dir) if f.is_dir() ] if os.path.exists(output_dir) else []
     for scenario_dir in tqdm(scenario_dirs):
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
@@ -297,6 +297,21 @@ def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
         except FileNotFoundError:
             pass
     return results  
+
+def load_results_gen(output_dir) -> Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]:
+    for scenario_dir in os.scandir(output_dir):
+        if not scenario_dir.is_dir():
+            continue
+        try:
+            with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
+                scenario = pickle.load(f)
+            with open(os.path.join(scenario_dir.path, 'traces.pkl'), 'rb') as f:
+                traces = pickle.load(f)
+            with open(os.path.join(scenario_dir.path, 'safety.txt')) as f:
+                safety = ast.literal_eval(f.read())
+            yield (scenario, traces, safety)
+        except:
+            continue
 
 def load_from_dir(output_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
     scenario_dir = os.path.join(output_dir, scenario_dir)
@@ -337,13 +352,11 @@ def debug_sim(output_dir, result_dir, sim_idx):
 
 def get_scenarios_to_run(output_dir, node_count, node_idx):
     scenarios = gen_verification_scenarios()
-    np.random.shuffle(scenarios)  
+    np.random.shuffle(scenarios)
     scenarios = [scenario for i, scenario in enumerate(scenarios) if i % node_count == node_idx]
     existing = set(load_scenarios(output_dir))
     scenarios = [scenario for scenario in scenarios if scenario not in existing]
     return scenarios
-
-
 
 def verify_wrapper():
     parser = argparse.ArgumentParser('pumpverif')
@@ -446,7 +459,7 @@ def table_analysis(results: List[Tuple[Scenario, object, object]], index, fignam
 def get_init(traces, index):
     return traces.root.sims[index][0][1:]
 
-def overlay_simulation_traces(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
+def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
 
     colors = [
         '#1f77b4',  # muted blue
@@ -482,6 +495,12 @@ def overlay_simulation_traces(result: Tuple[SimulationScenario, Any, Any]) -> go
         y_mins.append(min(trace_data.y))
         y_maxs.append(max(trace_data.y))
     fig.update_layout(showlegend=True, legend=dict(font=dict(size=12)))
+    # reduce the horizontal whitespace in this image to a minimum
+    # fig.update_layout(
+    #     margin=dict(l=20, r=20),  # reduce left and right margins
+    #     autosize=True,
+    #     width=None  # let the renderer decide the width
+    # )
     return fig
     
 if __name__ == '__main__':

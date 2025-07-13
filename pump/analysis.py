@@ -7,6 +7,25 @@ from safety.safety import AGP_report
 from verification import *
 from artificial_pancreas_simulate import extract_variable
 
+# we will store a map of scenario: ([], [])
+
+def get_all_AGP_reports(results_gen: Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]):
+    reports = {}
+    count = 0
+    for (scenario, traces, safety) in results_gen:
+        glucose_reachtube = extract_variable(traces, 'G', type=TraceType.VERIF)
+        reachtube_report = AGP_report(glucose_reachtube)
+        sim_reports = []
+        for sim in traces.root.sims:
+            glucose_trace = extract_variable(sim, 'G', type=TraceType.SIM)
+            sim_report = AGP_report(glucose_trace, type=TraceType.SIM)
+            sim_reports.append(sim_report)
+        reports[scenario] = (reachtube_report, sim_reports)
+        count += 1
+        if count % 100 == 0:
+            print(count)
+    return reports
+
 def two_way_analysis(results: List[Tuple[SimulationScenario, object, object]], index):
     points_safe = []
     points_unsafe = []
@@ -46,25 +65,42 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
 
-def redzone_analysis(results: List[Tuple[SimulationScenario, object, object]], low: bool):
-    def key(result):
-        traces = result[1]
-        sims = traces.root.sims
+def save_results_by_scenario(results_gen, to_save, output_dir):
+    to_save = set(to_save)
+    breakpoint()
+    for result in results_gen:
+        if result[0] in to_save:
+            save_scenario_results(result[0], result[1], result[2], output_dir)
+
+def redzone_analysis(result_func: Callable[[], Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]], low: bool):
+    def key(scenario):
+        report = reports[scenario]
+        return report[0][2][1] - report[0][2][0]
+        sim_reports = report[1]
         max_redzone_perc = 0
-        for sim in sims:
-            glucose_trace = extract_variable(sim, 'G', type=TraceType.SIM)
-            report = AGP_report(glucose_trace, type=TraceType.SIM)
-            redzone = report[0] if low else report[-1]
+        for sim_report in sim_reports:
+            redzone = sim_report[0] if low else sim_report[-1]
             max_redzone_perc = max(max_redzone_perc, redzone)
         return max_redzone_perc
     
-    results = sorted(results, key=key, reverse=False)
-    out_dir = 'results/redzone_low' if low else 'results/redzone_high'
-    out_dir = 'results/test'
-    for i in range(20):
-        save_result_with_sims(results[i], out_dir)
+    reports = get_all_AGP_reports(result_func())
+    # sort scenarios by report value
+    scenarios = sorted(reports.keys(), key=key, reverse=True)
+    top_scenarios = set(scenarios[:10])
+    save_results_by_scenario(result_func(), top_scenarios, 'results/bad_verif')
 
+def extended_shutoff_analysis(result_func: Callable[[], Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]]):
+   
+    keys = {}
+    for (scenario, traces, safety) in result_func():
+        glucose_trace = extract_variable(traces, 'G')
+        diffs = glucose_trace[:, 1] - glucose_trace[:, 0]
+        keys[scenario] = max(diffs)
+        pass
+    
+    scenarios = sorted(list(keys.keys()), key=keys.get, reverse=True)
+    top_scenarios = set(scenarios[:10])
+    save_results_by_scenario(result_func(), top_scenarios, 'results/bad_verif')
 
 if __name__ == '__main__':
-    results = load_results('results/verification')
-    redzone_analysis(results, low=True)
+    debug_sim('results/bad_verif', 'scenario_5', 1)

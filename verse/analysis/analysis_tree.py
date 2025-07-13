@@ -88,7 +88,7 @@ class AnalysisTreeNode:
     id: int
     """Integer ID for the current node. Unique amongst all nodes in the AnalysisTree"""
 
-    sims: Dict[str, TraceType]
+    sims: List[np.ndarray]
 
     def __init__(
         self,

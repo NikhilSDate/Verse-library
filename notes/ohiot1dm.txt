@@ -1,0 +1,2 @@
+- 2018 train patient 559 has highs, skipped boluses, etc.
+- 2018 train patient 563 has some significant CGM <-> fingerstick differences
