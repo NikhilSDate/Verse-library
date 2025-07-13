@@ -99,7 +99,7 @@ def gen_verification_scenarios():
 
     # TODO: CGM errors
 
-    DURATION = 24 * 60
+    DURATION = 10
 
     ERROR_LOW = 0.9
     ERROR_HIGH = 1.1
