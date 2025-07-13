@@ -1,8 +1,9 @@
 import numpy as np
 from typing import List, Tuple
-from ..artificial_pancreas_scenario import SimulationScenario
+from artificial_pancreas_scenario import SimulationScenario
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from verification import *
 
 
 def two_way_analysis(results: List[Tuple[SimulationScenario, object, object]], index):
@@ -43,3 +44,9 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
         perfect += np.min(np.array(result[2], dtype=int))
         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
+
+if __name__ == '__main__':
+    results = load_results('results/test')
+    scenarios = [result[0] for result in results]
+    print(len(scenarios))
+    print(len(set(scenarios)))

@@ -32,3 +32,5 @@ plots/
 .env
 
 results/
+
+**/*.sqsh
