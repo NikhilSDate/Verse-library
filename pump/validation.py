@@ -112,7 +112,7 @@ def parse_t1d_xml(xml_data, date=None, offset=0) -> OhioT1DMTrace:
 
     meals = []
     for (t, carbs) in M.items():
-        meals.append(Meal(t, int(carbs), DEFAULT_MEAL))
+        meals.append(Meal(t, int(carbs), 10))
 
     return OhioT1DMTrace(G, meals, I)
 
