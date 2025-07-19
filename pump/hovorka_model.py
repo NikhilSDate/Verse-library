@@ -184,7 +184,6 @@ class HovorkaModel:
 
         Um = sum(self.gut2comp_model(t, meal) for meal in self.meals)
 
-
         GluPlas_exp = np.exp(-1 / (GluPlas * self.param["TGlu"])) if GluPlas != 0 else 0
         dydt[self.eGluPlas] = -((self.variability["F01"]["val"] / 0.85) / (y[self.eGluPlas] + self.param["Vg"]) + y[self.eInsActT]) * y[self.eGluPlas] + \
                             self.variability["k12"]["val"] * y[self.eGluComp] - \
@@ -282,6 +281,134 @@ def patient_original(opt):
     
     Ip0 = fsolve(insulin_equation, initial_guess)[0]
     
+    param["Ub"] = 60 * Ip0 * param["ke"] / (1e6 / (param["Vi"] * param["w"]))
+    param["carbF"] = min(max(round(2 * (param["MCHO"] * (0.4 * max(param["St"], 16e-4) + 0.6 * min(max(param["Sd"], 3e-4), 12e-4)) * Gs0 * param["Vg"])/(param["ke"] * param["Vi"]))/2, 2), 25)
+    param["TDD"] = min(max(round(param["Ub"] * 24 + 200 / param["carbF"], 2), 10), 110)
+    return param
+
+def patient_random(opt):
+    param = {}
+    param["w"] = 45 + (95 - 45) * np.random.rand()  # Patient weight (kg)
+    resample_valid = True
+    max_iter = 100
+    iter_count = 0
+
+    while iter_count < max_iter and resample_valid:
+        iter_count += 1
+        resample_valid = False
+
+        # Glucose submodel
+        param["EGP0"] = np.random.lognormal(mean=np.log(17.0), sigma=0.2)
+        param["F01"] = np.random.lognormal(mean=np.log(11.0), sigma=0.1)
+        while 0.8 * param["EGP0"] < 5.5 * (param["F01"] / 0.85) / (5.5 + 1):
+            param["EGP0"] = np.random.lognormal(np.log(17.0), 0.2)
+            param["F01"] = np.random.lognormal(np.log(11.0), 0.1)
+
+        param["k12"] = np.random.lognormal(np.log(0.05), 0.4)
+        param["RTh"] = 11
+        param["RCl"] = np.random.lognormal(np.log(0.01), 0.2)
+
+        # Insulin submodel
+        param["ka1"] = np.random.lognormal(np.log(0.0035), 0.4)
+        param["ka2"] = np.random.lognormal(np.log(0.055), 0.4)
+        param["ka3"] = np.random.lognormal(np.log(0.025), 0.4)
+        param["St"] = np.random.lognormal(np.log(18.0e-4), 0.4)
+        param["Sd"] = np.random.lognormal(np.log(5.0e-4), 0.4)
+        param["Se"] = np.random.lognormal(np.log(190e-4), 0.4)
+        param["ka"] = np.random.lognormal(np.log(0.018), 0.2)
+        param["ke"] = np.random.lognormal(np.log(0.14), 0.2)
+
+        # Meal submodel
+        param["Bio"] = 0.8
+        param["TauM"] = 1 / np.random.lognormal(np.log(0.025), 0.2)
+
+        # Glucagon submodel
+        param["TauGlu"] = np.random.lognormal(np.log(19), 0.2)
+        param["TGlu"] = np.random.lognormal(np.log(0.0012), 0.2)
+        param["MCRGlu"] = np.random.lognormal(np.log(0.012), 0.2)
+
+        # Sensor submodel
+        param["TauS"] = 12
+
+        # Other constants
+        param["Vi"] = np.random.lognormal(np.log(120), 0.05)
+        param["Vg"] = np.random.lognormal(np.log(160), 0.05)
+        param["MCHO"] = 180.1577
+
+        # Validate parameters
+        Gs0 = opt["basalGlucose"]
+        param["GBasal"] = Gs0
+        Q10 = Gs0 * param["Vg"]
+        Fn = Q10 * (param["F01"] / 0.85) / (Q10 + param["Vg"])
+        Fr = param["RCl"] * (Q10 - param["RTh"] * param["Vg"]) * (Q10 > param["RTh"] * param["Vg"])
+
+        # Solve for initial insulin
+        coeffs = [
+            -Q10 * param["St"] * param["Sd"] - param["EGP0"] * param["Sd"] * param["Se"],
+            -param["k12"] * param["EGP0"] * param["Se"] + (param["EGP0"] - Fr - Fn) * param["Sd"],
+            param["k12"] * (param["EGP0"] - Fn - Fr)
+        ]
+        roots_sol = np.roots(coeffs)
+        real_roots = [r.real for r in roots_sol if np.isreal(r)]
+        if not real_roots:
+            continue
+        initial_guess = max(real_roots)
+
+        def insulin_equation(x):
+            return (-Fn
+                    - Q10 * param["St"] * x
+                    + param["k12"] * (Q10 * param["St"] * x) / (param["k12"] + param["Sd"] * x)
+                    - Fr
+                    + param["EGP0"] * np.exp(-param["Se"] * x))
+
+        try:
+            Ip0 = fsolve(insulin_equation, initial_guess)[0]
+        except Exception:
+            continue
+
+        # Basal insulin
+        param["Ub"] = round(2 * 60 * Ip0 * param["ke"] / (1e6 / (param["Vi"] * param["w"])) * 2) / 2
+
+        # Carb factor
+        param["carbF"] = (param["MCHO"] *
+                          (0.4 * max(param["St"], 16e-4) +
+                           0.6 * min(max(param["Sd"], 3e-4), 7e-4)) *
+                          5.0 * param["Vg"]) / (param["ke"] * param["Vi"])
+
+    # Approximate TDD
+    param["TDD"] = min(max(round(param["Ub"] * 24 + 200 / param["carbF"], 2), 10), 110)
+
+    if iter_count >= max_iter:
+        print("Warning: Couldn't sample valid parameters!")
+
+    return param
+
+def patient_custom(param):
+    Gs0 = param['basalGlucose']
+    Q10 = Gs0 * param["Vg"]
+    Fn = Q10 * (param["F01"] / 0.85) / (Q10 + param["Vg"])
+    Fr = param["RCl"] * (Q10 - param["RTh"] * param["Vg"]) * (Q10 > param["RTh"] * param["Vg"])
+    
+    coefficients = [
+        -Q10 * param["St"] * param["Sd"] - param["EGP0"] * param["Sd"] * param["Se"],
+        -param["k12"] * param["EGP0"] * param["Se"] + (param["EGP0"] - Fr - Fn) * param["Sd"],
+        param["k12"] * (param["EGP0"] - Fn - Fr)
+    ]
+    roots_solution = np.roots(coefficients)
+    real_roots = [r.real for r in roots_solution if np.isreal(r)]
+    
+    if not real_roots:
+        return None
+    
+    initial_guess = max(real_roots)
+    
+    def insulin_equation(x):
+        return (-Fn - Q10 * param["St"] * x + param["k12"] * (Q10 * param["St"] * x) / (param["k12"] + param["Sd"] * x) - Fr + param["EGP0"] * np.exp(-param["Se"] * x))
+    try:
+        Ip0 = fsolve(insulin_equation, initial_guess)[0]
+    except:
+        return None
+
     param["Ub"] = 60 * Ip0 * param["ke"] / (1e6 / (param["Vi"] * param["w"]))
     param["carbF"] = min(max(round(2 * (param["MCHO"] * (0.4 * max(param["St"], 16e-4) + 0.6 * min(max(param["Sd"], 3e-4), 12e-4)) * Gs0 * param["Vg"])/(param["ke"] * param["Vi"]))/2, 2), 25)
     param["TDD"] = min(max(round(param["Ub"] * 24 + 200 / param["carbF"], 2), 10), 110)

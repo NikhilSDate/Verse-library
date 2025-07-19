@@ -12,7 +12,7 @@ class PumpMode(Enum):
 class State:
 
     # Body model
-    G: float               # Amount of glucose in compartment 1 [mmol]
+    G: float                     # Amount of glucose in compartment 1 [mmol]
     InsSub1: float               # Amount of glucose in compartment 2 [mmol]
     InsSub2: float               # Amount of insulin in compartment 1 [mU]
     InsPlas: float               # Amount of insulin in compartment 2 [mU]
