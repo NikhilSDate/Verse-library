@@ -114,7 +114,7 @@ def parse_t1d_xml(xml_data, date=None, offset=0, duration=1440) -> OhioT1DMTrace
 
     meals = []
     for (t, carbs) in M.items():
-        meals.append(Meal(t, int(carbs), DEFAULT_MEAL))
+        meals.append(Meal(t, int(carbs), 50))
 
     return OhioT1DMTrace(G, meals, I, duration)
 
@@ -272,17 +272,17 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
 
 
 if __name__ == '__main__':
-    with open('/home/ndate/Research/OhioT1DM/2018/train/588-ws-training.xml') as f:
+    with open('/home/ndate/Research/OhioT1DM/2020/train/552-ws-training.xml') as f:
         data = f.read()
-    trace = parse_t1d_xml(data, date='31-08-2021', offset=360)
+    trace = parse_t1d_xml(data, date='17-04-2025', offset=360)
 
-    test = parse_t1d_xml(data, date='03-08-2021', offset=360)
+    test = parse_t1d_xml(data, date='18-04-2025', offset=360)
 
-    print(test.G[0])
+    # print(test.G[0])
 
-    params = fit_params(trace, 1440)
-    with open('params.pickle', 'wb') as f:
-        pickle.dump(params, f)
+    # params = fit_params(trace, 1440)
+
+    with open('params.pickle', 'rb') as f:
+        params = pickle.load(f)
+    
     evaluate_fit(params, test, 1440)
-    # with open('/home/ndate/Research/OhioT1DM/2018/train/588-ws-training.xml') as f:
-    #     data = f.read()
