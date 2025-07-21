@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 from scipy.optimize import *
 import pandas as pd
+import pickle
 
 
 @dataclass
@@ -17,10 +18,11 @@ class OhioT1DMTrace:
     G: Dict[int, float]
     M: List[Meal]
     I: defaultdict[int, float]
+    duration: int
 
 keys = ['basalGlucose', 'MCHO', 'w', 'TauS', 'EGP0', 'F01', 'k12', 'RTh', 'RCl', 'ka1', 'ka2', 'ka3', 'St', 'Sd', 'Se', 'ka', 'ke', 'Vi', 'Vg', 'Bio', 'TauM', 'TauGlu', 'TGlu', 'MCRGlu']
 
-def parse_t1d_xml(xml_data, date=None, offset=0) -> OhioT1DMTrace:
+def parse_t1d_xml(xml_data, date=None, offset=0, duration=1440) -> OhioT1DMTrace:
     def parse_datetime(ts):
         return datetime.strptime(ts, "%d-%m-%Y %H:%M:%S")
 
@@ -104,17 +106,17 @@ def parse_t1d_xml(xml_data, date=None, offset=0) -> OhioT1DMTrace:
         # binary search would be more efficient but this is clearer
         anchor_t = min([t for t in G.keys() if t >= anchor_t])
 
-        G = {t - anchor_t: v for t, v in G.items() if t >= anchor_t}
-        M = {t - anchor_t: v for t, v in M.items() if t >= anchor_t}
-        I = {t - anchor_t: v for t, v in I.items() if t >= anchor_t}
+        G = {t - anchor_t: v for t, v in G.items() if t >= anchor_t and t <= anchor_t + duration}
+        M = {t - anchor_t: v for t, v in M.items() if t >= anchor_t and t <= anchor_t + duration}
+        I = {t - anchor_t: v for t, v in I.items() if t >= anchor_t and t <= anchor_t + duration}
         I = defaultdict(float, I)
 
 
     meals = []
     for (t, carbs) in M.items():
-        meals.append(Meal(t, int(carbs), 10))
+        meals.append(Meal(t, int(carbs), DEFAULT_MEAL))
 
-    return OhioT1DMTrace(G, meals, I)
+    return OhioT1DMTrace(G, meals, I, duration)
 
 def interpolate_glucose(G: Dict[int, float], duration: int):
     raw = np.full(shape=(duration,), fill_value=np.nan)
@@ -201,18 +203,12 @@ def plot_predictions(variables, trace: OhioT1DMTrace, duration: int, path: str):
 
 # TODO: look at 575 more
 
-def fit_params():
-    with open('/home/ndate/Research/OhioT1DM/2018/train/591-ws-training.xml') as f:
-        data = f.read()
-
-    trace = parse_t1d_xml(data, date='31-08-2021', offset=360)
+def fit_params(trace, duration):
     initial = patient_original({'basalGlucose': 6.5})
     initial['basalGlucose'] = 6.5
 
     model = HovorkaModel(initial)
     state = model.get_init_state(trace.G[0])
-
-    duration = 1440
 
     initial_vec = np.zeros(len(keys) + len(state))
 
@@ -239,10 +235,54 @@ def fit_params():
 
     plot_predictions(optimal, trace, duration, 'after.png')
 
+    return result.x[:len(keys)]
+
+def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
+    def state_only_objective(state):
+        variables = np.hstack([params, state])
+        return harness(variables, trace, duration)
+
+    def state_only_plot(state, path):
+        variables = np.hstack([params, state])
+        plot_predictions(variables, trace, duration, path)
+    
+    initial = patient_original({'basalGlucose': 6.5})
+    initial['basalGlucose'] = 6.5
+
+    model = HovorkaModel(initial)
+    state = model.get_init_state(trace.G[0])
+
+    duration = 1440
+
+    initial_vec = np.array(state)
+
+    state_only_plot(initial_vec, 'before.png')
+
+    print(f'initial error: {state_only_objective(initial_vec)}')
+
+    bounds = [(var * 0.2, var * 4) for var in initial_vec]
+
+    objective_func = state_only_objective
+    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1e-3)
+    
+    optimal = result.x
+
+    state_only_plot(optimal, 'after.png')
     breakpoint()
 
 
 if __name__ == '__main__':
-    fit_params()
+    with open('/home/ndate/Research/OhioT1DM/2018/train/588-ws-training.xml') as f:
+        data = f.read()
+    trace = parse_t1d_xml(data, date='31-08-2021', offset=360)
+
+    test = parse_t1d_xml(data, date='03-08-2021', offset=360)
+
+    print(test.G[0])
+
+    params = fit_params(trace, 1440)
+    with open('params.pickle', 'wb') as f:
+        pickle.dump(params, f)
+    evaluate_fit(params, test, 1440)
     # with open('/home/ndate/Research/OhioT1DM/2018/train/588-ws-training.xml') as f:
     #     data = f.read()
