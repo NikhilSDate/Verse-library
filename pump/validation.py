@@ -114,7 +114,7 @@ def parse_t1d_xml(xml_data, date=None, offset=0, duration=1440) -> OhioT1DMTrace
 
     meals = []
     for (t, carbs) in M.items():
-        meals.append(Meal(t, int(carbs), 50))
+        meals.append(Meal(t, int(carbs), DEFAULT_MEAL))
 
     return OhioT1DMTrace(G, meals, I, duration)
 
@@ -249,6 +249,8 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
     initial = patient_original({'basalGlucose': 6.5})
     initial['basalGlucose'] = 6.5
 
+    initial_params_vec = [initial[key] for key in keys]
+
     model = HovorkaModel(initial)
     state = model.get_init_state(trace.G[0])
 
@@ -256,9 +258,11 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
 
     initial_vec = np.array(state)
 
-    state_only_plot(initial_vec, 'before.png')
+    before = np.hstack([initial_params_vec, state])
 
-    print(f'initial error: {state_only_objective(initial_vec)}')
+    plot_predictions(before, trace, duration, 'before.png')
+
+    print(f'initial error: {harness(before, trace, duration)}')
 
     bounds = [(var * 0.2, var * 4) for var in initial_vec]
 
@@ -270,17 +274,22 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
     state_only_plot(optimal, 'after.png')
     breakpoint()
 
+def save_params(params):
+    with open('params.pickle', 'wb') as f:
+        pickle.dump(params, f)
 
 if __name__ == '__main__':
-    with open('/home/ndate/Research/OhioT1DM/2020/train/552-ws-training.xml') as f:
+    with open('/home/ndate/Research/OhioT1DM/2018/train/559-ws-training.xml') as f:
         data = f.read()
-    trace = parse_t1d_xml(data, date='17-04-2025', offset=360)
+    trace = parse_t1d_xml(data, date='09-12-2021', offset=300)
 
-    test = parse_t1d_xml(data, date='18-04-2025', offset=360)
+    test = parse_t1d_xml(data, date='10-12-2021', offset=300)
 
-    # print(test.G[0])
+    # # print(test.G[0])
 
     # params = fit_params(trace, 1440)
+
+    # save_params(params)
 
     with open('params.pickle', 'rb') as f:
         params = pickle.load(f)
