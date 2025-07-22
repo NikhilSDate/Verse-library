@@ -28,9 +28,16 @@ class OhioT1DMTrace:
 
 @dataclass
 class TraceMeta:
-    path: str
+    year: int
+    patient_id: int
+    partition: str
     date: str
     offset: int
+
+def get_trace_path(meta: TraceMeta):
+    base = '/home/ndate/Research/OhioT1DM'
+    file_partition = 'training' if meta.partition == 'train' else 'testing'
+    return f'{base}/{meta.year}/{meta.partition}/{meta.patient_id}-ws-{file_partition}.xml'
 
 keys = ['basalGlucose', 'MCHO', 'w', 'TauS', 'EGP0', 'F01', 'k12', 'RTh', 'RCl', 'ka1', 'ka2', 'ka3', 'St', 'Sd', 'Se', 'ka', 'ke', 'Vi', 'Vg', 'Bio', 'TauM', 'TauGlu', 'TGlu', 'MCRGlu']
 
@@ -257,6 +264,7 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int, path='
     model = HovorkaModel(initial)
     state = model.get_init_state(trace.G[0])
 
+    os.makedirs(path, exist_ok=True)
     plot_predictions(initial_params_vec, trace, duration, os.path.join(path, 'before.png'))
 
     print(f'initial error: {harness(initial_params_vec, trace, duration)}')
@@ -278,10 +286,11 @@ def save_params(params):
 # train and test are each a list of (path, date, offset)
 # duration is assumed to be 1440
 # offset for error calculation is asumed to be 300
-def run_train_test(train: List[OhioT1DMTrace], test: List[OhioT1DMTrace]):
-    def multi_trace_objective(params, traces: List[OhioT1DMTrace]):
+def run_train_test(train: List[TraceMeta], test: List[TraceMeta]):
+    def multi_trace_objective(params, traces: List[TraceMeta]):
         total_error = 0
         for trace in traces:
+            trace = load_trace(trace)
             total_error += harness(params, trace, trace.duration)
         return total_error / len(traces)
 
@@ -289,27 +298,48 @@ def run_train_test(train: List[OhioT1DMTrace], test: List[OhioT1DMTrace]):
     initial = patient_original({'basalGlucose': 6.5})
     initial['basalGlucose'] = 6.5
 
-    model = HovorkaModel(initial)
     initial_vec = np.zeros(len(keys))
+
+    idx = 0
+    for i in range(len(keys)):
+        initial_vec[idx] = initial[keys[i]]
+        idx += 1
 
     bounds = [(var * 0.2, var * 4) for var in initial_vec]
 
     objective_func = lambda x: multi_trace_objective(x, train)
-    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1e-3)
+    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1)
 
+    params = result.x
+
+    result_path = os.path.join('./validation', f'{train[0].year}-{str(train[0].patient_id)}')
+    os.makedirs(result_path, exist_ok=True)
+
+    with open(os.path.join(result_path, 'train_traces.pickle'), 'wb') as f:
+        pickle.dump(train, f)
     
+    with open(os.path.join(result_path, 'params.pickle'), 'wb') as f:
+        pickle.dump(params, f)
 
+    for test_trace in test:
+        trace = load_trace(test_trace)
+        evaluate_fit(params, trace, trace.duration, os.path.join(result_path, f'{test_trace.patient_id}-{test_trace.partition}-{test_trace.date}'))
+
+    return params
+    
+def load_trace(meta: TraceMeta) -> OhioT1DMTrace:
+    with open(get_trace_path(meta)) as f:
+        data = f.read()
+    return parse_t1d_xml(data, meta.date, offset=meta.offset)
 
 if __name__ == '__main__':
-    with open('/home/ndate/Research/OhioT1DM/2018/train/559-ws-training.xml') as f:
-        data = f.read()
-    trace = parse_t1d_xml(data, date='09-12-2021', offset=300)
+    train = [TraceMeta(2020, 552, 'train', '17-04-2025', 300)]
+    test = [TraceMeta(2020, 552, 'train', '19-04-2025', 300), TraceMeta(2020, 552, 'test', '04-06-2025', 300)]
 
-    test = parse_t1d_xml(data, date='10-12-2021', offset=300)
 
     # # print(test.G[0])
 
-    params = fit_params(trace, 1440)
+    params = run_train_test(train, test)
 
     # save_params(params)
 
