@@ -252,7 +252,7 @@ def fit_params(trace, duration):
 
 
     plot_predictions(optimal, trace, duration, 'after.png')
-
+    plt.clf()
     return result.x[:len(keys)]
 
 def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int, path='./'):    
@@ -269,15 +269,15 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int, path='
 
     print(f'initial error: {harness(initial_params_vec, trace, duration)}')
 
-    bounds = [(var * 0.2, var * 4) for var in initial_params_vec]
+    # bounds = [(var * 0.2, var * 4) for var in initial_params_vec]
 
-    objective_func = lambda x: harness(x, trace, duration)
-    result = minimize(objective_func, initial_params_vec, bounds=bounds, tol=1e-3)
+    # objective_func = lambda x: harness(x, trace, duration)
+    # result = minimize(objective_func, initial_params_vec, bounds=bounds, tol=1e-3)
     
-    optimal = result.x
+    # optimal = result.x
 
-    plot_predictions(optimal, trace, duration, os.path.join(path, 'after.png'))
-    breakpoint()
+    plot_predictions(params, trace, duration, os.path.join(path, 'after.png'))
+    plt.clf()
 
 def save_params(params):
     with open('params.pickle', 'wb') as f:
@@ -308,7 +308,7 @@ def run_train_test(train: List[TraceMeta], test: List[TraceMeta]):
     bounds = [(var * 0.2, var * 4) for var in initial_vec]
 
     objective_func = lambda x: multi_trace_objective(x, train)
-    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1)
+    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1e-3)
 
     params = result.x
 
@@ -334,7 +334,7 @@ def load_trace(meta: TraceMeta) -> OhioT1DMTrace:
 
 if __name__ == '__main__':
     train = [TraceMeta(2020, 552, 'train', '17-04-2025', 300)]
-    test = [TraceMeta(2020, 552, 'train', '19-04-2025', 300), TraceMeta(2020, 552, 'test', '04-06-2025', 300)]
+    test = [TraceMeta(2020, 552, 'train', '19-04-2025', 300), TraceMeta(2020, 552, 'test', '04-06-2025', 300), TraceMeta(2020, 552, 'train', '17-04-2025', 300)]
 
 
     # # print(test.G[0])
