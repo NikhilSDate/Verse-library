@@ -12,6 +12,12 @@ from scipy.optimize import *
 import pandas as pd
 import pickle
 
+from typing import Tuple
+
+import time
+
+import os
+
 
 @dataclass
 class OhioT1DMTrace:
@@ -19,6 +25,12 @@ class OhioT1DMTrace:
     M: List[Meal]
     I: defaultdict[int, float]
     duration: int
+
+@dataclass
+class TraceMeta:
+    path: str
+    date: str
+    offset: int
 
 keys = ['basalGlucose', 'MCHO', 'w', 'TauS', 'EGP0', 'F01', 'k12', 'RTh', 'RCl', 'ka1', 'ka2', 'ka3', 'St', 'Sd', 'Se', 'ka', 'ke', 'Vi', 'Vg', 'Bio', 'TauM', 'TauGlu', 'TGlu', 'MCRGlu']
 
@@ -135,13 +147,13 @@ def split(variables):
 
 def run_model(variables, trace: OhioT1DMTrace, duration: int):
 
-    print('here')
+    before = time.time()
 
     G, M, I = trace.G, trace.M, trace.I
     
     M = [meal for meal in M if meal.time <= duration]
 
-    params, init = split(variables)
+    params  = variables
 
     params = {keys[i]: params[i] for i in range(len(params))}
     params = patient_custom(params)
@@ -154,7 +166,7 @@ def run_model(variables, trace: OhioT1DMTrace, duration: int):
 
     model = HovorkaModel(params)
     model.set_meals(M)
-    state_vec = init
+    state_vec = model.get_init_state(trace.G[0])
 
     time_step = 1
 
@@ -167,6 +179,9 @@ def run_model(variables, trace: OhioT1DMTrace, duration: int):
         r.set_initial_value(state_vec)
         res: np.ndarray = r.integrate(r.t + time_step)
         state_vec = res.flatten()
+
+    after = time.time()
+    print(after - before)
     return predicted
 
 # returns the mean squared error for a period of duration minutes
@@ -208,18 +223,14 @@ def fit_params(trace, duration):
     initial['basalGlucose'] = 6.5
 
     model = HovorkaModel(initial)
-    state = model.get_init_state(trace.G[0])
-
-    initial_vec = np.zeros(len(keys) + len(state))
+    initial_vec = np.zeros(len(keys))
 
     idx = 0
     for i in range(len(keys)):
         initial_vec[idx] = initial[keys[i]]
         idx += 1
-
-    for i in range(len(state)):
-        initial_vec[idx] = state[i]
-        idx += 1
+    
+    initial_vec = initial_vec
     
     plot_predictions(initial_vec, trace, duration, 'before.png')
 
@@ -237,15 +248,7 @@ def fit_params(trace, duration):
 
     return result.x[:len(keys)]
 
-def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
-    def state_only_objective(state):
-        variables = np.hstack([params, state])
-        return harness(variables, trace, duration)
-
-    def state_only_plot(state, path):
-        variables = np.hstack([params, state])
-        plot_predictions(variables, trace, duration, path)
-    
+def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int, path='./'):    
     initial = patient_original({'basalGlucose': 6.5})
     initial['basalGlucose'] = 6.5
 
@@ -254,29 +257,48 @@ def evaluate_fit(params: np.ndarray, trace: OhioT1DMTrace, duration: int):
     model = HovorkaModel(initial)
     state = model.get_init_state(trace.G[0])
 
-    duration = 1440
+    plot_predictions(initial_params_vec, trace, duration, os.path.join(path, 'before.png'))
 
-    initial_vec = np.array(state)
+    print(f'initial error: {harness(initial_params_vec, trace, duration)}')
 
-    before = np.hstack([initial_params_vec, state])
+    bounds = [(var * 0.2, var * 4) for var in initial_params_vec]
 
-    plot_predictions(before, trace, duration, 'before.png')
-
-    print(f'initial error: {harness(before, trace, duration)}')
-
-    bounds = [(var * 0.2, var * 4) for var in initial_vec]
-
-    objective_func = state_only_objective
-    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1e-3)
+    objective_func = lambda x: harness(x, trace, duration)
+    result = minimize(objective_func, initial_params_vec, bounds=bounds, tol=1e-3)
     
     optimal = result.x
 
-    state_only_plot(optimal, 'after.png')
+    plot_predictions(optimal, trace, duration, os.path.join(path, 'after.png'))
     breakpoint()
 
 def save_params(params):
     with open('params.pickle', 'wb') as f:
         pickle.dump(params, f)
+
+# train and test are each a list of (path, date, offset)
+# duration is assumed to be 1440
+# offset for error calculation is asumed to be 300
+def run_train_test(train: List[OhioT1DMTrace], test: List[OhioT1DMTrace]):
+    def multi_trace_objective(params, traces: List[OhioT1DMTrace]):
+        total_error = 0
+        for trace in traces:
+            total_error += harness(params, trace, trace.duration)
+        return total_error / len(traces)
+
+
+    initial = patient_original({'basalGlucose': 6.5})
+    initial['basalGlucose'] = 6.5
+
+    model = HovorkaModel(initial)
+    initial_vec = np.zeros(len(keys))
+
+    bounds = [(var * 0.2, var * 4) for var in initial_vec]
+
+    objective_func = lambda x: multi_trace_objective(x, train)
+    result = minimize(objective_func, initial_vec, bounds=bounds, tol=1e-3)
+
+    
+
 
 if __name__ == '__main__':
     with open('/home/ndate/Research/OhioT1DM/2018/train/559-ws-training.xml') as f:
@@ -287,11 +309,11 @@ if __name__ == '__main__':
 
     # # print(test.G[0])
 
-    # params = fit_params(trace, 1440)
+    params = fit_params(trace, 1440)
 
     # save_params(params)
 
-    with open('params.pickle', 'rb') as f:
-        params = pickle.load(f)
+    # with open('params.pickle', 'rb') as f:
+    #     params = pickle.load(f)
     
-    evaluate_fit(params, test, 1440)
+    # evaluate_fit(params, test, 1440)
