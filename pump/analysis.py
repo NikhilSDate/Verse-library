@@ -4,6 +4,8 @@ from artificial_pancreas_scenario import SimulationScenario
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from verification import *
+from hashlib import md5
+import json
 
 
 def two_way_analysis(results: List[Tuple[SimulationScenario, object, object]], index):
@@ -45,8 +47,19 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
 
+
+def scenario_hash(scenario: SimulationScenario):
+    dump = json.dumps(
+        scenario.to_dict(),
+        ensure_ascii=False,
+        sort_keys=True,
+        indent=None,
+        separators=(',', ':'),
+    )
+    return md5(dump.encode('utf-8')).hexdigest()
+
 if __name__ == '__main__':
-    results = load_results('results/test')
+    results = load_results('results/test_local')
     scenarios = [result[0] for result in results]
-    print(len(scenarios))
-    print(len(set(scenarios)))
+    for scenario in scenarios:
+        print(scenario_hash(scenario))

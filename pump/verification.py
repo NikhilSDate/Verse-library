@@ -199,7 +199,7 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
         f.write(str(safety_results))
     with open(os.path.join(scenario_directory, 'scenario.yaml'), 'w') as f:
-        to_dump = denumpify(asdict(scenario.get_data(), dict_factory=custom_asdict_factory))
+        to_dump = scenario.to_dict()
         yaml.dump(to_dump, f)
     with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
         pickle.dump(scenario, f)
