@@ -210,6 +210,7 @@ def save_crash(scenario, payload, output_dir):
 
 
 def run_verification_scenario(scenario, output_dir):
+    print(hash(scenario), file=sys.stderr)
     res = verify_multi_meal_scenario(scenario)
     if res.type == ResultType.OK:
         traces = res.payload

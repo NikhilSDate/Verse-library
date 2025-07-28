@@ -59,7 +59,18 @@ def scenario_hash(scenario: SimulationScenario):
     return md5(dump.encode('utf-8')).hexdigest()
 
 if __name__ == '__main__':
+    seed = 42
+    np.random.seed(seed)
+    random.seed(seed)
+
     results = load_results('results/test_local')
-    scenarios = [result[0] for result in results]
-    for scenario in scenarios:
-        print(scenario_hash(scenario))
+    existing = [result[0] for result in results]
+    scenarios = gen_verification_scenarios()
+    np.random.shuffle(scenarios)
+    breakpoint()
+    # print(len(scenarios))
+    # print(len(set(scenarios)))
+    # scenarios_2 = gen_verification_scenarios()
+    # scenarios_1 = set(scenarios_1)
+    # diff = [scenario for scenario in scenarios_2 if scenario not in scenarios_1]
+    # print(len(scenarios_2), len(diff))
