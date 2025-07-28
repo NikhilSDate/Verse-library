@@ -68,7 +68,7 @@ class HovorkaModel:
         self.name = self.opt["name"]
         random.seed(self.opt["RNGSeed"]) if self.opt["RNGSeed"] > 0 else None
 
-        self.param = param
+        self.param = param.copy() # we mutate param, so we don't want to affect the original param dict
 
         if self.opt["basalGlucose"] < 0:
             self.param["GBasal"] = np.random.normal(6.5, 1.0)
@@ -98,9 +98,6 @@ class HovorkaModel:
         else:
             self.opt["initialGlucose"] = self.param["GBasal"] if np.isnan(self.opt["initialGlucose"]) else self.opt["initialGlucose"]
             self.opt["initialInsulinOnBoard"] = 0.0 if np.isnan(self.opt["initialInsulinOnBoard"]) else self.opt["initialInsulinOnBoard"]
-
-        self.param["carbFactors"] = {"value": self.param["carbF"], "time": 0}
-        self.param["pumpBasals"] = {"value": self.param["Ub"], "time": 0}
 
         self.CGM = {
             "lambda": 15.96,

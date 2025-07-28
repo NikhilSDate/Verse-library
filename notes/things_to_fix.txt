@@ -1,0 +1,3 @@
+- clone params in HovorkaModel to keep the scenario frozen
+- copy over scenario hashing logic
+- for new scenarios, should we just hash the scenario in advance?

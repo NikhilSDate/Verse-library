@@ -62,15 +62,10 @@ if __name__ == '__main__':
     seed = 42
     np.random.seed(seed)
     random.seed(seed)
-
-    results = load_results('results/test_local')
-    existing = [result[0] for result in results]
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)
+    results = load_results('results/test_local')
+    existing = [result[0] for result in results]
+    print(len(existing))
+    print(len(set(existing)))
     breakpoint()
-    # print(len(scenarios))
-    # print(len(set(scenarios)))
-    # scenarios_2 = gen_verification_scenarios()
-    # scenarios_1 = set(scenarios_1)
-    # diff = [scenario for scenario in scenarios_2 if scenario not in scenarios_1]
-    # print(len(scenarios_2), len(diff))
