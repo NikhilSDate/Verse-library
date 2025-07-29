@@ -51,6 +51,15 @@ class ScenarioData:
     sim_duration: int
 
 @dataclass(eq=True)
+class ScenarioKey:
+    init_bg: Tuple[int, int]
+    meals: List[Meal]
+    boluses: List[Bolus]
+    errors: List[float]
+    cgm_config: CGMConfig
+    sim_duration: int
+
+@dataclass(eq=True)
 class UserConfig:
     resume: bool
 
@@ -211,13 +220,14 @@ class SimulationScenario:
     def to_dict(self):
         return denumpify(dataclasses.asdict(self.get_data(), dict_factory=custom_asdict_factory))
     
-    def __key(self):
-        return freeze((self.init_bg, self.meals, self.boluses, self.errors, self.params, self.sim_duration, self.settings, self.cgm_config))
-    
+    def __key(self) -> ScenarioKey:
+        return ScenarioKey(self.init_bg, self.get_meals(), self.get_boluses(), self.errors, self.cgm_config, self.sim_duration)
+
     def __hash__(self):
+        to_hash = denumpify(dataclasses.asdict(self.__key(), dict_factory=custom_asdict_factory))
         # this is needed to get a deterministic hash across executions of the Python interpreter
         dump = json.dumps(
-            self.to_dict(),
+            to_hash,
             ensure_ascii=False,
             sort_keys=True,
             indent=None,

@@ -99,9 +99,6 @@ class HovorkaModel:
             self.opt["initialGlucose"] = self.param["GBasal"] if np.isnan(self.opt["initialGlucose"]) else self.opt["initialGlucose"]
             self.opt["initialInsulinOnBoard"] = 0.0 if np.isnan(self.opt["initialInsulinOnBoard"]) else self.opt["initialInsulinOnBoard"]
 
-        self.param["carbFactors"] = {"value": self.param["carbF"], "time": 0}
-        self.param["pumpBasals"] = {"value": self.param["Ub"], "time": 0}
-
         self.CGM = {
             "lambda": 15.96,
             "epsilon": -5.471,

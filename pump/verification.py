@@ -377,6 +377,7 @@ def verify_wrapper():
         exit(0)
 
     signal.signal(signal.SIGINT, sigint)
+    signal.signal(signal.SIGTERM, sigint)
     np.random.seed(seed)
     random.seed(seed)
 
