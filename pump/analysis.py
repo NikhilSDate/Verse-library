@@ -103,4 +103,13 @@ def extended_shutoff_analysis(result_func: Callable[[], Generator[Tuple[Simulati
     save_results_by_scenario(result_func(), top_scenarios, 'results/bad_verif')
 
 if __name__ == '__main__':
-    debug_sim('results/bad_verif', 'scenario_5', 1)
+    # debug_sim('results/bad_verif', 'scenario_5', 1)
+    seed = 42
+    f = open('hashes2.txt', 'w')
+    np.random.seed(seed)
+    random.seed(seed)
+    scenarios = gen_verification_scenarios()
+    np.random.shuffle(scenarios)
+    for scenario in scenarios:
+        f.write(str(hash(scenario)) + '\n')
+    f.close()

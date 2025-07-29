@@ -6,6 +6,8 @@ import dataclasses
 import numpy as np
 from pyrsistent import freeze
 import pickle
+import json
+import hashlib
 
 class BolusType(str, Enum):
     Simple = 'Simple'
@@ -97,6 +99,27 @@ def get_bolus_config(bolus: Bolus):
 def set_bolus_config(bolus: Bolus, config: Tuple[BolusType, ExtendedBolusConfig]):
     return dataclasses.replace(bolus, type=config[0], config=config[1])
 
+def custom_asdict_factory(data):
+    def convert_value(obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        return obj
+    return dict((k, convert_value(v)) for k, v in data)
+
+def denumpify(obj):
+    if isinstance(obj, dict):
+        return {k: denumpify(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [denumpify(i) for i in obj]
+    elif isinstance(obj, tuple):
+        return tuple(denumpify(i) for i in obj)
+    elif isinstance(obj, (np.integer, np.floating)):
+        return obj.item()
+    elif isinstance(obj, np.ndarray):
+        return denumpify(obj.tolist())  # recursively convert the list too
+    else:
+        return obj
+
 class SimulationScenario:
 
     # ==[ Instance Variables ]==
@@ -185,14 +208,29 @@ class SimulationScenario:
     def get_smallest_meal(self):
         return min([meal.carbs[0] for meal in self.get_meals()])
 
+    def to_dict(self):
+        return denumpify(dataclasses.asdict(self.get_data(), dict_factory=custom_asdict_factory))
+    
     def __key(self):
         return freeze((self.init_bg, self.meals, self.boluses, self.errors, self.params, self.sim_duration, self.settings, self.cgm_config))
     
     def __hash__(self):
-        return hash(self.__key())
-    
+        # this is needed to get a deterministic hash across executions of the Python interpreter
+        dump = json.dumps(
+            self.to_dict(),
+            ensure_ascii=False,
+            sort_keys=True,
+            indent=None,
+            separators=(',', ':'),
+        )
+        digest = hashlib.md5(dump.encode('utf-8')).hexdigest()
+        return int(digest, 16)
+
     def __eq__(self, other):
         return self.__key() == other.__key()
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
     
     def __repr__(self):
         return f'Scenario{self.get_meals(), self.boluses.values()}'

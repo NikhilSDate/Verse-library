@@ -68,7 +68,7 @@ class HovorkaModel:
         self.name = self.opt["name"]
         random.seed(self.opt["RNGSeed"]) if self.opt["RNGSeed"] > 0 else None
 
-        self.param = param
+        self.param = param.copy() # we don't want to mutate the original params object
 
         if self.opt["basalGlucose"] < 0:
             self.param["GBasal"] = np.random.normal(6.5, 1.0)
