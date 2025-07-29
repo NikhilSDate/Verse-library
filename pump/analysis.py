@@ -114,7 +114,6 @@ if __name__ == '__main__':
     #     f.write(str(hash(scenario)) + '\n')
     # f.close()
 
-    results = load_results('results/test_local')
-    scenarios = [result[0] for result in results]
+    scenarios = load_scenarios('results/verification_dedup/verification')
     print(len(scenarios))
     print(len(set(scenarios)))
