@@ -114,9 +114,7 @@ if __name__ == '__main__':
     #     f.write(str(hash(scenario)) + '\n')
     # f.close()
 
-    scenarios = gen_verification_scenarios()
-    hashes = [hash(scenario) for scenario in scenarios]
-    print(len(set(hashes)))
+    results = load_results('results/test_local')
+    scenarios = [result[0] for result in results]
     print(len(scenarios))
-    with open('hashes2.txt', 'w') as f:
-        f.writelines([str(h) + '\n' for h in hashes])
+    print(len(set(scenarios)))
