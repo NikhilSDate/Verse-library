@@ -11,5 +11,5 @@
 # trap cleanup SIGINT
 
 for i in {1..2}; do
-  timeout --signal=SIGINT 1m python3 pump/verification.py -p 1 -o results/test_local
+  timeout --signal=SIGINT 1m python3 pump/verification.py -p 1 -o results/test_local -n $1 -i $2
 done
