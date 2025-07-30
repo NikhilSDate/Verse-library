@@ -25,6 +25,7 @@ from tqdm import tqdm
 from typing import Any
 from functools import partial
 import time
+import gzip
 
 
 # TODO: this function is a bit of a hack
@@ -208,7 +209,7 @@ def save_result_with_sims(result: Tuple[SimulationScenario, object, object], out
         return
     fig = plot_variable(traces, 'G', show=False)
     fig.write_image(os.path.join(scenario_directory, 'plot.png'))
-    with open(os.path.join(scenario_directory, 'traces.pkl'), 'wb') as f:
+    with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
         pickle.dump(traces, f)
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
         f.write(str(safety))
@@ -227,7 +228,7 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
         print('redundant scenario')
         return
     fig = plot_results((scenario, traces, safety_results))
-    with open(os.path.join(scenario_directory, 'traces.pkl'), 'wb') as f:
+    with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
         pickle.dump(traces, f)
     fig.write_image(os.path.join(scenario_directory, 'plot.png'))
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
