@@ -9,10 +9,13 @@ from artificial_pancreas_simulate import extract_variable
 
 # we will store a map of scenario: ([], [])
 
-def get_all_AGP_reports(results_gen: Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]):
+
+
+def get_all_AGP_reports(scenarios: Dict[SimulationScenario, Tuple[str, str]]) -> Dict[SimulationScenario, Tuple]:
     reports = {}
     count = 0
-    for (scenario, traces, safety) in results_gen:
+    for scenario, path in scenarios.items():
+        scenario, traces, safety = load_from_dir(path[0], path[1])
         glucose_reachtube = extract_variable(traces, 'G', type=TraceType.VERIF)
         reachtube_report = AGP_report(glucose_reachtube)
         sim_reports = []
@@ -24,9 +27,11 @@ def get_all_AGP_reports(results_gen: Generator[Tuple[SimulationScenario, Analysi
         count += 1
         if count % 100 == 0:
             print(count)
+            if count == 1000:
+                break
     return reports
 
-def two_way_analysis(results: List[Tuple[SimulationScenario, object, object]], index):
+def two_way_analysis(scenarios: List[Tuple[SimulationScenario, object, object]], index):
     points_safe = []
     points_unsafe = []
 
@@ -65,29 +70,29 @@ def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, obj
         perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
     return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
 
-def save_results_by_scenario(results_gen, to_save, output_dir):
-    to_save = set(to_save)
-    breakpoint()
-    for result in results_gen:
-        if result[0] in to_save:
-            save_scenario_results(result[0], result[1], result[2], output_dir)
+def save_results_by_scenario(all_scenarios: Dict[SimulationScenario, Tuple[str, str]], to_save: List[SimulationScenario], output_dir):
+    for scenario in to_save:
+        path = all_scenarios[scenario]
+        result = load_from_dir(path[0], path[1])
+        save_scenario_results(result[0], result[1], result[2], output_dir)
+    
 
-def redzone_analysis(result_func: Callable[[], Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]], low: bool):
-    def key(scenario):
+def redzone_analysis(scenarios: Dict[SimulationScenario, Tuple[str, str]]):
+    def key(reports, scenario):
         report = reports[scenario]
-        return report[0][2][1] - report[0][2][0]
         sim_reports = report[1]
         max_redzone_perc = 0
         for sim_report in sim_reports:
-            redzone = sim_report[0] if low else sim_report[-1]
+            redzone = sim_report[0]
             max_redzone_perc = max(max_redzone_perc, redzone)
         return max_redzone_perc
     
-    reports = get_all_AGP_reports(result_func())
+    reports = get_all_AGP_reports(scenarios)
     # sort scenarios by report value
-    scenarios = sorted(reports.keys(), key=key, reverse=True)
-    top_scenarios = set(scenarios[:10])
-    save_results_by_scenario(result_func(), top_scenarios, 'results/bad_verif')
+    top_scenarios = sorted(reports.keys(), key=lambda scenario: key(reports, scenario), reverse=True)
+    top_scenarios = set(top_scenarios[:10])
+    breakpoint()
+    save_results_by_scenario(scenarios, top_scenarios, 'results/bad_verif')
 
 def extended_shutoff_analysis(result_func: Callable[[], Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]]):
    
@@ -102,6 +107,77 @@ def extended_shutoff_analysis(result_func: Callable[[], Generator[Tuple[Simulati
     top_scenarios = set(scenarios[:10])
     save_results_by_scenario(result_func(), top_scenarios, 'results/bad_verif')
 
+# walks through all subdirs in result_dir and converts any traces.pkl to traces.gzip
+def compress_traces(result_dir):
+    scenarios = []
+    scenario_dirs = [ f for f in os.scandir(result_dir) if f.is_dir() ] if os.path.exists(result_dir) else []
+    count = 0
+    for scenario_dir in tqdm(scenario_dirs):
+        trace_path = os.path.join(scenario_dir, 'traces.pkl')
+        if not os.path.exists(trace_path):
+            # compressed already
+            continue
+        
+        try:
+            with open(trace_path, 'rb') as f:
+                traces = pickle.load(f)
+        except:
+            continue
+        
+        tqdm.write(f'compressing traces for {scenario_dir}')
+        # dump gzip
+        gzip_path = os.path.join(scenario_dir, 'traces.gzip')
+        with gzip.open(gzip_path, 'wb') as f:
+            pickle.dump(traces, f)    
+
+def table_analysis(results: List[Tuple[SimulationScenario, object, object]], zone, figname='table.png', title='Table'):
+    print('Starting table analysis')
+    data = {}
+    for result in tqdm(results):
+        safety = result[2]
+        key = (result[0].get_largest_meal(), result[0].get_total_carb_range()[1])
+        if key not in data:
+            data[key] = np.zeros((3,))
+        data[key] += np.array([get_safe(safety)[zone], get_unsafe(safety[zone]), get_unknown(safety)[zone]])
+
+    # convert to percentages
+
+
+    x_values = sorted(set(key[0] for key in data))
+    y_values = sorted(set(key[1] for key in data), reverse=True)
+    df = pd.DataFrame(index=y_values, columns=x_values)
+
+    # Fill DataFrame with formatted values
+    for (x, y), vals in data.items():
+        df.at[y, x] = f"[{int(vals[0])}, {int(vals[1])}, {int(vals[2])}]"
+    df = df.fillna("--")
+    # Create the figure and axis
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.axis('off')
+    print(len(x_values))
+    print(len(y_values))
+    # Create table without row and column labels
+    table = ax.table(
+        cellText=df.values,
+        cellLoc='center',
+        loc='center', 
+        rowLabels=y_values,
+        colLabels=x_values
+    )
+
+    # Style table
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 1.5)
+
+    # Add axis labels
+    plt.title(title)
+    plt.figtext(0.5, 0.2, 'Max single-meal carbs', ha='center', va='center', fontsize=12)
+    plt.figtext(0.02, 0.5, 'Max total carbs', ha='center', va='center', rotation='vertical', fontsize=12)
+    plt.savefig(figname)
+    return data
+
+
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
     # seed = 42
@@ -113,7 +189,9 @@ if __name__ == '__main__':
     # for scenario in scenarios:
     #     f.write(str(hash(scenario)) + '\n')
     # f.close()
-
-    scenarios = load_scenarios('results/verification_dedup/verification')
-    print(len(scenarios))
-    print(len(set(scenarios)))
+    g = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    results = []
+    for i in tqdm(range(5000)):
+        results.append(next(g))
+    table_analysis(results, 0)
+    breakpoint()

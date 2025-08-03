@@ -282,6 +282,20 @@ def load_scenarios(output_dir) -> List[SimulationScenario]:
             pass
     return scenarios
 
+# returns a mapping of scenarios to paths
+# (allows easy lookup of traces from disk in a secondary pass)
+def load_scenarios_and_dirs(result_dir: str) -> Dict[SimulationScenario, Tuple[str, str]]:
+    scenarios = {}
+    scenario_dirs = [ f for f in os.scandir(result_dir) if f.is_dir() ] if os.path.exists(result_dir) else []
+    for scenario_dir in tqdm(scenario_dirs):
+        try:
+            with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
+                scenario = pickle.load(f)
+            scenarios[scenario] = (result_dir, scenario_dir.path)
+        except:
+            pass
+    return scenarios
+
 
 def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
     results = []
@@ -290,7 +304,7 @@ def load_results(output_dir) -> List[Tuple[SimulationScenario, object, object]]:
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
                 scenario = pickle.load(f)
-            with open(os.path.join(scenario_dir.path, 'traces.pkl'), 'rb') as f:
+            with gzip.open(os.path.join(scenario_dir.path, 'traces.gzip'), 'rb') as f:
                 traces = pickle.load(f)
             with open(os.path.join(scenario_dir.path, 'safety.txt')) as f:
                 safety = ast.literal_eval(f.read())
@@ -306,7 +320,7 @@ def load_results_gen(output_dir) -> Generator[Tuple[SimulationScenario, Analysis
         try:
             with open(os.path.join(scenario_dir.path, 'scenario.pkl'), 'rb') as f:
                 scenario = pickle.load(f)
-            with open(os.path.join(scenario_dir.path, 'traces.pkl'), 'rb') as f:
+            with gzip.open(os.path.join(scenario_dir.path, 'traces.gzip'), 'rb') as f:
                 traces = pickle.load(f)
             with open(os.path.join(scenario_dir.path, 'safety.txt')) as f:
                 safety = ast.literal_eval(f.read())
@@ -314,17 +328,17 @@ def load_results_gen(output_dir) -> Generator[Tuple[SimulationScenario, Analysis
         except:
             continue
 
-def load_from_dir(output_dir, scenario_dir) -> Tuple[SimulationScenario, Any, Any]:
+def load_from_dir(output_dir, scenario_dir) -> Tuple[SimulationScenario, AnalysisTree, List[bool]]:
     scenario_dir = os.path.join(output_dir, scenario_dir)
     scenario, traces, safety = None, None, None
     scenario_path = os.path.join(scenario_dir, 'scenario.pkl')
-    traces_path = os.path.join(scenario_dir, 'traces.pkl')
+    traces_path = os.path.join(scenario_dir, 'traces.gzip')
     safety_path = os.path.join(scenario_dir, 'safety.txt')
     if os.path.exists(scenario_path):
         with open(scenario_path, 'rb') as f:
             scenario = pickle.load(f)
     if os.path.exists(traces_path):
-        with open(traces_path, 'rb') as f:
+        with gzip.open(traces_path, 'rb') as f:
             traces = pickle.load(f)
     if os.path.exists(safety_path):
         with open(safety_path) as f:
@@ -413,50 +427,6 @@ def save_perfectly_unsafe(results, log_dir):
     for result in results:
         if np.min(1 - np.array(np.array(result[2]) == True, dtype=int)) > 0:
             save_scenario_results(result[0], result[1], result[2], log_dir)
-
-def table_analysis(results: List[Tuple[Scenario, object, object]], index, figname='table.png', title='Table'):
-    data = {}
-    for result in results:
-        safety = result[2]
-        key = (result[0].get_largest_meal(), result[0].get_total_carb_range()[1])
-        if key not in data:
-            data[key] = np.zeros((3,))
-        data[key] += np.array([get_safe(safety)[index], get_unsafe(safety[index]), get_unknown(safety)[index]])
-
-    x_values = sorted(set(key[0] for key in data))
-    y_values = sorted(set(key[1] for key in data), reverse=True)
-    df = pd.DataFrame(index=y_values, columns=x_values)
-
-    # Fill DataFrame with formatted values
-    for (x, y), vals in data.items():
-        df.at[y, x] = f"[{int(vals[0])}, {int(vals[1])}, {int(vals[2])}]"
-    df = df.fillna("--")
-
-    # Create the figure and axis
-    fig, ax = plt.subplots(figsize=(10, 7))
-    ax.axis('off')
-    print(len(x_values))
-    print(len(y_values))
-    # Create table without row and column labels
-    table = ax.table(
-        cellText=df.values,
-        cellLoc='center',
-        loc='center', 
-        rowLabels=y_values,
-        colLabels=x_values
-    )
-
-    # Style table
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1, 1.5)
-
-    # Add axis labels
-    plt.title(title)
-    plt.figtext(0.5, 0.2, 'Max single-meal carbs', ha='center', va='center', fontsize=12)
-    plt.figtext(0.02, 0.5, 'Max total carbs', ha='center', va='center', rotation='vertical', fontsize=12)
-    plt.savefig(figname)
-    return data
 
 def get_init(traces, index):
     return traces.root.sims[index][0][1:]
