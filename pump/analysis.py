@@ -6,6 +6,7 @@ from tqdm import tqdm
 from safety.safety import AGP_report
 from verification import *
 from artificial_pancreas_simulate import extract_variable
+from matplotlib.patches import Patch
 
 # we will store a map of scenario: ([], [])
 
@@ -130,7 +131,19 @@ def compress_traces(result_dir):
         with gzip.open(gzip_path, 'wb') as f:
             pickle.dump(traces, f)    
 
-def table_analysis(results: List[Tuple[SimulationScenario, object, object]], zone, figname='table.png', title='Table'):
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+
+def table_analysis(results, zone, figname='table.png'):
     print('Starting table analysis')
     data = {}
     for result in tqdm(results):
@@ -138,45 +151,91 @@ def table_analysis(results: List[Tuple[SimulationScenario, object, object]], zon
         key = (result[0].get_largest_meal(), result[0].get_total_carb_range()[1])
         if key not in data:
             data[key] = np.zeros((3,))
-        data[key] += np.array([get_safe(safety)[zone], get_unsafe(safety[zone]), get_unknown(safety)[zone]])
-
-    # convert to percentages
-
+        data[key] += np.array([get_safe(safety)[zone], get_unknown(safety)[zone], get_unsafe(safety)[zone]])
 
     x_values = sorted(set(key[0] for key in data))
     y_values = sorted(set(key[1] for key in data), reverse=True)
-    df = pd.DataFrame(index=y_values, columns=x_values)
+    df = pd.DataFrame(index=y_values, columns=x_values, dtype=object)
 
-    # Fill DataFrame with formatted values
+    # Fill DataFrame with raw values (for drawing bars)
     for (x, y), vals in data.items():
-        df.at[y, x] = f"[{int(vals[0])}, {int(vals[1])}, {int(vals[2])}]"
-    df = df.fillna("--")
-    # Create the figure and axis
-    fig, ax = plt.subplots(figsize=(10, 7))
-    ax.axis('off')
-    print(len(x_values))
-    print(len(y_values))
-    # Create table without row and column labels
-    table = ax.table(
-        cellText=df.values,
-        cellLoc='center',
-        loc='center', 
-        rowLabels=y_values,
-        colLabels=x_values
-    )
+        df.at[y, x] = vals
 
-    # Style table
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1, 1.5)
+    # Replace NaNs with zero-triplets
+    for i in df.index:
+        for j in df.columns:
+            if df.at[i, j] is None or isinstance(df.at[i,j], float) and np.isnan(df.at[i,j]):
+                df.at[i,j] = np.array([0,0,0], dtype=float)
 
-    # Add axis labels
-    plt.title(title)
-    plt.figtext(0.5, 0.2, 'Max single-meal carbs', ha='center', va='center', fontsize=12)
-    plt.figtext(0.02, 0.5, 'Max total carbs', ha='center', va='center', rotation='vertical', fontsize=12)
-    plt.savefig(figname)
-    return data
 
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.set_xlim(0, len(x_values))
+    ax.set_ylim(0, len(y_values))
+
+    # Parameters
+    colors = ['green', 'red', 'yellow']  # safe, unsafe, unknown
+    bar_frac = 0.7  # 70% of cell width and height
+
+    for yi, y in enumerate(y_values):
+        for xi, x in enumerate(x_values):
+            vals = data.get((x, y), np.zeros(3))
+            total = np.sum(vals)
+
+            # Grid cell (dotted gray border)
+            ax.add_patch(plt.Rectangle(
+                (xi, yi), 1, 1, fill=False, edgecolor='gray', lw=1, linestyle=':'
+            ))
+
+            if total > 0:
+                # Compute bar dimensions (70% of cell, centered)
+                bar_width = bar_frac
+                bar_height = bar_frac
+                x_offset = xi + (1 - bar_frac) / 2
+                y_offset = yi + (1 - bar_frac) / 2
+
+                start = 0
+                for k, c in enumerate(colors):
+                    frac = vals[k] / total
+                    if frac > 0:
+                        ax.add_patch(plt.Rectangle(
+                            (x_offset + start*bar_width, y_offset),
+                            bar_width*frac, bar_height,
+                            facecolor=c, edgecolor='none'
+                        ))
+                        start += frac
+                            # Overlay total count in light gray
+            ax.text(
+                xi + 0.5, yi + 0.5,
+                f"{int(total)}",
+                ha='center', va='center',
+                fontsize=9, color='lightgray', weight='bold'
+            )
+
+    legend_elements = [Patch(facecolor='green', label='Safe'), Patch(facecolor='red', label='Unsafe'), Patch(facecolor='yellow', label='Unknown')]
+
+    ax.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1))
+
+    # Set ticks as labels
+    ax.set_xticks(np.arange(len(x_values)) + 0.5)
+    ax.set_yticks(np.arange(len(y_values)) + 0.5)
+    ax.set_xticklabels(x_values, fontsize=14)
+    ax.set_yticklabels(y_values, fontsize=14)
+
+    ax.invert_yaxis()  # top row = largest y
+    ax.set_xlabel('Max single-meal carbs (g)', fontsize=14)
+    ax.set_ylabel('Max total scenario carbs (g)', fontsize=14)
+
+    # Hide spines for a cleaner table look
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join('./figures', figname), dpi=200)
+    plt.show()
+
+def load_n_results(scenario_dir, n):
+    pass
 
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
@@ -191,7 +250,7 @@ if __name__ == '__main__':
     # f.close()
     g = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     results = []
-    for i in tqdm(range(5000)):
+    for i in tqdm(range(1000)):
         results.append(next(g))
     table_analysis(results, 0)
     breakpoint()
