@@ -8,10 +8,6 @@ from verification import *
 from artificial_pancreas_simulate import extract_variable
 from matplotlib.patches import Patch
 
-# we will store a map of scenario: ([], [])
-
-
-
 def get_all_AGP_reports(scenarios: Dict[SimulationScenario, Tuple[str, str]]) -> Dict[SimulationScenario, Tuple]:
     reports = {}
     count = 0
@@ -151,7 +147,7 @@ def table_analysis(results, zone, figname='table.png'):
         key = (result[0].get_largest_meal(), result[0].get_total_carb_range()[1])
         if key not in data:
             data[key] = np.zeros((3,))
-        data[key] += np.array([get_safe(safety)[zone], get_unknown(safety)[zone], get_unsafe(safety)[zone]])
+        data[key] += np.array([get_safe(safety)[zone], get_unsafe(safety)[zone], get_unknown(safety)[zone]])
 
     x_values = sorted(set(key[0] for key in data))
     y_values = sorted(set(key[1] for key in data), reverse=True)
@@ -234,8 +230,27 @@ def table_analysis(results, zone, figname='table.png'):
     plt.savefig(os.path.join('./figures', figname), dpi=200)
     plt.show()
 
+def all_zones_counts(results: List[Tuple[SimulationScenario, AnalysisTree, List[bool]]]):
+    zones = ['0 - 54 mg/dL', '54 - 70 mg/dL', '70 - 180 mg/dL', '180 - 250 mg/dL', '250+ mg/dL']
+    safety_categories = ['Safe', 'Unsafe', 'Unknown']
+    df = pd.DataFrame(index=zones, columns=safety_categories).fillna(0)
+    for result in tqdm(results):
+        safety = result[2]
+        safe = get_safe(safety)
+        unsafe = get_unsafe(safety)
+        unknown = get_unknown(safety)
+        df['Safe'] += safe
+        df['Unsafe'] += unsafe
+        df['Unknown'] += unknown
+    breakpoint()
+
+
 def load_n_results(scenario_dir, n):
-    pass
+    g = load_results_gen(scenario_dir)
+    results = []
+    for i in tqdm(range(n)):
+        results.append(next(g))
+    return results
 
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
@@ -248,9 +263,11 @@ if __name__ == '__main__':
     # for scenario in scenarios:
     #     f.write(str(hash(scenario)) + '\n')
     # f.close()
-    g = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    results = []
-    for i in tqdm(range(1000)):
-        results.append(next(g))
-    table_analysis(results, 0)
-    breakpoint()
+    # g = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # results = []
+    # for i in tqdm(range(1000)):
+    #     results.append(next(g))
+    # table_analysis(results, 0)
+    # breakpoint()
+    results = load_n_results('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 1000)
+    table_analysis(results, 0, 'zone_0_table.png')
