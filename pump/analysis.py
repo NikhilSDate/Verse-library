@@ -270,4 +270,4 @@ if __name__ == '__main__':
     # table_analysis(results, 0)
     # breakpoint()
     results = load_n_results('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 1000)
-    table_analysis(results, 0, 'zone_0_table.png')
+    table_analysis(results, 4, 'zone_4_table.png')
