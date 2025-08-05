@@ -7,6 +7,11 @@ from safety.safety import AGP_report
 from verification import *
 from artificial_pancreas_simulate import extract_variable
 from matplotlib.patches import Patch
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
 
 def get_all_AGP_reports(scenarios: Dict[SimulationScenario, Tuple[str, str]]) -> Dict[SimulationScenario, Tuple]:
     reports = {}
@@ -73,23 +78,26 @@ def save_results_by_scenario(all_scenarios: Dict[SimulationScenario, Tuple[str, 
         result = load_from_dir(path[0], path[1])
         save_scenario_results(result[0], result[1], result[2], output_dir)
     
-
-def redzone_analysis(scenarios: Dict[SimulationScenario, Tuple[str, str]]):
-    def key(reports, scenario):
-        report = reports[scenario]
-        sim_reports = report[1]
-        max_redzone_perc = 0
-        for sim_report in sim_reports:
-            redzone = sim_report[0]
-            max_redzone_perc = max(max_redzone_perc, redzone)
-        return max_redzone_perc
-    
-    reports = get_all_AGP_reports(scenarios)
+# ranks scenarios by some key and save the top n
+def rank_analysis(scenarios: Dict[SimulationScenario, Tuple[str, str]], key: Callable, n: int, output_dir: str, reverse=False):
     # sort scenarios by report value
-    top_scenarios = sorted(reports.keys(), key=lambda scenario: key(reports, scenario), reverse=True)
-    top_scenarios = set(top_scenarios[:10])
-    breakpoint()
-    save_results_by_scenario(scenarios, top_scenarios, 'results/bad_verif')
+    top_scenarios = sorted(list(scenarios.keys())[:n], key=lambda scenario: key(load_from_dir(*scenarios[scenario])), reverse=reverse)
+    save_results_by_scenario(scenarios, top_scenarios[:10], output_dir)
+
+def redzone_key(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
+    report = reports[scenario]
+    sim_reports = report[1]
+    max_redzone_perc = 0
+    for sim_report in sim_reports:
+        redzone = sim_report[0]
+        max_redzone_perc = max(max_redzone_perc, redzone)
+    return max_redzone_perc
+
+def bad_verif_key(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
+    trace = result[1]
+    glucose_trace = extract_variable(trace, 'G')
+    diffs = glucose_trace[:, 1] - glucose_trace[:, 0]
+    return max(diffs)
 
 def extended_shutoff_analysis(result_func: Callable[[], Generator[Tuple[SimulationScenario, AnalysisTree, object], None, None]]):
    
@@ -126,18 +134,6 @@ def compress_traces(result_dir):
         gzip_path = os.path.join(scenario_dir, 'traces.gzip')
         with gzip.open(gzip_path, 'wb') as f:
             pickle.dump(traces, f)    
-
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
 
 def table_analysis(results, zone, figname='table.png'):
     print('Starting table analysis')
@@ -230,7 +226,7 @@ def table_analysis(results, zone, figname='table.png'):
     plt.savefig(os.path.join('./figures', figname), dpi=200)
     plt.show()
 
-def all_zones_counts(results: List[Tuple[SimulationScenario, AnalysisTree, List[bool]]]):
+def all_zones_analysis(results: List[Tuple[SimulationScenario, AnalysisTree, List[bool]]]):
     zones = ['0 - 54 mg/dL', '54 - 70 mg/dL', '70 - 180 mg/dL', '180 - 250 mg/dL', '250+ mg/dL']
     safety_categories = ['Safe', 'Unsafe', 'Unknown']
     df = pd.DataFrame(index=zones, columns=safety_categories).fillna(0)
@@ -242,6 +238,7 @@ def all_zones_counts(results: List[Tuple[SimulationScenario, AnalysisTree, List[
         df['Safe'] += safe
         df['Unsafe'] += unsafe
         df['Unknown'] += unknown
+    df = df / len(results)
     breakpoint()
 
 
@@ -269,5 +266,6 @@ if __name__ == '__main__':
     #     results.append(next(g))
     # table_analysis(results, 0)
     # breakpoint()
-    results = load_n_results('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 1000)
-    table_analysis(results, 4, 'zone_4_table.png')
+
+    scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)

@@ -432,7 +432,6 @@ def get_init(traces, index):
     return traces.root.sims[index][0][1:]
 
 def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
-
     colors = [
         '#1f77b4',  # muted blue
         '#ff7f0e',  # safety orange
@@ -467,6 +466,23 @@ def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
         y_mins.append(min(trace_data.y))
         y_maxs.append(max(trace_data.y))
     fig.update_layout(showlegend=True, legend=dict(font=dict(size=12)))
+    fig.update_layout(
+    xaxis_title="Time (min)",
+    yaxis_title="Blood Glucose (mg/dL)",
+        xaxis=dict(
+            title_font=dict(size=14),
+            tickfont=dict(size=14)
+        ),
+        yaxis=dict(
+            title_font=dict(size=14),
+            tickfont=dict(size=14)
+        )
+    )
+
+    fig.update_layout(
+        margin={'t':0,'l':0,'b':0,'r':0}
+    )
+
     # reduce the horizontal whitespace in this image to a minimum
     # fig.update_layout(
     #     margin=dict(l=20, r=20),  # reduce left and right margins
