@@ -33,6 +33,18 @@ def get_all_AGP_reports(scenarios: Dict[SimulationScenario, Tuple[str, str]]) ->
                 break
     return reports
 
+def get_scenario_AGP_reports(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
+    scenario, traces, safety = result
+    glucose_reachtube = extract_variable(traces, 'G', type=TraceType.VERIF)
+    reachtube_report = AGP_report(glucose_reachtube)
+    sim_reports = []
+    for sim in traces.root.sims:
+        glucose_trace = extract_variable(sim, 'G', type=TraceType.SIM)
+        sim_report = AGP_report(glucose_trace, type=TraceType.SIM)
+        sim_reports.append(sim_report)
+    return (reachtube_report, sim_reports)
+
+
 def two_way_analysis(scenarios: List[Tuple[SimulationScenario, object, object]], index):
     points_safe = []
     points_unsafe = []
@@ -85,9 +97,8 @@ def rank_analysis(scenarios: Dict[SimulationScenario, Tuple[str, str]], key: Cal
     save_results_by_scenario(scenarios, top_scenarios[:10], output_dir)
 
 def redzone_key(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
-    report = reports[scenario]
-    sim_reports = report[1]
-    max_redzone_perc = 0
+    (reachtube_report, sim_reports) = get_scenario_AGP_reports(result)
+    max_redzone_perc = -np.inf
     for sim_report in sim_reports:
         redzone = sim_report[0]
         max_redzone_perc = max(max_redzone_perc, redzone)
@@ -167,7 +178,8 @@ def table_analysis(results, zone, figname='table.png'):
 
     # Parameters
     colors = ['green', 'red', 'yellow']  # safe, unsafe, unknown
-    bar_frac = 0.7  # 70% of cell width and height
+    width_frac = 0.85  # 70% of cell width and height
+    height_frac = 0.7
 
     for yi, y in enumerate(y_values):
         for xi, x in enumerate(x_values):
@@ -181,17 +193,19 @@ def table_analysis(results, zone, figname='table.png'):
 
             if total > 0:
                 # Compute bar dimensions (70% of cell, centered)
-                bar_width = bar_frac
-                bar_height = bar_frac
-                x_offset = xi + (1 - bar_frac) / 2
-                y_offset = yi + (1 - bar_frac) / 2
+                bar_width = width_frac
+                bar_height = height_frac
+                x_offset = xi + (1 - width_frac) / 2
+                y_offset = yi + (1 - height_frac) / 2
 
                 start = 0
                 for k, c in enumerate(colors):
                     frac = vals[k] / total
                     if frac > 0:
+                        loc = (x_offset + start*bar_width, y_offset)
+                        ax.text(loc[0] + bar_width * frac / 2, yi + 0.5, str(int(vals[k])), fontsize=9, ha='center', va='center', color='lightgray', weight='bold')
                         ax.add_patch(plt.Rectangle(
-                            (x_offset + start*bar_width, y_offset),
+                            loc,
                             bar_width*frac, bar_height,
                             facecolor=c, edgecolor='none'
                         ))
@@ -227,9 +241,14 @@ def table_analysis(results, zone, figname='table.png'):
     plt.show()
 
 def all_zones_analysis(results: List[Tuple[SimulationScenario, AnalysisTree, List[bool]]]):
-    zones = ['0 - 54 mg/dL', '54 - 70 mg/dL', '70 - 180 mg/dL', '180 - 250 mg/dL', '250+ mg/dL']
-    safety_categories = ['Safe', 'Unsafe', 'Unknown']
-    df = pd.DataFrame(index=zones, columns=safety_categories).fillna(0)
+    safety_categories = ['Glucose region', 'Time-in-range safety criterion', 'Safe', 'Unsafe', 'Indeterminate']
+    df = pd.DataFrame(columns=safety_categories)
+
+    df.iloc[:, 0] = ['0 - 54 mg/dL', '54 - 70 mg/dL', '70 - 180 mg/dL', '180 - 250 mg/dL', '250+ mg/dL']
+    df.iloc[:, 1] = [' < 1\%', '< 4\%', '> 70\% ', '< 25\%', '< 5\%']
+    df = df.rename({'index': 'Glucose region'})
+    df = df.fillna(0)
+    count = 0
     for result in tqdm(results):
         safety = result[2]
         safe = get_safe(safety)
@@ -237,10 +256,22 @@ def all_zones_analysis(results: List[Tuple[SimulationScenario, AnalysisTree, Lis
         unknown = get_unknown(safety)
         df['Safe'] += safe
         df['Unsafe'] += unsafe
-        df['Unknown'] += unknown
-    df = df / len(results)
-    breakpoint()
+        df['Indeterminate'] += unknown
 
+        count += 1
+
+    df[['Safe', 'Unsafe', 'Indeterminate']] = df[['Safe', 'Unsafe', 'Indeterminate']] / count
+    
+    styler = df.style.format(
+        {
+            'Safe': lambda x: f"{x*100:.1f}\\%",
+            'Unsafe': lambda x: f"{x*100:.1f}\\%",
+            'Indeterminate': lambda x: f"{x*100:.1f}\\%"
+        }
+    )
+    styler = styler.hide(axis='index')
+    print(styler.to_latex(hrules=True))
+    return df
 
 def load_n_results(scenario_dir, n):
     g = load_results_gen(scenario_dir)
@@ -270,4 +301,16 @@ if __name__ == '__main__':
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)
 
-    debug_sim('./results/bad_verif', 'scenario_4', 7)
+    # results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # all_zones_analysis(results)
+    # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # rank_analysis(scenarios, key=redzone_key, n=1000, output_dir='results/redzone', reverse=True)
+    # plot_reachtube(traces, 'G')
+    # fig = plot_results(results[0])
+    # fig.write_image('test2.png')
+
+    result = load_from_dir('./results/redzone', 'scenario_2')
+    scenario, traces, safety = result
+    print(hash(scenario))
+    # fig, ax = plot_result_paper(result)
+    # fig.savefig('./figures/two_meals.png')
