@@ -267,5 +267,7 @@ if __name__ == '__main__':
     # table_analysis(results, 0)
     # breakpoint()
 
-    scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)
+    # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)
+
+    debug_sim('./results/bad_verif', 'scenario_4', 7)
