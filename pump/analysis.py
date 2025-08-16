@@ -185,9 +185,9 @@ def table_analysis(results, zone, figname='table.png'):
     ax.set_ylim(0, len(y_values))
 
     # Parameters
-    colors = ['green', 'red', 'yellow']  # safe, unsafe, unknown
+    colors = ['green', 'red', 'y']  # safe, unsafe, unknown
     labels = ['S', 'U', 'I']
-    width_frac = 0.85  # 70% of cell width and height
+    width_frac = 0.7  # 70% of cell width and height
     height_frac = 0.7
 
     for yi, y in enumerate(y_values):
@@ -203,7 +203,6 @@ def table_analysis(results, zone, figname='table.png'):
             if total > 0:
                 # Compute bar dimensions (70% of cell, centered)
                 bar_width = width_frac
-                bar_height = height_frac
                 x_offset = xi + (1 - width_frac) / 2
                 y_offset = yi + (1 - height_frac) / 2
 
@@ -211,15 +210,15 @@ def table_analysis(results, zone, figname='table.png'):
                 text = ''
                 for k, c in enumerate(colors):
                     frac = vals[k] / total
-                    if frac > 0:
-                        loc = (x_offset + start*bar_width, y_offset)
-                        ax.text(xi + k / 3 / 2, yi + 0.5, f'{labels[k]: vals[k]}', fontsize=9, ha='center', va='center', color=c, weight='bold')
-                        # ax.add_patch(plt.Rectangle(
-                        #     loc,
-                        #     bar_width*frac, bar_height,
-                        #     facecolor=c, edgecolor='none'
-                        # ))
-                        # start += frac
+                    loc = (x_offset + start*bar_width, yi + 0.66)
+                    ax.text(xi + 0.5 + (k - 1) * 0.3, yi + 0.33, f'{int(vals[k])}', fontsize=11, ha='center', va='center', color=c, weight='bold')
+                    # ax.text(xi + 0.5 + (k - 1) * 0.3, yi + 0.66, f'({vals[k] / total * 100: .1f}%)', fontsize=11, ha='center', va='center', color=c, weight='bold')
+                    ax.add_patch(plt.Rectangle(
+                        loc,
+                        bar_width*frac, 0.2,
+                        facecolor=c, edgecolor='none'
+                    ))
+                    start += frac
                             # Overlay total count in light gray
             # ax.text(
             #     xi + 0.5, yi + 0.5,
@@ -228,7 +227,7 @@ def table_analysis(results, zone, figname='table.png'):
             #     fontsize=9, color='lightgray', weight='bold'
             # )
 
-    legend_elements = [Patch(facecolor='green', label='Safe'), Patch(facecolor='red', label='Unsafe'), Patch(facecolor='yellow', label='Unknown')]
+    legend_elements = [Patch(facecolor='green', label='Safe'), Patch(facecolor='red', label='Unsafe'), Patch(facecolor='y', label='Indeterminate')]
 
     ax.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1))
 
@@ -290,6 +289,21 @@ def load_n_results(scenario_dir, n):
         results.append(next(g))
     return results
 
+def get_min_interval(scenario: SimulationScenario):
+    min_interval = np.inf
+    meals = sorted(scenario.get_meals(), key=lambda meal: meal.time)
+    for i in range(len(meals) - 1):
+        min_interval = min(min_interval, meals[i + 1].time - meals[i].time)
+    return min_interval
+
+def interval_analysis(results):
+    intervals = set()
+    for result in results:
+        scenario, traces, safety = result
+        interval = get_min_interval(scenario)
+        intervals.add(interval)
+    breakpoint()
+
 
 
 if __name__ == '__main__':
@@ -325,8 +339,8 @@ if __name__ == '__main__':
     # fig, ax = plot_result_paper(result)
     # fig.savefig('./figures/extended_shutoff.png')
 
-    results = load_n_results('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 100)
-    table_analysis(results, 0, 'table_text.txt')
+    results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    table_analysis(results, 4, 'table_text.png')
 
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, key=redzone_high_key, n=5000, output_dir='results/redzone_high', reverse=True)
