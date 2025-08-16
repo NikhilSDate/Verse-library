@@ -317,11 +317,11 @@ if __name__ == '__main__':
     # fig = plot_results(results[0])
     # fig.write_image('test2.png')
 
-    result = load_from_dir('./results/redzone_high', 'scenario_5')
+    result = load_from_dir('./results/bad_verif', 'scenario_4')
     scenario, traces, safety = result
     print(hash(scenario))
     fig, ax = plot_result_paper(result)
-    fig.savefig('./figures/large_meal.png')
+    fig.savefig('./figures/extended_shutoff.png')
 
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, key=redzone_high_key, n=5000, output_dir='results/redzone_high', reverse=True)
