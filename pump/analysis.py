@@ -186,6 +186,7 @@ def table_analysis(results, zone, figname='table.png'):
 
     # Parameters
     colors = ['green', 'red', 'yellow']  # safe, unsafe, unknown
+    labels = ['S', 'U', 'I']
     width_frac = 0.85  # 70% of cell width and height
     height_frac = 0.7
 
@@ -207,24 +208,25 @@ def table_analysis(results, zone, figname='table.png'):
                 y_offset = yi + (1 - height_frac) / 2
 
                 start = 0
+                text = ''
                 for k, c in enumerate(colors):
                     frac = vals[k] / total
                     if frac > 0:
                         loc = (x_offset + start*bar_width, y_offset)
-                        ax.text(loc[0] + bar_width * frac / 2, yi + 0.5, str(int(vals[k])), fontsize=9, ha='center', va='center', color='lightgray', weight='bold')
-                        ax.add_patch(plt.Rectangle(
-                            loc,
-                            bar_width*frac, bar_height,
-                            facecolor=c, edgecolor='none'
-                        ))
-                        start += frac
+                        ax.text(xi + k / 3 / 2, yi + 0.5, f'{labels[k]: vals[k]}', fontsize=9, ha='center', va='center', color=c, weight='bold')
+                        # ax.add_patch(plt.Rectangle(
+                        #     loc,
+                        #     bar_width*frac, bar_height,
+                        #     facecolor=c, edgecolor='none'
+                        # ))
+                        # start += frac
                             # Overlay total count in light gray
-            ax.text(
-                xi + 0.5, yi + 0.5,
-                f"{int(total)}",
-                ha='center', va='center',
-                fontsize=9, color='lightgray', weight='bold'
-            )
+            # ax.text(
+            #     xi + 0.5, yi + 0.5,
+            #     f"{int(total)}",
+            #     ha='center', va='center',
+            #     fontsize=9, color='lightgray', weight='bold'
+            # )
 
     legend_elements = [Patch(facecolor='green', label='Safe'), Patch(facecolor='red', label='Unsafe'), Patch(facecolor='yellow', label='Unknown')]
 
@@ -317,11 +319,14 @@ if __name__ == '__main__':
     # fig = plot_results(results[0])
     # fig.write_image('test2.png')
 
-    result = load_from_dir('./results/bad_verif', 'scenario_4')
-    scenario, traces, safety = result
-    print(hash(scenario))
-    fig, ax = plot_result_paper(result)
-    fig.savefig('./figures/extended_shutoff.png')
+    # result = load_from_dir('./results/bad_verif', 'scenario_4')
+    # scenario, traces, safety = result
+    # print(hash(scenario))
+    # fig, ax = plot_result_paper(result)
+    # fig.savefig('./figures/extended_shutoff.png')
+
+    results = load_n_results('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 100)
+    table_analysis(results, 0, 'table_text.txt')
 
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, key=redzone_high_key, n=5000, output_dir='results/redzone_high', reverse=True)
