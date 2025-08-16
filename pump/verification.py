@@ -446,6 +446,7 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
         y = extract_variable(sim, 'G', type=TraceType.SIM)
         x = np.arange(len(y))
         ax.plot(x, y, color='black')
+
     ax.grid()
     ax.set_xlabel('Time (min)')
     ax.set_ylabel('Blood Glucose (mg/dL)')
@@ -555,5 +556,5 @@ if __name__ == '__main__':
     # titles = ['G < 54mg/dL for less than 1% of time', '54mg/dL <= G <= 70mg/dL for less than 4% of time', '70mg/dL <= G <= 180 mg/dL for at least 70% of time', '180mg/dL <= G <= 250 mg/dL for less than 25% of time', ' G > 250 mg/dL for < 5% of time']
     # for i in range(5):
     #     table_analysis(results, i, f'table_{i}', titles[i])
-    
+
     verify_wrapper()

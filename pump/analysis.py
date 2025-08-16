@@ -104,6 +104,14 @@ def redzone_key(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
         max_redzone_perc = max(max_redzone_perc, redzone)
     return max_redzone_perc
 
+def redzone_high_key(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
+    (reachtube_report, sim_reports) = get_scenario_AGP_reports(result)
+    max_redzone_perc = -np.inf
+    for sim_report in sim_reports:
+        redzone = sim_report[-1]
+        max_redzone_perc = max(max_redzone_perc, redzone)
+    return max_redzone_perc 
+
 def bad_verif_key(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
     trace = result[1]
     glucose_trace = extract_variable(trace, 'G')
@@ -280,6 +288,8 @@ def load_n_results(scenario_dir, n):
         results.append(next(g))
     return results
 
+
+
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
     # seed = 42
@@ -303,14 +313,15 @@ if __name__ == '__main__':
 
     # results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # all_zones_analysis(results)
-    # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # rank_analysis(scenarios, key=redzone_key, n=1000, output_dir='results/redzone', reverse=True)
     # plot_reachtube(traces, 'G')
     # fig = plot_results(results[0])
     # fig.write_image('test2.png')
 
-    result = load_from_dir('./results/redzone', 'scenario_2')
+    result = load_from_dir('./results/redzone_high', 'scenario_5')
     scenario, traces, safety = result
     print(hash(scenario))
-    # fig, ax = plot_result_paper(result)
-    # fig.savefig('./figures/two_meals.png')
+    fig, ax = plot_result_paper(result)
+    fig.savefig('./figures/large_meal.png')
+
+    # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # rank_analysis(scenarios, key=redzone_high_key, n=5000, output_dir='results/redzone_high', reverse=True)
