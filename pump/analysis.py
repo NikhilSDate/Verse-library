@@ -297,11 +297,20 @@ def get_min_interval(scenario: SimulationScenario):
     return min_interval
 
 def interval_analysis(results):
-    intervals = set()
-    for result in results:
+    cols = ['Min inter-meal separation', 'Total scenarios', 'Scenarios unsafe w.r.t. 0 - 54 mg/dL range', 'Scenarios unsafe w.r.t. 250+ mg/dL range']
+    df = pd.DataFrame(columns=cols)
+    df.iloc[:, 0] = ['60 min', '120 min', '180 min', '240 min']
+    df = df.rename({'index': 'Min inter-meal separation'}).fillna(0)
+    for result in tqdm(results):
         scenario, traces, safety = result
-        interval = get_min_interval(scenario)
-        intervals.add(interval)
+        row = get_min_interval(scenario) // 60 - 1 # this is a bit of hack
+        unsafe = get_unsafe(safety)
+        df.iloc[row, 1] += 1
+        df.iloc[row, 2] += unsafe[0]
+        df.iloc[row, 3] += unsafe[4]
+    styler = df.style.format()
+    styler = styler.hide(axis='index')
+    print(styler.to_latex(hrules=True))
     breakpoint()
 
 
@@ -339,8 +348,20 @@ if __name__ == '__main__':
     # fig, ax = plot_result_paper(result)
     # fig.savefig('./figures/extended_shutoff.png')
 
-    results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    table_analysis(results, 4, 'table_text.png')
+    # results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # df = interval_analysis(results)
+    # breakpoint()
+
 
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, key=redzone_high_key, n=5000, output_dir='results/redzone_high', reverse=True)
+
+    # scenarios = gen_verification_scenarios()
+    # print(len(scenarios))
+
+    results = load_results('results/bad_verif')
+    for result in results:
+        scenario, traces, safety = result
+        if hash(scenario) == 2009178107378957702:
+            fig, ax = plot_result_paper(result)
+            fig.savefig('figures/extended_shutoff_stacked.png')

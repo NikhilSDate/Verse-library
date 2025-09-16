@@ -16,6 +16,8 @@ from shutil import rmtree
 from simutils import FORGOT_BOLUS
 from safety.safety import realism
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
+from matplotlib.patches import Rectangle
 from multiprocessing import Pool
 import os
 import signal
@@ -431,26 +433,86 @@ def save_perfectly_unsafe(results, log_dir):
 def get_init(traces, index):
     return traces.root.sims[index][0][1:]
 
-def plot_reachtube(traces, var):
-    fig, ax = plt.subplots()
+# def plot_reachtube(traces, var):
+#     fig, ax = plt.subplots()
+#     trace = extract_variable(traces, var)
+#     x = np.arange(len(trace))
+#     ax.vlines(x, trace[:, 0], trace[:, 1], colors='lightgray')
+#     return fig, ax
+
+# def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
+#     scenario, traces, safety = result
+#     scenario.get_boluses()
+#     fig, ax = plot_reachtube(traces, 'G')
+#     sims = traces.root.sims
+#     for i, sim in enumerate(sims):
+#         y = extract_variable(sim, 'G', type=TraceType.SIM)
+#         x = np.arange(len(y))
+#         ax.plot(x, y, color='black')
+
+#     ax.grid()
+#     ax.set_xlabel('Time (min)')
+#     ax.set_ylabel('Blood Glucose (mg/dL)')
+#     return fig, ax
+
+def plot_reachtube(traces, var, ax):
     trace = extract_variable(traces, var)
     x = np.arange(len(trace))
     ax.vlines(x, trace[:, 0], trace[:, 1], colors='lightgray')
-    return fig, ax
+    return ax
+
+def plot_reachtube(traces, var, ax):
+    trace = extract_variable(traces, var)
+    x = np.arange(len(trace))
+    ax.vlines(x, trace[:, 0], trace[:, 1], colors='lightgray')
+    return ax
 
 def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
     scenario, traces, safety = result
-    fig, ax = plot_reachtube(traces, 'G')
+
+    # Create stacked plots with shared x-axis
+    fig = plt.figure(figsize=(8, 6))
+    gs = gridspec.GridSpec(3, 1, height_ratios=[4, 0.8, 0.6], hspace=0.05)
+    
+    ax_main = fig.add_subplot(gs[0])
+    ax_meals = fig.add_subplot(gs[1], sharex=ax_main)
+    ax_boluses = fig.add_subplot(gs[2], sharex=ax_main)
+
+    # --- Main glucose plot ---
+    plot_reachtube(traces, 'G', ax_main)
     sims = traces.root.sims
-    for i, sim in enumerate(sims):
+    for sim in sims:
         y = extract_variable(sim, 'G', type=TraceType.SIM)
         x = np.arange(len(y))
-        ax.plot(x, y, color='black')
+        ax_main.plot(x, y, color='black')
 
-    ax.grid()
-    ax.set_xlabel('Time (min)')
-    ax.set_ylabel('Blood Glucose (mg/dL)')
-    return fig, ax
+    ax_main.grid()
+    ax_main.set_ylabel('Blood Glucose (mg/dL)')
+
+    # --- Meals plot (vertical strips for carb ranges) ---
+    meal_times = [m.time for m in scenario.get_meals()]
+    meal_ranges = [m.carbs for m in scenario.get_meals()]  # each is a (low, high) tuple
+
+    for t, (low, high) in zip(meal_times, meal_ranges):
+        rect_width = 5   # adjust width to match bolus dot "thickness"
+        ax_meals.add_patch(Rectangle((t - rect_width/2, low),
+                             rect_width, high - low,
+                             color='tab:green'))
+
+    ax_meals.set_yticks([0, 40, 80, 120, 160])
+    ax_meals.set_ylim(0, 160)
+    ax_meals.grid(axis='both')
+    ax_meals.set_ylabel("Meal carbs (g)")
+
+    # --- Boluses plot ---
+    bolus_times = [b.time for b in scenario.get_boluses()]
+    ax_boluses.plot(bolus_times, [1]*len(bolus_times), 'o', color='tab:blue')
+    ax_boluses.set_yticks([])
+    ax_boluses.set_ylabel("Boluses")
+    ax_boluses.set_xlabel('Time (min)')
+    ax_boluses.grid(axis='x')
+
+    return fig, (ax_main, ax_meals, ax_boluses)
 
 def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
     colors = [

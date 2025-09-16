@@ -193,7 +193,7 @@ class SimulationScenario:
     def get_meals(self) -> List[Meal]:
         return [self.meals[t] for t in sorted(self.meals.keys())]
     
-    def get_boluses(self) -> List[Meal]:
+    def get_boluses(self) -> List[Bolus]:
         return [self.boluses[t] for t in sorted(self.boluses.keys())]
     
     def get_bolus_meal_mapping(self):
