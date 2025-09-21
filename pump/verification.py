@@ -472,7 +472,7 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
 
     # Create stacked plots with shared x-axis
     fig = plt.figure(figsize=(8, 6))
-    gs = gridspec.GridSpec(3, 1, height_ratios=[4, 0.8, 0.6], hspace=0.05)
+    gs = gridspec.GridSpec(3, 1, height_ratios=[4, 0.8, 0.6], hspace=0.1)
     
     ax_main = fig.add_subplot(gs[0])
     ax_meals = fig.add_subplot(gs[1], sharex=ax_main)

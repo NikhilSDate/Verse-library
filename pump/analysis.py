@@ -313,7 +313,20 @@ def interval_analysis(results):
     print(styler.to_latex(hrules=True))
     breakpoint()
 
-
+def traces_to_csv(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]) -> pd.DataFrame:
+    scenario, traces, safety = result
+    num_simulations = 10
+    state_names = {v: k for (k, v) in state_indices.items() if k != 'agent_mode'}
+    versions = [i for i in range(10)] + ['lowerbound', 'upperbound']
+    columns = []
+    for version in versions:
+        for i  in state_names:
+            columns.append(f'{state_names[i]}@{version}')
+    num_vars = len(state_names)
+    df = pd.DataFrame(columns=columns, index=np.arange(1440))
+    for i, sim in enumerate(traces.root.sims):
+        df.iloc[:, 0:39] = sim[1:, :]
+        breakpoint()
 
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
@@ -359,9 +372,12 @@ if __name__ == '__main__':
     # scenarios = gen_verification_scenarios()
     # print(len(scenarios))
 
+    # results = load_results('results/bad_verif')
+    # for result in results:
+    #     scenario, traces, safety = result
+    #     if hash(scenario) == 2009178107378957702:
+    #         fig, ax = plot_result_paper(result)
+    #         fig.savefig('figures/extended_shutoff_stacked.png')
+
     results = load_results('results/bad_verif')
-    for result in results:
-        scenario, traces, safety = result
-        if hash(scenario) == 2009178107378957702:
-            fig, ax = plot_result_paper(result)
-            fig.savefig('figures/extended_shutoff_stacked.png')
+    traces_to_csv(results[0])
