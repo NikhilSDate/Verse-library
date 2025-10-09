@@ -178,7 +178,6 @@ def gen_verification_scenarios():
         scenarios.append(scenario)
     return scenarios        
 
-# TODO: this is completely broken, figure out a way to fix it   
 def get_scenario_directory(scenario: SimulationScenario, output_dir):
     idx = 0
     result = ''
@@ -472,22 +471,23 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
 
     # Create stacked plots with shared x-axis
     fig = plt.figure(figsize=(8, 6))
-    gs = gridspec.GridSpec(3, 1, height_ratios=[4, 0.8, 0.6], hspace=0.1)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[4, 0.8], hspace=0.1)
     
     ax_main = fig.add_subplot(gs[0])
     ax_meals = fig.add_subplot(gs[1], sharex=ax_main)
-    ax_boluses = fig.add_subplot(gs[2], sharex=ax_main)
+    # ax_boluses = fig.add_subplot(gs[2], sharex=ax_main)
 
     # --- Main glucose plot ---
     plot_reachtube(traces, 'G', ax_main)
     sims = traces.root.sims
     for sim in sims:
         y = extract_variable(sim, 'G', type=TraceType.SIM)
-        x = np.arange(len(y))
+        x = np.arange(len(y)) # convert from minutes to hours
         ax_main.plot(x, y, color='black')
 
     ax_main.grid()
     ax_main.set_ylabel('Blood Glucose (mg/dL)')
+    ax_main.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
     # --- Meals plot (vertical strips for carb ranges) ---
     meal_times = [m.time for m in scenario.get_meals()]
@@ -503,16 +503,14 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
     ax_meals.set_ylim(0, 160)
     ax_meals.grid(axis='both')
     ax_meals.set_ylabel("Meal carbs (g)")
+    ax_meals.set_xticks(np.arange(0, 24 * 60 + 1, 60))
+    ax_meals.set_xticklabels([str(i) for i in range(25)])
+    ax_meals.set_xlabel('Time (hours)')
+    
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.98, bottom=0.1, hspace=0.02)
+    plt.margins(x=0, y=0)
 
-    # --- Boluses plot ---
-    bolus_times = [b.time for b in scenario.get_boluses()]
-    ax_boluses.plot(bolus_times, [1]*len(bolus_times), 'o', color='tab:blue')
-    ax_boluses.set_yticks([])
-    ax_boluses.set_ylabel("Boluses")
-    ax_boluses.set_xlabel('Time (min)')
-    ax_boluses.grid(axis='x')
-
-    return fig, (ax_main, ax_meals, ax_boluses)
+    return fig, (ax_main, ax_meals)
 
 def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
     colors = [

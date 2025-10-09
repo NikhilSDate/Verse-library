@@ -313,11 +313,11 @@ def interval_analysis(results):
     print(styler.to_latex(hrules=True))
     breakpoint()
 
-def traces_to_csv(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]) -> pd.DataFrame:
+def traces_to_df(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]) -> pd.DataFrame:
     scenario, traces, safety = result
-    num_simulations = 10
+    num_simulations = len(traces.root.sims)
     state_names = {v: k for (k, v) in state_indices.items() if k != 'agent_mode'}
-    versions = [i for i in range(10)] + ['lowerbound', 'upperbound']
+    versions = [i for i in range(num_simulations)] + ['lowerbound', 'upperbound']
     columns = []
     for version in versions:
         for i  in state_names:
@@ -325,8 +325,30 @@ def traces_to_csv(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]) -
     num_vars = len(state_names)
     df = pd.DataFrame(columns=columns, index=np.arange(1440))
     for i, sim in enumerate(traces.root.sims):
-        df.iloc[:, 0:39] = sim[1:, :]
-        breakpoint()
+        df.iloc[:, i * num_vars: (i + 1) * num_vars] = sim[:-1, 1:]
+    
+    bounds = np.array(traces.root.trace['pump'], dtype=float)
+    bounds = bounds.reshape((-1, 2, bounds.shape[1]))
+    lower_bound = bounds[:, 0, :]
+    upper_bound = bounds[:, 1, :]
+    df.iloc[:, num_simulations * num_vars: (num_simulations + 1) * num_vars] = lower_bound[:, 1:]
+    df.iloc[:, (num_simulations + 1) * num_vars: (num_simulations + 2) * num_vars] = upper_bound[:, 1:]
+    df.index.name = "Time (min)"
+    return df
+
+def save_result_csv(result, output_dir):
+    scenario, traces, safety = result
+    scenario_directory = get_scenario_directory(scenario, output_dir)
+    df = traces_to_df(result)
+    fig, _ = plot_result_paper((scenario, traces, safety))
+    fig.savefig(os.path.join(scenario_directory, 'plot.png'))
+    df.to_csv(os.path.join(scenario_directory, 'traces.csv'))
+    with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
+        f.write(str(safety))
+    with open(os.path.join(scenario_directory, 'scenario.yaml'), 'w') as f:
+        to_dump = denumpify(asdict(scenario.get_data(), dict_factory=custom_asdict_factory))
+        yaml.dump(to_dump, f)
+
 
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
@@ -372,12 +394,26 @@ if __name__ == '__main__':
     # scenarios = gen_verification_scenarios()
     # print(len(scenarios))
 
-    # results = load_results('results/bad_verif')
-    # for result in results:
-    #     scenario, traces, safety = result
-    #     if hash(scenario) == 2009178107378957702:
-    #         fig, ax = plot_result_paper(result)
-    #         fig.savefig('figures/extended_shutoff_stacked.png')
-
     results = load_results('results/bad_verif')
-    traces_to_csv(results[0])
+    for result in results:
+        scenario, traces, safety = result
+        if hash(scenario) == 2009178107378957702:
+            fig, ax = plot_result_paper(result)
+            fig.savefig('figures/extended_shutoff_stacked.png')
+
+    # scenarios_and_dirs = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # scenarios = list(scenarios_and_dirs.keys())
+    # sample = random.sample(scenarios, 10)
+    # for scenario in sample:
+    #     full_dir = scenarios_and_dirs[scenario][1]
+    #     result_dir, scenario_dir = full_dir.rsplit("/", 1)
+    #     result = load_from_dir(result_dir, scenario_dir)
+    #     save_result_csv(result, './results/csv/data')
+
+    # debug_sim('results/redzone', 'scenario_0', 0)
+
+    # with open('results/redzone/scenario_0/debug/sim_0/calls.pkl', 'rb') as f:
+    #     calls = pickle.load(f)
+    #     with open('./calls.txt', 'w') as f2:
+    #         for call in calls:
+    #             f2.write(str(call) + '\n')
