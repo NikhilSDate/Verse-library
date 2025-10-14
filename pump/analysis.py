@@ -154,7 +154,7 @@ def compress_traces(result_dir):
         with gzip.open(gzip_path, 'wb') as f:
             pickle.dump(traces, f)    
 
-def table_analysis(results, zone, figname='table.png'):
+def table_analysis(results, zone, ax):
     print('Starting table analysis')
     data = {}
     for result in tqdm(results):
@@ -166,6 +166,7 @@ def table_analysis(results, zone, figname='table.png'):
 
     x_values = sorted(set(key[0] for key in data))
     y_values = sorted(set(key[1] for key in data), reverse=True)
+
     df = pd.DataFrame(index=y_values, columns=x_values, dtype=object)
 
     # Fill DataFrame with raw values (for drawing bars)
@@ -180,7 +181,6 @@ def table_analysis(results, zone, figname='table.png'):
 
 
     # Create figure
-    fig, ax = plt.subplots(figsize=(12, 7))
     ax.set_xlim(0, len(x_values))
     ax.set_ylim(0, len(y_values))
 
@@ -229,8 +229,6 @@ def table_analysis(results, zone, figname='table.png'):
 
     legend_elements = [Patch(facecolor='green', label='Safe'), Patch(facecolor='red', label='Unsafe'), Patch(facecolor='y', label='Indeterminate')]
 
-    ax.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1))
-
     # Set ticks as labels
     ax.set_xticks(np.arange(len(x_values)) + 0.5)
     ax.set_yticks(np.arange(len(y_values)) + 0.5)
@@ -245,9 +243,40 @@ def table_analysis(results, zone, figname='table.png'):
     for spine in ax.spines.values():
         spine.set_visible(False)
 
+def multiple_table_analysis(results, figname='combined_table.png'):
+    zones = [0, 4]
+    fig, axes = plt.subplots(1, len(zones), figsize=(18, 7), sharey=True)
+
+    colors = ['green', 'red', 'y']
+    legend_elements = [
+        Patch(facecolor='green', label='Safe'),
+        Patch(facecolor='red', label='Unsafe'),
+        Patch(facecolor='y', label='Indeterminate')
+    ]
+
+    titles = ['< 54 mg/dL', '> 250 mg/dL']
+    i = 0
+    for ax, zone in zip(axes, zones):
+        table_analysis(results(), zone, ax=ax)
+        ax.set_title(titles[i], fontsize=16)
+        i += 1
+
+    legend_elements = [
+        Patch(facecolor='green', label='Safe'),
+        Patch(facecolor='red', label='Unsafe'),
+        Patch(facecolor='y', label='Indeterminate')
+    ]
+
+    fig.legend(
+        handles=legend_elements,
+        loc='upper center',
+        ncol=3,
+        fontsize=12,
+        frameon=False
+    )
     plt.tight_layout()
-    plt.savefig(os.path.join('./figures', figname), dpi=200)
-    plt.show()
+    plt.subplots_adjust(top=0.88)  # make room for legend
+    fig.savefig(os.path.join('./figures', figname), dpi=200)
 
 def all_zones_analysis(results: List[Tuple[SimulationScenario, AnalysisTree, List[bool]]]):
     safety_categories = ['Glucose region', 'Time-in-range safety criterion', 'Safe', 'Unsafe', 'Indeterminate']
@@ -361,12 +390,11 @@ if __name__ == '__main__':
     # for scenario in scenarios:
     #     f.write(str(hash(scenario)) + '\n')
     # f.close()
-    # g = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # results = []
-    # for i in tqdm(range(1000)):
-    #     results.append(next(g))
-    # table_analysis(results, 0)
-    # breakpoint()
+    
+    
+    results = lambda: load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    multiple_table_analysis(results)
+    breakpoint()
 
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)
@@ -394,12 +422,12 @@ if __name__ == '__main__':
     # scenarios = gen_verification_scenarios()
     # print(len(scenarios))
 
-    results = load_results('results/bad_verif')
-    for result in results:
-        scenario, traces, safety = result
-        if hash(scenario) == 2009178107378957702:
-            fig, ax = plot_result_paper(result)
-            fig.savefig('figures/extended_shutoff_stacked.png')
+    # results = load_results('results/bad_verif')
+    # for result in results:
+    #     scenario, traces, safety = result
+    #     if hash(scenario) == 2009178107378957702:
+    #         fig, ax = plot_result_paper(result)
+    #         fig.savefig('figures/extended_shutoff_stacked.png')
 
     # scenarios_and_dirs = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # scenarios = list(scenarios_and_dirs.keys())
