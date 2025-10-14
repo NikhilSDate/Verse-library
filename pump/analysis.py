@@ -254,12 +254,18 @@ def multiple_table_analysis(results, figname='combined_table.png'):
         Patch(facecolor='y', label='Indeterminate')
     ]
 
-    titles = ['< 54 mg/dL', '> 250 mg/dL']
+    titles = ['TIR > 1% for glucose < 54 mg/dL', 'TIR > 5% for glucose > 250 mg/dL']
     i = 0
     for ax, zone in zip(axes, zones):
         table_analysis(results(), zone, ax=ax)
         ax.set_title(titles[i], fontsize=16)
         i += 1
+
+    for i, ax in enumerate(axes):
+        if i > 0:  # hide y labels for all but the first plot
+            ax.set_ylabel('')
+            ax.set_yticklabels([])
+            ax.tick_params(axis='y', left=False, labelleft=False)
 
     legend_elements = [
         Patch(facecolor='green', label='Safe'),
@@ -307,6 +313,7 @@ def all_zones_analysis(results: List[Tuple[SimulationScenario, AnalysisTree, Lis
             'Indeterminate': lambda x: f"{x*100:.1f}\\%"
         }
     )
+
     styler = styler.hide(axis='index')
     print(styler.to_latex(hrules=True))
     return df
