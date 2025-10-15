@@ -154,16 +154,17 @@ def compress_traces(result_dir):
         with gzip.open(gzip_path, 'wb') as f:
             pickle.dump(traces, f)    
 
-def table_analysis(results, zone, ax):
-    print('Starting table analysis')
+def table_analysis_data(results, zone):
     data = {}
-    for result in tqdm(results):
+    for result in tqdm(results()):
         safety = result[2]
         key = (result[0].get_largest_meal(), result[0].get_total_carb_range()[1])
         if key not in data:
             data[key] = np.zeros((3,))
         data[key] += np.array([get_safe(safety)[zone], get_unsafe(safety)[zone], get_unknown(safety)[zone]])
+    return data
 
+def table_analysis_plot(data, ax):
     x_values = sorted(set(key[0] for key in data))
     y_values = sorted(set(key[1] for key in data), reverse=True)
 
@@ -197,7 +198,7 @@ def table_analysis(results, zone, ax):
 
             # Grid cell (dotted gray border)
             ax.add_patch(plt.Rectangle(
-                (xi, yi), 1, 1, fill=False, edgecolor='gray', lw=1, linestyle=':'
+                (xi, yi), 1, 1, fill=False, edgecolor='gray', lw=1, linestyle='-'
             ))
 
             if total > 0:
@@ -219,15 +220,6 @@ def table_analysis(results, zone, ax):
                         facecolor=c, edgecolor='none'
                     ))
                     start += frac
-                            # Overlay total count in light gray
-            # ax.text(
-            #     xi + 0.5, yi + 0.5,
-            #     f"{int(total)}",
-            #     ha='center', va='center',
-            #     fontsize=9, color='lightgray', weight='bold'
-            # )
-
-    legend_elements = [Patch(facecolor='green', label='Safe'), Patch(facecolor='red', label='Unsafe'), Patch(facecolor='y', label='Indeterminate')]
 
     # Set ticks as labels
     ax.set_xticks(np.arange(len(x_values)) + 0.5)
@@ -243,9 +235,16 @@ def table_analysis(results, zone, ax):
     for spine in ax.spines.values():
         spine.set_visible(False)
 
-def multiple_table_analysis(results, figname='combined_table.png'):
+def table_analysis(results_or_data, zone, ax, raw=True):
+    if raw:
+        data = table_analysis_data(results_or_data, zone)
+    else:
+        data = results_or_data
+    return table_analysis_plot(data, ax)
+
+def multiple_table_analysis(results, figname='combined_table.png', raw=True):
     zones = [0, 4]
-    fig, axes = plt.subplots(1, len(zones), figsize=(18, 7), sharey=True)
+    fig, axes = plt.subplots(1, len(zones), figsize=(18, 7))
 
     colors = ['green', 'red', 'y']
     legend_elements = [
@@ -255,17 +254,21 @@ def multiple_table_analysis(results, figname='combined_table.png'):
     ]
 
     titles = ['TIR > 1% for glucose < 54 mg/dL', 'TIR > 5% for glucose > 250 mg/dL']
+
     i = 0
     for ax, zone in zip(axes, zones):
-        table_analysis(results(), zone, ax=ax)
+        if raw:
+            table_analysis(results(), zone, ax=ax, raw=True)
+        else:
+            table_analysis(results[i], zone, ax, raw=False)
         ax.set_title(titles[i], fontsize=16)
         i += 1
 
-    for i, ax in enumerate(axes):
-        if i > 0:  # hide y labels for all but the first plot
-            ax.set_ylabel('')
-            ax.set_yticklabels([])
-            ax.tick_params(axis='y', left=False, labelleft=False)
+    # for i, ax in enumerate(axes):
+    #     if i > 0:  # hide y labels for all but the first plot
+    #         ax.set_ylabel('')
+    #         ax.set_yticklabels([])
+    #         ax.tick_params(axis='y', left=False, labelleft=False)            
 
     legend_elements = [
         Patch(facecolor='green', label='Safe'),
@@ -399,9 +402,18 @@ if __name__ == '__main__':
     # f.close()
     
     
-    results = lambda: load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    multiple_table_analysis(results)
-    breakpoint()
+    # results = lambda: load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
+    # data0 = table_analysis_data(results, 0)
+    # data4 = table_analysis_data(results, 4)
+    with open('data0.pkl', 'rb') as f:
+        data0 = pickle.load(f)
+    with open('data4.pkl', 'rb') as f:
+        data4 = pickle.load(f)
+    multiple_table_analysis([data0, data4], raw=False)
+
+
+    # multiple_table_analysis(results)
+    # breakpoint()
 
     # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)
