@@ -486,8 +486,9 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
         ax_main.plot(x, y, color='black')
 
     ax_main.grid()
-    ax_main.set_ylabel('Blood Glucose (mg/dL)')
+    ax_main.set_ylabel('Blood Glucose (mg/dL)', fontsize=12)
     ax_main.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    ax_main.tick_params(axis='both', which='major', labelsize=12)
 
     # --- Meals plot (vertical strips for carb ranges) ---
     meal_times = [m.time for m in scenario.get_meals()]
@@ -502,12 +503,13 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
     ax_meals.set_yticks([0, 40, 80, 120, 160])
     ax_meals.set_ylim(0, 160)
     ax_meals.grid(axis='both')
-    ax_meals.set_ylabel("Meal carbs (g)")
+    ax_meals.set_ylabel("Meal carbs (g)", fontsize=12)
     ax_meals.set_xticks(np.arange(0, 24 * 60 + 1, 60))
-    ax_meals.set_xticklabels([str(i) for i in range(25)])
-    ax_meals.set_xlabel('Time (hours)')
-    
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.98, bottom=0.1, hspace=0.02)
+    ax_meals.set_xticklabels([str(i) for i in range(25)], fontsize=12)
+    ax_meals.set_xlabel('Time (hours)', fontsize=12)
+    ax_meals.tick_params(axis='both', which='major', labelsize=12)
+
+    fig.subplots_adjust(left=0.1, right=0.98, top=0.98, bottom=0.1, hspace=0.02)
     plt.margins(x=0, y=0)
 
     return fig, (ax_main, ax_meals)

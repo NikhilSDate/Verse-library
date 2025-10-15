@@ -405,11 +405,11 @@ if __name__ == '__main__':
     # results = lambda: load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # data0 = table_analysis_data(results, 0)
     # data4 = table_analysis_data(results, 4)
-    with open('data0.pkl', 'rb') as f:
-        data0 = pickle.load(f)
-    with open('data4.pkl', 'rb') as f:
-        data4 = pickle.load(f)
-    multiple_table_analysis([data0, data4], raw=False)
+    # with open('data0.pkl', 'rb') as f:
+    #     data0 = pickle.load(f)
+    # with open('data4.pkl', 'rb') as f:
+    #     data4 = pickle.load(f)
+    # multiple_table_analysis([data0, data4], raw=False)
 
 
     # multiple_table_analysis(results)
