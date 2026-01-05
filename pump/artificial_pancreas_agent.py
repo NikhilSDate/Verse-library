@@ -296,7 +296,8 @@ class ArtificialPancreasAgent(BaseAgent):
         
         if self.matlab_export:
             sim_data = self.export_sim_data()
-            sim_data.trace = trace
+            sim_data.trace = trace    #    sim_duration (int) - simulation duration in minutes
+
             self.sims.append(sim_data)
 
         self.update_trace_metadata()

@@ -22,7 +22,6 @@ class InsulinPumpEvent:
 class InsulinPumpModel:
 
     def __init__(self, sim_scenario, settings=None, trace=False):
-
         self.settings = settings
         self.basal_iq = settings['basal_iq']        
         self.trace = trace

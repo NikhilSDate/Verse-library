@@ -407,6 +407,10 @@ class Verifier:
                 uncertain_param = node.uncertain_param[agent_id]
                 if consts.reachability_method == ReachabilityMethod.DRYVR:
                     # pp(('tube', agent_id, mode, inits))
+                    if 'sim_trace_num' in params:
+                        sim_trace_num = params['sim_trace_num']
+                    else:
+                        sim_trace_num = SIMTRACENUM        
                     (
                         cur_bloated_tube,
                         cache_tube_update,
@@ -422,7 +426,7 @@ class Verifier:
                         node.agent[agent_id].TC_simulate,
                         params,
                         100,
-                        SIMTRACENUM,
+                        sim_trace_num,
                         combine_seg_length=consts.init_seg_length,
                         lane_map=consts.lane_map,
                     )

@@ -77,7 +77,7 @@ def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
         good_ranges.append(ranges)
     return good_ranges
     
-def gen_verification_scenarios():
+def gen_verification_scenarios() -> List[SimulationScenario]:
     # we want a set of conditions that a scenario should satisfy to ensure realism
     # M1: total carbs should be in a particular range
     # M2: carbs in each meal should be in a particular range
@@ -457,13 +457,7 @@ def get_init(traces, index):
 def plot_reachtube(traces, var, ax):
     trace = extract_variable(traces, var)
     x = np.arange(len(trace))
-    ax.vlines(x, trace[:, 0], trace[:, 1], colors='lightgray')
-    return ax
-
-def plot_reachtube(traces, var, ax):
-    trace = extract_variable(traces, var)
-    x = np.arange(len(trace))
-    ax.vlines(x, trace[:, 0], trace[:, 1], colors='lightgray')
+    ax.vlines(x, trace[:, 0], trace[:, 1], colors='silver')
     return ax
 
 def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
@@ -475,8 +469,7 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
     
     ax_main = fig.add_subplot(gs[0])
     ax_meals = fig.add_subplot(gs[1], sharex=ax_main)
-    # ax_boluses = fig.add_subplot(gs[2], sharex=ax_main)
-
+    
     # --- Main glucose plot ---
     plot_reachtube(traces, 'G', ax_main)
     sims = traces.root.sims
@@ -485,9 +478,25 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
         x = np.arange(len(y)) # convert from minutes to hours
         ax_main.plot(x, y, color='black')
 
+    
+    upper = ax_main.get_ylim()[1]
+    
+    import matplotlib; matplotlib.rcParams['hatch.linewidth'] = 1
+
+    ax_main.axhspan(0, 54, facecolor='red', alpha=0.5, hatch='//', edgecolor='black')  # severe hypo
+    ax_main.axhspan(54, 70, facecolor='red', alpha=0.35)   # mild hypo
+    ax_main.axhspan(70, 180, facecolor='green', alpha=0.15)  # target
+    ax_main.axhspan(180, 250, facecolor='yellow', alpha=0.2)  # hyper
+    ax_main.axhspan(250, upper, facecolor='orange', alpha=0.2)  # severe hyper
+    ax_main.set_axisbelow(False)
+
+    # Clear and reapply the limits (just in case hspans change them)
+    ax_main.set_ylim(0, upper)
+    
     ax_main.grid()
-    ax_main.set_ylabel('Blood Glucose (mg/dL)')
+    ax_main.set_ylabel('Blood Glucose (mg/dL)', fontsize=12)
     ax_main.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    ax_main.tick_params(axis='both', which='major', labelsize=12)
 
     # --- Meals plot (vertical strips for carb ranges) ---
     meal_times = [m.time for m in scenario.get_meals()]
@@ -502,12 +511,13 @@ def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]
     ax_meals.set_yticks([0, 40, 80, 120, 160])
     ax_meals.set_ylim(0, 160)
     ax_meals.grid(axis='both')
-    ax_meals.set_ylabel("Meal carbs (g)")
+    ax_meals.set_ylabel("Meal carbs (g)", fontsize=12)
     ax_meals.set_xticks(np.arange(0, 24 * 60 + 1, 60))
-    ax_meals.set_xticklabels([str(i) for i in range(25)])
-    ax_meals.set_xlabel('Time (hours)')
-    
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.98, bottom=0.1, hspace=0.02)
+    ax_meals.set_xticklabels([str(i) for i in range(25)], fontsize=12)
+    ax_meals.set_xlabel('Time (hours)', fontsize=12)
+    ax_meals.tick_params(axis='both', which='major', labelsize=12)
+
+    fig.subplots_adjust(left=0.1, right=0.98, top=0.98, bottom=0.1, hspace=0.02)
     plt.margins(x=0, y=0)
 
     return fig, (ax_main, ax_meals)
