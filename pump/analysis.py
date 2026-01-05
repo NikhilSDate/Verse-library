@@ -13,6 +13,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
+import cProfile
+
 def get_all_AGP_reports(scenarios: Dict[SimulationScenario, Tuple[str, str]]) -> Dict[SimulationScenario, Tuple]:
     reports = {}
     count = 0
@@ -165,6 +167,14 @@ def table_analysis_data(results, zone):
     return data
 
 def table_analysis_plot(data, ax):
+    # convert from safe, unsafe, indeterminate to safe, indeterminate, unsafe
+    data_converted = {}
+    for key, val in data.items():
+        val_converted = np.array([val[0], val[2], val[1]])
+        data_converted[key] = val_converted
+    
+    data = data_converted
+
     x_values = sorted(set(key[0] for key in data))
     y_values = sorted(set(key[1] for key in data), reverse=True)
 
@@ -186,8 +196,7 @@ def table_analysis_plot(data, ax):
     ax.set_ylim(0, len(y_values))
 
     # Parameters
-    colors = ['green', 'red', 'y']  # safe, unsafe, unknown
-    labels = ['S', 'U', 'I']
+    colors = ['cornflowerblue', 'gray', 'darkmagenta']  # safe, unsafe, unknown
     width_frac = 0.7  # 70% of cell width and height
     height_frac = 0.7
 
@@ -270,17 +279,18 @@ def multiple_table_analysis(results, figname='combined_table.png', raw=True):
     #         ax.set_yticklabels([])
     #         ax.tick_params(axis='y', left=False, labelleft=False)            
 
+    colors = ['cornflowerblue', 'gray', 'darkmagenta']
     legend_elements = [
-        Patch(facecolor='green', label='Safe'),
-        Patch(facecolor='red', label='Unsafe'),
-        Patch(facecolor='y', label='Indeterminate')
+        Patch(facecolor=colors[0], label='Safe'),
+        Patch(facecolor=colors[1], label='Indeterminate'),
+        Patch(facecolor=colors[2], label='Unsafe')
     ]
 
     fig.legend(
         handles=legend_elements,
         loc='upper center',
         ncol=3,
-        fontsize=12,
+        fontsize=16,
         frameon=False
     )
     plt.tight_layout()
@@ -388,6 +398,27 @@ def save_result_csv(result, output_dir):
         to_dump = denumpify(asdict(scenario.get_data(), dict_factory=custom_asdict_factory))
         yaml.dump(to_dump, f)
 
+def plot_all_trace_figures():
+    results = load_results('results/redzone')
+    for result in results:
+        scenario, traces, safety = result
+        if hash(scenario) == 1711958327294277283:
+            fig, ax = plot_result_paper(result)
+            fig.savefig('figures/two_meals_stacked.png')
+    
+    results = load_results('results/redzone_high')
+    for result in results:
+        scenario, traces, safety = result
+        if hash(scenario) == 67413248031987897:
+            fig, ax = plot_result_paper(result)
+            fig.savefig('figures/large_meal_stacked.png')
+
+    results = load_results('results/bad_verif')
+    for result in results:
+        scenario, traces, safety = result
+        if hash(scenario) == 2009178107378957702:
+            fig, ax = plot_result_paper(result)
+            fig.savefig('figures/extended_shutoff_stacked.png')
 
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
@@ -441,13 +472,6 @@ if __name__ == '__main__':
     # scenarios = gen_verification_scenarios()
     # print(len(scenarios))
 
-    # results = load_results('results/bad_verif')
-    # for result in results:
-    #     scenario, traces, safety = result
-    #     if hash(scenario) == 2009178107378957702:
-    #         fig, ax = plot_result_paper(result)
-    #         fig.savefig('figures/extended_shutoff_stacked.png')
-
     # scenarios_and_dirs = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
     # scenarios = list(scenarios_and_dirs.keys())
     # sample = random.sample(scenarios, 10)
@@ -464,3 +488,11 @@ if __name__ == '__main__':
     #     with open('./calls.txt', 'w') as f2:
     #         for call in calls:
     #             f2.write(str(call) + '\n')
+
+    # plot_all_trace_figures()
+
+    scenarios = gen_verification_scenarios()
+    scenario = scenarios[0]
+    scenario.sim_duration = 60
+    cProfile.run('verify_multi_meal_scenario(scenario, None)')
+    

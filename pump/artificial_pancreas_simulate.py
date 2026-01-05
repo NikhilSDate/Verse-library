@@ -100,10 +100,10 @@ def get_cgm_error_range(cgm_config: CGMConfig):
 def get_cgm_error(cgm_config: CGMConfig):
     return [cgm_config.bias, cgm_config.offset]
 
-# TODO: change this so that it takes a SimulationScenario object directly, instead of the current arguments
-# That's a much cleaner abstraction
 # track_inits is a hack: if set to True, no actual verification will be performed, and the function will just return the initial values that DryVR chooses
-def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None) -> VerificationResult:
+def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, params={}) -> VerificationResult:
+    log_dir = params.get('log_dir', None)
+    sim_trace_num = params.get('sim_trace_num', 10)
     pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
@@ -124,7 +124,7 @@ def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=
         )  # TODO what's the other half of the tuple?
 
         time_step = simulation_scenario.time_step
-        traces = scenario.verify(simulation_scenario.sim_duration, time_step)  
+        traces = scenario.verify(simulation_scenario.sim_duration, time_step, params={'sim_trace_num': sim_trace_num})  
         traces.metadata = agent.trace_metadata
         return VerificationResult(ResultType.OK, traces)
     except Exception as e:
