@@ -197,9 +197,13 @@ class HovorkaModel:
         return dydt
     
     def construct_meal(self, meal):
+        # Handle tuple carbs (for verification ranges) by taking midpoint
+        carbs = meal.carbs
+        if isinstance(carbs, tuple):
+            carbs = (carbs[0] + carbs[1]) / 2.0
         return {
             'time': meal.time,
-            'value': meal.carbs,
+            'value': carbs,
             'Delay': 0,
             'TauM': meal.TauM,
             'Bio': self.param['Bio']

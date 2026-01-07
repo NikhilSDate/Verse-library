@@ -12,8 +12,7 @@ import matplotlib.patches as patches
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-
-import cProfile
+from artificial_pancreas_generic import verify
 
 def get_all_AGP_reports(scenarios: Dict[SimulationScenario, Tuple[str, str]]) -> Dict[SimulationScenario, Tuple]:
     reports = {}
@@ -491,8 +490,5 @@ if __name__ == '__main__':
 
     # plot_all_trace_figures()
 
-    scenarios = gen_verification_scenarios()
-    scenario = scenarios[0]
-    scenario.sim_duration = 60
-    cProfile.run('verify_multi_meal_scenario(scenario, None)')
     
+
