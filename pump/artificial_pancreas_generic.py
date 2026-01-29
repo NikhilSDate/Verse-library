@@ -189,7 +189,7 @@ def simulate(
     controller = InsulinPumpController(
         scenario=scenario,
         basal_iq=settings['basal_iq'],
-        trace=True,
+        trace=False,
         output_buffer=[]
     )
     # Initialize controller once
@@ -212,8 +212,6 @@ def simulate(
 
 def verify(
     scenario: SimulationScenario,
-    duration: float,
-    time_step: float = 1.0,
     num_simulations: int = 10,
     log_dir: str = None
 ) -> AnalysisTree:
@@ -255,8 +253,8 @@ def verify(
         plant=plant,
         init_low=init_low,
         init_high=init_high,
-        duration=duration,
-        time_step=time_step,
+        duration=scenario.sim_duration,
+        time_step=scenario.time_step,
         num_simulations=num_simulations
     )
 

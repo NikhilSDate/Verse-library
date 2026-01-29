@@ -12,7 +12,7 @@ from verse.analysis.analysis_tree import AnalysisTree, TraceType
 
 from .controller import Controller
 from .plant import Plant
-
+from tqdm import tqdm
 
 class GenericControllerPlantAgent(BaseAgent):
     """
@@ -108,7 +108,7 @@ class GenericControllerPlantAgent(BaseAgent):
         trace[0, 1:] = state_vec  # Update initial trace entry
 
         # Main simulation loop
-        for i in range(num_points):
+        for i in tqdm(range(num_points)):
             current_time = i * time_step
 
             # Preprocess state (update derived quantities like sensor readings)
@@ -249,7 +249,7 @@ def verify(
 
     # Create generic agent (Verse internals hidden)
     agent = GenericControllerPlantAgent(
-        id="agent",
+        id="pump",
         controller=controller,
         plant=plant,
         init_mode=("default",),
@@ -261,13 +261,13 @@ def verify(
     # Create Verse scenario
     scenario = Scenario(ScenarioConfig(init_seg_length=1, parallel=False))
     scenario.add_agent(agent)
-    scenario.set_init_single("agent", [init_low, init_high], ("default",))
+    scenario.set_init_single("pump", [init_low, init_high], ("default",))
 
     # Run verification
     traces = scenario.verify(
         duration,
         time_step,
-        params={'sim_trace_num': num_simulations}
+        params={'sim_trace_num': num_simulations, 'parallel': True}
     )
 
     return traces

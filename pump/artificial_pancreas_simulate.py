@@ -67,8 +67,9 @@ def simulate_from_init(simulation_scenario: SimulationScenario, init, logging=Fa
 
 
 
-def simulate_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None):
-    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings) 
+def simulate_multi_meal_scenario(simulation_scenario: SimulationScenario, log_dir=None, params={}):
+    trace = params.get('trace', False)
+    pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings, trace=trace) 
     body = HovorkaModel(simulation_scenario.params)
     cgm = CGM()
     logger = Logger(log_dir=log_dir)
@@ -86,8 +87,12 @@ def simulate_multi_meal_scenario(simulation_scenario: SimulationScenario, log_di
         time_step = simulation_scenario.time_step
         traces = scenario.simulate(simulation_scenario.sim_duration, time_step)    
         traces.metadata = agent.trace_metadata
+        if trace and log_dir is not None:
+            pump.write_trace(log_dir)
         return VerificationResult(ResultType.OK, traces)
     except Exception as e:
+        print('here')
+        raise e
         err_info = agent.get_error_info()
         err_info.e = e
         return VerificationResult(ResultType.ERROR, err_info)

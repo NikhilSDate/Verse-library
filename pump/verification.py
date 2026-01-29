@@ -119,7 +119,6 @@ def gen_verification_scenarios() -> List[SimulationScenario]:
     RESUME = True
     
     meal_ranges = get_allowed_meal_carb_ranges(100, 350)
-    print(len(meal_ranges))
     
     meal_1_time = 60 * np.array([2, 5])
     meal_2_time = 60 * np.array([7, 10])
@@ -229,8 +228,8 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
         print('redundant scenario')
         return
     fig = plot_results((scenario, traces, safety_results))
-    with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
-        pickle.dump(traces, f)
+    # with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
+    #     pickle.dump(traces, f)
     fig.write_image(os.path.join(scenario_directory, 'plot.png'))
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
         f.write(str(safety_results))

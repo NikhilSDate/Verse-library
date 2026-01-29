@@ -490,5 +490,11 @@ if __name__ == '__main__':
 
     # plot_all_trace_figures()
 
+    np.random.seed(42)
+    random.seed(42)
     
-
+    scenarios = gen_verification_scenarios()
+    scenario = scenarios[0]
+    traces = verify_multi_meal_scenario(scenario).payload
+    safety = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
+    save_scenario_results(scenario, traces, safety, './test_maestro')
