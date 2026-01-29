@@ -548,7 +548,7 @@ def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
                 y=y,
                 mode="lines",
                 name=f"trace {i}",
-                marker=dict(color=colors[i]),
+                marker=dict(color=colors[i % len(colors)]),
         ))
     y_mins = []
     y_maxs = []
