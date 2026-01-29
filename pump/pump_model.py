@@ -32,6 +32,8 @@ class InsulinPumpModel:
     
     def get_pump(self, basal_iq, settings, trace=False):
         pump = Pump(basal_iq=basal_iq, trace=trace)
+        if settings is not None:
+            pump.set_settings(carb_ratio=settings['carb_ratio'], correction_factor=settings['correction_factor'], target_bg=settings['target_bg'], max_bolus=settings['max_bolus'], insulin_duration=settings['insulin_duration'], basal_rate=settings['basal_rate'])
         return pump
 
     def send_bolus_command(self, bg, bolus: Bolus, resume=False):
