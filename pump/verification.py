@@ -250,7 +250,7 @@ def save_scenario_runtime(scenario, output_dir, runtime):
 
 def run_verification_scenario(scenario, output_dir):
     start_time = time.time()
-    res = verify_multi_meal_scenario(scenario)
+    res = verify_multi_meal_scenario(scenario, {'sim_trace_num': 300})
     if res.type == ResultType.OK:
         traces = res.payload
         safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
