@@ -420,6 +420,13 @@ def plot_all_trace_figures():
             fig, ax = plot_result_paper(result)
             fig.savefig('figures/extended_shutoff_stacked.png')
 
+def find_scenario(output_dir, scenario_hash: int) -> Optional[Tuple[str, str]]:
+    scenarios_and_dirs = load_scenarios_and_dirs(output_dir)
+    for scenario, dirs in tqdm(scenarios_and_dirs.items()):
+        if hash(scenario) == scenario_hash:
+            return dirs
+    return None
+
 if __name__ == '__main__':
     # debug_sim('results/bad_verif', 'scenario_5', 1)
     # seed = 42
@@ -491,8 +498,13 @@ if __name__ == '__main__':
 
     # plot_all_trace_figures()
 
-    scenarios = gen_verification_scenarios()
-    scenario = scenarios[0]
-    scenario.sim_duration = 60
-    cProfile.run('verify_multi_meal_scenario(scenario, None)')
-    
+    # scenarios = gen_verification_scenarios()
+    # scenario = scenarios[0]
+    # scenario.sim_duration = 10
+    # # cProfile.run('verify_multi_meal_scenario(scenario, None)')
+    # traces = verify_multi_meal_scenario(scenario, None)
+    # traces = traces.payload
+    # safety = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
+    # save_scenario_results(scenario, traces, safety, './test_output')
+    res = find_scenario('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 626752643824406827)
+    print(res)
