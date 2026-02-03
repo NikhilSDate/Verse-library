@@ -73,7 +73,7 @@ params:
   TauGlu: 19
   TauM: 40.0
   TauS: 10.718808477734166
-  Ub: 0.9097168337052115
+  Ub: 0.9097168337052114
   Vg: 160
   Vi: 120
   carbF: 11.5
@@ -86,7 +86,7 @@ params:
   w: 74.9
 settings:
 - basal_iq: true
-  basal_rate: 0.8187451503346904
+  basal_rate: 0.8187451503346903
   carb_ratio: 11
   correction_factor: 43
   insulin_duration: 300
@@ -99,4 +99,4 @@ settings:
   insulin_duration: 300
   max_bolus: 10
   target_bg: 110
-sim_duration: 1440
+sim_duration: 10

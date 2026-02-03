@@ -107,6 +107,7 @@ def get_cgm_error(cgm_config: CGMConfig):
 
 # track_inits is a hack: if set to True, no actual verification will be performed, and the function will just return the initial values that DryVR chooses
 def verify_multi_meal_scenario(simulation_scenario: SimulationScenario, params={}) -> VerificationResult:
+    params = params if params is not None else {}
     log_dir = params.get('log_dir', None)
     sim_trace_num = params.get('sim_trace_num', 10)
     pump = InsulinPumpModel(simulation_scenario, settings=simulation_scenario.settings[0]) 
