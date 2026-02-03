@@ -501,7 +501,8 @@ if __name__ == '__main__':
     random.seed(42)
     
     scenarios = gen_verification_scenarios()
-    scenario = scenarios[0]
-    traces = verify_multi_meal_scenario(scenario, {'sim_trace_num': 10}).payload
-    safety = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
-    save_scenario_results(scenario, traces, safety, './test_maestro')
+    scenario = scenarios[1]
+    print(hash(scenario))
+    # traces = verify_multi_meal_scenario(scenario, {'sim_trace_num': 10}).payload
+    # safety = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
+    # save_scenario_results(scenario, traces, safety, './test_maestro')

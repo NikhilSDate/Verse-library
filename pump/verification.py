@@ -377,7 +377,7 @@ def verify_wrapper():
     parser = argparse.ArgumentParser('pumpverif')
     parser.add_argument('-p', '--processes', default=1, type=int)
     parser.add_argument('-s', '--seed', default=42, type=int)
-    parser.add_argument('-o', '--output-dir', default='results/verification', type=str)
+    parser.add_argument('-o', '--output-dir', type=str)
     parser.add_argument('-n', '--node-count', default=1, type=int)
     parser.add_argument('-i', '--node-index', default=0, type=int)
     args = parser.parse_args()
@@ -430,28 +430,6 @@ def save_perfectly_unsafe(results, log_dir):
 
 def get_init(traces, index):
     return traces.root.sims[index][0][1:]
-
-# def plot_reachtube(traces, var):
-#     fig, ax = plt.subplots()
-#     trace = extract_variable(traces, var)
-#     x = np.arange(len(trace))
-#     ax.vlines(x, trace[:, 0], trace[:, 1], colors='lightgray')
-#     return fig, ax
-
-# def plot_result_paper(result: Tuple[SimulationScenario, AnalysisTree, List[bool]]):
-#     scenario, traces, safety = result
-#     scenario.get_boluses()
-#     fig, ax = plot_reachtube(traces, 'G')
-#     sims = traces.root.sims
-#     for i, sim in enumerate(sims):
-#         y = extract_variable(sim, 'G', type=TraceType.SIM)
-#         x = np.arange(len(y))
-#         ax.plot(x, y, color='black')
-
-#     ax.grid()
-#     ax.set_xlabel('Time (min)')
-#     ax.set_ylabel('Blood Glucose (mg/dL)')
-#     return fig, ax
 
 def plot_reachtube(traces, var, ax):
     trace = extract_variable(traces, var)
@@ -582,48 +560,4 @@ def plot_results(result: Tuple[SimulationScenario, Any, Any]) -> go.Figure:
     return fig
     
 if __name__ == '__main__':
-    # results = load_results('results/verification')
-    # save_perfectly_unsafe(results, 'results/perfectly_unsafe')
-
-    # scenario.user_config = UserConfig(resume=True)
-    # traces = verify_multi_meal_scenario(scenario)
-    # plot_variable(traces, 'G')
-
-    # with open('results/verification/scenario_080000000000d3c9b/traces.pkl', 'rb') as f:
-    #     traces = pickle.load(f)
-    # plot_variable(traces, 'G')
-    # stats = compute_proof_statistics(results)    
-    # plot_verification_results(results, 0)
-    # results/perfectly_unsafe/scenario_0800000001e04ba8e
-    # signal.signal(signal.SIGINT, sigint)    
-    # scenario, traces, unsafe = load_from_dir(log_dir, 'scenario_0800000001b086758')
-    # perfectly_unsafe_scenarios = [(log_dir, f.name) for f in os.scandir(log_dir) if f.is_dir() ]
-    # with Pool(20) as p:
-    # #     p.map(overlay_simulation_traces, perfectly_unsafe_scenarios)
-    # log_dir = 'results/perfectly_unsafe'
-    # fig = overlay_simulation_traces((log_dir, 'scenario_080000000071e0c19'))
-    # fig.show()
-    # trace 5 is bad
-    # print(scenario.settings)
-    # scenario.settings[0]['basal_iq'] = True
-    # scenario.user_config = UserConfig(resume=True)
-    # log_dir = 'results/perfectly_unsafe'
-    # scenario, verification_traces, safety= load_from_dir(log_dir, 'scenario_08000000006d3ff3c')
-    # run_verification_scenario(scenario)
-    # init = get_init(scenario, 1)
-    # print(init)
-    # traces = simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
-    # plot_variable(traces, 'G')
-    # results = load_results('results/verification')
-    # print(unsafe_analysis(results, 2))
-    # scenario, traces, safety = load_from_dir('results/perfectly_unsafe', 'scenario_0800000001ab5da68')
-    # init = get_init(traces, 7)
-    # print(init)
-    # simulate_from_init(scenario, init, logging=True, log_dir='results/logs')
-    # results = load_results('results/verification')
-    # print(results)
-    # titles = ['G < 54mg/dL for less than 1% of time', '54mg/dL <= G <= 70mg/dL for less than 4% of time', '70mg/dL <= G <= 180 mg/dL for at least 70% of time', '180mg/dL <= G <= 250 mg/dL for less than 25% of time', ' G > 250 mg/dL for < 5% of time']
-    # for i in range(5):
-    #     table_analysis(results, i, f'table_{i}', titles[i])
-
     verify_wrapper()
