@@ -498,13 +498,15 @@ if __name__ == '__main__':
 
     # plot_all_trace_figures()
 
-    # scenarios = gen_verification_scenarios()
-    # scenario = scenarios[0]
-    # scenario.sim_duration = 10
-    # # cProfile.run('verify_multi_meal_scenario(scenario, None)')
-    # traces = verify_multi_meal_scenario(scenario, None)
-    # traces = traces.payload
-    # safety = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
-    # save_scenario_results(scenario, traces, safety, './test_output')
-    res = find_scenario('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification', 626752643824406827)
-    print(res)
+    np.random.seed(42)
+    random.seed(42)
+    
+    scenarios = gen_verification_scenarios()
+    scenario = scenarios[0]
+    # print(hash(scenario))
+
+    traces = verify_multi_meal_scenario(scenario).payload
+    safety = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
+    save_scenario_results(scenario, traces, safety, './test_maestro')
+    
+    # debug_sim('./test_maestro', 'scenario_2', 0)

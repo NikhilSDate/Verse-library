@@ -254,7 +254,7 @@ class ArtificialPancreasAgent(BaseAgent):
         state_vec = init
         self.reset_pump()
         basal_rate = init[state_indices['basal_rate']]
-        self.pump.pump_emulator.set_settings(basal_rate=basal_rate)
+        self.pump.pump_emulator.set_settings(carb_ratio=self.scenario.settings[0]['carb_ratio'], correction_factor=self.scenario.settings[0]['correction_factor'], target_bg=self.scenario.settings[0]['target_bg'], max_bolus=self.scenario.settings[0]['max_bolus'], insulin_duration=self.scenario.settings[0]['insulin_duration'], basal_rate=basal_rate)
         self.logger.start_sim(init)
         self.body.set_meals(self.get_meals(state_vec))
         self.cgm.set_config(self.get_config(state_vec))
