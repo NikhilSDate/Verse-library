@@ -131,7 +131,7 @@ def gen_verification_scenarios() -> List[SimulationScenario]:
     taum_choices = [DEFAULT_MEAL, HIGH_FAT_MEAL]
     taum_default = [DEFAULT_MEAL]
 
-    meal_TauM_lists = [taum_choices, taum_choices, taum_default, taum_choices]
+    meal_TauM_lists = [taum_default, taum_choices, taum_default, taum_choices]
     meal_TauMs = list(itertools.product(*meal_TauM_lists))
     
     meal_params = itertools.product(*[meal_times, meal_ranges, meal_TauMs])
