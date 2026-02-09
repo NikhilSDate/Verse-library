@@ -11,20 +11,22 @@ boluses:
     duration: 180
   correction: true
   meal_index: 1
-  time: 595
+  time: 415
   type: Extended
 - carbs: null
   config: null
   correction: true
   meal_index: 2
-  time: 655
+  time: 775
   type: Simple
 - carbs: null
-  config: null
+  config:
+    deliver_now_perc: 50
+    duration: 180
   correction: true
   meal_index: 3
-  time: 835
-  type: Simple
+  time: 1015
+  type: Extended
 cgm_config:
   bias: !!python/tuple
   - 0.9
@@ -41,24 +43,24 @@ init_bg:
 meals:
 - TauM: 40
   carbs: !!python/tuple
-  - 120
-  - 160
+  - 0
+  - 40
   time: 300
 - TauM: 120
   carbs: !!python/tuple
+  - 0
   - 40
-  - 80
-  time: 600
+  time: 420
 - TauM: 40
   carbs: !!python/tuple
   - 0
   - 40
-  time: 660
-- TauM: 40
+  time: 780
+- TauM: 120
   carbs: !!python/tuple
-  - 120
-  - 160
-  time: 840
+  - 0
+  - 40
+  time: 1020
 params:
   Bio: 0.8
   EGP0: 16.9

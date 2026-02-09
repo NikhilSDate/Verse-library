@@ -28,6 +28,7 @@ from typing import Any
 from functools import partial
 import time
 import gzip
+import fcntl
 
 
 # TODO: this function is a bit of a hack
@@ -248,9 +249,15 @@ def save_scenario_runtime(scenario, output_dir, runtime):
     with open(os.path.join(log_dir, 'runtime.txt'), 'w') as f:
         f.write(str(runtime))
 
+def append_scenario_to_log(scenario, output_dir):
+    with open(os.path.join(output_dir, 'scenarios.txt'), 'a+') as f:
+        fcntl.lockf(f, fcntl.LOCK_EX)
+        f.write(f'{hash(scenario)}\n')
+        fcntl.lockf(f, fcntl.LOCK_UN)
+
 def run_verification_scenario(scenario, output_dir):
     start_time = time.time()
-    res = verify_multi_meal_scenario(scenario, {'sim_trace_num': 300})
+    res = verify_multi_meal_scenario(scenario, {'sim_trace_num': 10})
     if res.type == ResultType.OK:
         traces = res.payload
         safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
@@ -260,6 +267,7 @@ def run_verification_scenario(scenario, output_dir):
     end_time = time.time()
     runtime = end_time - start_time
     save_scenario_runtime(scenario, output_dir, runtime)
+    append_scenario_to_log(scenario, output_dir)
 
 def sigint(signum, frame):
     os.kill(0, signal.SIGKILL)
@@ -365,12 +373,24 @@ def debug_sim(output_dir, result_dir, sim_idx):
     fig = plot_variable(traces, 'G', show=False)
     fig.write_image(os.path.join(output_dir, result_dir, 'debug', f'sim_{sim_idx}', 'plot.png'))
 
+def get_existing_scenario_hashes(output_dir):
+    try:
+        with open(os.path.join(output_dir, 'scenarios.txt'), 'r+') as f:
+            fcntl.lockf(f, fcntl.LOCK_SH)
+            lines = f.readlines()
+            fcntl.lockf(f, fcntl.LOCK_UN)
+    except FileNotFoundError:
+        lines = []
+    hashes = [int(line.strip()) for line in lines]
+    return hashes
+
 def get_scenarios_to_run(output_dir, node_count, node_idx):
     scenarios = gen_verification_scenarios()
     np.random.shuffle(scenarios)
     scenarios = [scenario for i, scenario in enumerate(scenarios) if i % node_count == node_idx]
-    existing = set(load_scenarios(output_dir))
-    scenarios = [scenario for scenario in scenarios if scenario not in existing]
+    existing = set(get_existing_scenario_hashes(output_dir))
+    scenarios = [scenario for scenario in scenarios if hash(scenario) not in existing]
+    print(len(scenarios))
     return scenarios
 
 def verify_wrapper():
