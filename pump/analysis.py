@@ -266,7 +266,7 @@ def multiple_table_analysis(results, figname='combined_table.png', raw=True):
     i = 0
     for ax, zone in zip(axes, zones):
         if raw:
-            table_analysis(results(), zone, ax=ax, raw=True)
+            table_analysis(results, zone, ax=ax, raw=True)
         else:
             table_analysis(results[i], zone, ax, raw=False)
         ax.set_title(titles[i], fontsize=16)
@@ -427,76 +427,6 @@ def find_scenario(output_dir, scenario_hash: int) -> Optional[Tuple[str, str]]:
     return None
 
 if __name__ == '__main__':
-    # debug_sim('results/bad_verif', 'scenario_5', 1)
-    # seed = 42
-    # f = open('hashes2.txt', 'w')
-    # np.random.seed(seed)
-    # random.seed(seed)
-    # scenarios = gen_verification_scenarios()
-    # np.random.shuffle(scenarios)
-    # for scenario in scenarios:
-    #     f.write(str(hash(scenario)) + '\n')
-    # f.close()
-    
-    
-    # results = lambda: load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # data0 = table_analysis_data(results, 0)
-    # data4 = table_analysis_data(results, 4)
-    # with open('data0.pkl', 'rb') as f:
-    #     data0 = pickle.load(f)
-    # with open('data4.pkl', 'rb') as f:
-    #     data4 = pickle.load(f)
-    # multiple_table_analysis([data0, data4], raw=False)
-
-
-    # multiple_table_analysis(results)
-    # breakpoint()
-
-    # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # rank_analysis(scenarios, bad_verif_key, 100, 'results/bad_verif', reverse=True)
-
-    # results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # all_zones_analysis(results)
-    # plot_reachtube(traces, 'G')
-    # fig = plot_results(results[0])
-    # fig.write_image('test2.png')
-
-    # result = load_from_dir('./results/bad_verif', 'scenario_4')
-    # scenario, traces, safety = result
-    # print(hash(scenario))
-    # fig, ax = plot_result_paper(result)
-    # fig.savefig('./figures/extended_shutoff.png')
-
-    # results = load_results_gen('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # df = interval_analysis(results)
-    # breakpoint()
-
-
-    # scenarios = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # rank_analysis(scenarios, key=redzone_high_key, n=5000, output_dir='results/redzone_high', reverse=True)
-
-    # scenarios = gen_verification_scenarios()
-    # print(len(scenarios))
-
-    # scenarios_and_dirs = load_scenarios_and_dirs('/mnt/shared/gpfs/home/ndate2/InsulinPump/results/verification')
-    # scenarios = list(scenarios_and_dirs.keys())
-    # sample = random.sample(scenarios, 10)
-    # for scenario in sample:
-    #     full_dir = scenarios_and_dirs[scenario][1]
-    #     result_dir, scenario_dir = full_dir.rsplit("/", 1)
-    #     result = load_from_dir(result_dir, scenario_dir)
-    #     save_result_csv(result, './results/csv/data')
-
-    # debug_sim('results/redzone', 'scenario_0', 0)
-
-    # with open('results/redzone/scenario_0/debug/sim_0/calls.pkl', 'rb') as f:
-    #     calls = pickle.load(f)
-    #     with open('./calls.txt', 'w') as f2:
-    #         for call in calls:
-    #             f2.write(str(call) + '\n')
-
-    # plot_all_trace_figures()
-
     np.random.seed(42)
     random.seed(42)
     
