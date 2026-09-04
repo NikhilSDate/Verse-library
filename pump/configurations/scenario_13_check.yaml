@@ -1,0 +1,59 @@
+# Single-scenario config reproducing results/bad_verif/scenario_13 exactly,
+# for checking whether the current simulation/safety pipeline still flags it
+# the same way. Each "meals" list below is pinned to one option per meal, so
+# gen_verification_scenarios(...) produces exactly one scenario.
+sim_duration: 1440
+num_meals: 4
+num_simulations: 20
+
+meals:
+  time_offsets:
+    - [120]
+    - [600]
+    - [660]
+    - [1020]
+  carb_ranges:
+    - [[40, 80]]
+    - [[0, 40]]
+    - [[120, 160]]
+    - [[120, 160]]
+  types:
+    - [default]
+    - [default]
+    - [default]
+    - [high_fat]
+
+meal_types:
+  default:
+    TauM: 40
+    bolus:
+      type: Simple
+  high_fat:
+    TauM: 120
+    bolus:
+      type: Extended
+      deliver_now_perc: 50
+      duration: 180
+
+boluses:
+  offset: -5
+  correction: true
+
+carb_error: [0.9, 1.1]
+init_bg: [70, 180]
+
+cgm:
+  bias: 0.1
+  offset: [0, 0]
+
+patient:
+  basal_glucose: 6.5
+  TDD: 39.22
+  BW: 74.9
+
+settings:
+  basal_iq: true
+  basal_rate_range: 0.1
+
+user:
+  resume: true

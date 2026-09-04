@@ -5,7 +5,7 @@ sim_duration: 1440   # minutes
 num_meals: 4
 # Simulation traces sampled inside each scenario's reachtube. Verse also runs the
 # nominal trace, so N here means N + 1 sims are stored with the reachtube.
-num_simulations: 400
+num_simulations: 10
 
 meals:
   # Breakfast anchors the day: it always happens at t = 0, and every other meal

@@ -119,7 +119,13 @@ def gen_verification_scenarios(config: Optional[Dict] = None) -> List[Simulation
 
     # breakfast is always at t = 0, every other meal time is an offset from it
     meal_times = list(itertools.product(*meal_config['time_offsets']))
-    meal_ranges = list(itertools.product(*[[tuple(r) for r in meal_config['carb_ranges']]] * NUM_MEALS))
+    carb_ranges_config = meal_config['carb_ranges']
+    if isinstance(carb_ranges_config[0][0], (list, tuple)):
+        # per-meal carb range options, e.g. [[[40, 80]], [[0, 40]], [[120, 160]], [[120, 160]]]
+        meal_ranges = list(itertools.product(*[[tuple(r) for r in options] for options in carb_ranges_config]))
+    else:
+        # shared pool of carb range options applied to every meal
+        meal_ranges = list(itertools.product(*[[tuple(r) for r in carb_ranges_config]] * NUM_MEALS))
     meal_type_names = list(itertools.product(*meal_config['types']))
 
     scenarios = []
@@ -186,8 +192,9 @@ def save_result_with_sims(result: Tuple[SimulationScenario, object, object], out
     if scenario_directory is None:
         print('redundant scenario')
         return
-    fig = plot_variable(traces, 'G', show=False)
-    fig.write_image(os.path.join(scenario_directory, 'plot.png'))
+    fig, _ = plot_result_paper(result)
+    fig.savefig(os.path.join(scenario_directory, 'plot.png'))
+    plt.close(fig)
     with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
         pickle.dump(traces, f)
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
@@ -197,8 +204,6 @@ def save_result_with_sims(result: Tuple[SimulationScenario, object, object], out
         yaml.dump(to_dump, f)
     with open(os.path.join(scenario_directory, 'scenario.pkl'), 'wb') as f:
         pickle.dump(scenario, f)
-    fig_with_sims = plot_results(result)
-    fig_with_sims.write_image(os.path.join(scenario_directory, 'plot_with_sims.png'))
 
 def save_scenario_results(scenario: SimulationScenario, traces, safety_results, output_dir):
     # create a directory in output_dir using hash of scenario
@@ -206,10 +211,11 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
     if scenario_directory is None:
         print('redundant scenario')
         return
-    fig = plot_results((scenario, traces, safety_results))
+    fig, _ = plot_result_paper((scenario, traces, safety_results))
     with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
         pickle.dump(traces, f)
-    fig.write_image(os.path.join(scenario_directory, 'plot.png'))
+    fig.savefig(os.path.join(scenario_directory, 'plot.png'))
+    plt.close(fig)
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
         f.write(str(safety_results))
     with open(os.path.join(scenario_directory, 'scenario.yaml'), 'w') as f:
@@ -378,7 +384,7 @@ def verify_wrapper():
     parser.add_argument('-o', '--output-dir', type=str)
     parser.add_argument('-n', '--node-count', default=1, type=int)
     parser.add_argument('-i', '--node-index', default=0, type=int)
-    parser.add_argument('-c', '--config', default=CONFIG_PATH, type=str)
+    parser.add_argument('-c', '--config', type=str)
     args = parser.parse_args()
     seed = args.seed
     processes = args.processes
@@ -387,7 +393,7 @@ def verify_wrapper():
     node_index = args.node_index
     config = load_config(args.config)
 
-    if (node_index > node_count):
+    if (node_index >= node_count):
         print('invalid node index!')
         exit(0)
 
