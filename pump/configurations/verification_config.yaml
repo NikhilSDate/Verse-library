@@ -1,0 +1,68 @@
+# Option sets for the verification sweep (pump/verification.py).
+# One scenario is generated for every combination of the options below.
+
+sim_duration: 1440   # minutes
+num_meals: 4
+# Simulation traces sampled inside each scenario's reachtube. Verse also runs the
+# nominal trace, so N here means N + 1 sims are stored with the reachtube.
+num_simulations: 400
+
+meals:
+  # Breakfast anchors the day: it always happens at t = 0, and every other meal
+  # time is an offset from breakfast, in minutes.
+  time_offsets:
+    - [0]           # breakfast
+    - [120, 300]    # lunch:  2h / 5h after breakfast
+    - [360, 480]    # snack:  6h / 8h after breakfast
+    - [540, 720]    # dinner: 9h / 12h after breakfast
+  # Carb range (grams) each meal may fall into. Every meal draws from this list,
+  # and all combinations are kept (there is no constraint on the scenario total).
+  carb_ranges:
+    - [0, 40]
+    - [40, 120]
+    - [120, 160]
+  # Which meal types (see meal_types below) each meal may take.
+  types:
+    - [default, high_fat]
+    - [default, high_fat]
+    - [default]
+    - [default, high_fat]
+
+# Digestion time constant (TauM, minutes) and the bolus the user delivers for
+# each type of meal.
+meal_types:
+  default:
+    TauM: 40
+    bolus:
+      type: Simple
+  high_fat:
+    TauM: 120
+    bolus:
+      type: Extended
+      deliver_now_perc: 50
+      duration: 180
+
+boluses:
+  # minutes relative to the meal (negative = bolus before eating). Bolus times are
+  # clamped to t >= 0, so breakfast's bolus lands at the start of the simulation.
+  offset: -5
+  correction: true  # user always requests a correction
+
+carb_error: [0.9, 1.1]  # user's carb-counting error, as a multiplier on the meal carbs
+init_bg: [70, 180]      # mg/dL
+
+cgm:
+  bias: 0.1         # CGM reads within +/- this fraction of the true value
+  offset: [0, 0]
+
+patient:
+  basal_glucose: 6.5
+  TDD: 39.22
+  BW: 74.9
+
+settings:
+  basal_iq: true
+  basal_rate_range: 0.1  # pump basal rate is within +/- this fraction of the patient's requirement
+
+user:
+  resume: true

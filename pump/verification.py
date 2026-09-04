@@ -53,31 +53,20 @@ def custom_asdict_factory(data):
         return obj
     return dict((k, convert_value(v)) for k, v in data)
 
-def get_allowed_meal_carb_ranges(TOTAL_LOW, TOTAL_HIGH, num_meals=4):
-    meal_carb_ranges = [(0, 40), (40, 80), (80, 120), (120, 160)]
-    m = len(meal_carb_ranges)
-    good_ranges = []
-    for i in range(m ** num_meals):
-        n = i
-        idx0 = n % m
-        n  = n // m
-        idx1 = n % m
-        n = n // m
-        idx2 = n % m
-        n = n // m
-        idx3 = n % m
-        assert(n // m == 0)
-        ranges = [meal_carb_ranges[idx0], meal_carb_ranges[idx1], meal_carb_ranges[idx2], meal_carb_ranges[idx3]]
-        low_sum = sum([ranges[i][0] for i in range(4)])
-        high_sum = sum([ranges[i][1] for i in range(4)])
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'configurations', 'verification_config.yaml')
 
-        # accept any range that has at least partial overlap with the total range
-        if low_sum >= TOTAL_HIGH or high_sum <= TOTAL_LOW:
-            continue
-        good_ranges.append(ranges)
-    return good_ranges
-    
-def gen_verification_scenarios() -> List[SimulationScenario]:
+def load_config(path: str = CONFIG_PATH) -> Dict:
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+def get_meal_bolus_config(meal_type: Dict) -> Tuple[BolusType, Optional[ExtendedBolusConfig]]:
+    bolus = meal_type['bolus']
+    bolus_type = BolusType(bolus['type'])
+    if bolus_type == BolusType.Extended:
+        return (bolus_type, ExtendedBolusConfig(bolus['deliver_now_perc'], bolus['duration']))
+    return (bolus_type, None)
+
+def gen_verification_scenarios(config: Optional[Dict] = None) -> List[SimulationScenario]:
     # we want a set of conditions that a scenario should satisfy to ensure realism
     # M1: total carbs should be in a particular range
     # M2: carbs in each meal should be in a particular range
@@ -103,79 +92,68 @@ def gen_verification_scenarios() -> List[SimulationScenario]:
 
     # TODO: CGM errors
 
-    DURATION = 24 * 60
+    if config is None:
+        config = load_config()
 
-    ERROR_LOW = 0.9
-    ERROR_HIGH = 1.1
-        
-    PATIENT_BASAL_GLUCOSE = 6.5
-    CGM_BIAS = 0.1
-    NUM_MEALS = 4
-    
-    BOLUS_OFFSET = -5
-    
-    BASAL_RATE_RANGE = 0.1
+    DURATION = config['sim_duration']
+    NUM_MEALS = config['num_meals']
 
-    RESUME = True
-    
-    meal_ranges = get_allowed_meal_carb_ranges(100, 350)
-    
-    meal_1_time = 60 * np.array([2, 5])
-    meal_2_time = 60 * np.array([7, 10])
-    meal_3_time = 60 * np.array([11, 13])
-    meal_4_time = 60 * np.array([14, 17])
-    
-    meal_times_lists = [meal_1_time, meal_2_time, meal_3_time, meal_4_time]
-    meal_times = list(itertools.product(*meal_times_lists))
-    
-    taum_choices = [DEFAULT_MEAL, HIGH_FAT_MEAL]
-    taum_default = [DEFAULT_MEAL]
+    meal_config = config['meals']
+    meal_types = config['meal_types']
 
-    meal_TauM_lists = [taum_choices, taum_choices, taum_default, taum_choices]
-    meal_TauMs = list(itertools.product(*meal_TauM_lists))
-    
-    meal_params = itertools.product(*[meal_times, meal_ranges, meal_TauMs])
-    
-    meals_choices: List[List[Meal]] = []
-    for comb in meal_params:
-        times = comb[0]
-        carbs = comb[1]
-        TauMs = comb[2]
-        scenario_meals = []
-        for i in range(NUM_MEALS):
-            scenario_meals.append(Meal(times[i], carbs[i], TauMs[i]))
-        meals_choices.append(scenario_meals)    
-    
-    bolus_configs = {DEFAULT_MEAL: (BolusType.Simple, None), HIGH_FAT_MEAL: (BolusType.Extended, ExtendedBolusConfig(50, 180))}    
-    
+    ERRORS = list(config['carb_error'])
+    INIT_BG = list(config['init_bg'])
+
+    PATIENT_BASAL_GLUCOSE = config['patient']['basal_glucose']
+    CGM_BIAS = config['cgm']['bias']
+    CGM_OFFSET = tuple(config['cgm']['offset'])
+
+    BOLUS_OFFSET = config['boluses']['offset']
+    BOLUS_CORRECTION = config['boluses']['correction']
+
+    BASAL_RATE_RANGE = config['settings']['basal_rate_range']
+    BASAL_IQ = config['settings']['basal_iq']
+
+    RESUME = config['user']['resume']
+
+    # breakfast is always at t = 0, every other meal time is an offset from it
+    meal_times = list(itertools.product(*meal_config['time_offsets']))
+    meal_ranges = list(itertools.product(*[[tuple(r) for r in meal_config['carb_ranges']]] * NUM_MEALS))
+    meal_type_names = list(itertools.product(*meal_config['types']))
+
     scenarios = []
-    for meals in meals_choices:  
-        
+    for times, carbs, type_names in itertools.product(meal_times, meal_ranges, meal_type_names):
+
+        meals = [Meal(times[i], carbs[i], meal_types[type_names[i]]['TauM']) for i in range(NUM_MEALS)]
+
         boluses = []
 
         for i, m in enumerate(meals):
-            bolus = Bolus(m.time + BOLUS_OFFSET, None, None, i, True, None)
-            bolus = set_bolus_config(bolus, bolus_configs[m.TauM])
+            # breakfast sits at t = 0, so its pre-meal bolus would fall outside the
+            # simulation window: clamp it to the start of the sim instead of dropping it
+            bolus_time = max(0, m.time + BOLUS_OFFSET)
+            bolus = Bolus(bolus_time, None, None, i, BOLUS_CORRECTION, None)
+            bolus = set_bolus_config(bolus, get_meal_bolus_config(meal_types[type_names[i]]))
             boluses.append(bolus)
-                
-        errors = [ERROR_LOW, ERROR_HIGH]
-        init_bg = [70, 180]
+
+        errors = list(ERRORS)
+        init_bg = list(INIT_BG)
         patient_params = patient_original({'basalGlucose': PATIENT_BASAL_GLUCOSE})
-        settings = get_recommended_settings(TDD=39.22, BW=74.9)
+        settings = get_recommended_settings(TDD=config['patient']['TDD'], BW=config['patient']['BW'])
         settings['basal_rate'] = patient_params['Ub']
-        settings['basal_iq'] = True
-        
+        settings['basal_iq'] = BASAL_IQ
+
         settings_low = settings.copy()
         settings_high = settings.copy()
-        
+
         settings_low['basal_rate'] = settings_low['basal_rate'] * (1 - BASAL_RATE_RANGE)
         settings_high['basal_rate'] = settings_high['basal_rate'] * (1 + BASAL_RATE_RANGE)
-        
-        cgm_config = CGMConfig((1 - CGM_BIAS, 1 + CGM_BIAS), (0, 0))
+
+        cgm_config = CGMConfig((1 - CGM_BIAS, 1 + CGM_BIAS), CGM_OFFSET)
         user_config = UserConfig(resume=RESUME)
         scenario = SimulationScenario(init_bg, boluses, meals, errors, [settings_low, settings_high], patient_params, cgm_config, sim_duration=DURATION, user_config=user_config)
         scenarios.append(scenario)
-    return scenarios        
+    return scenarios
 
 def get_scenario_directory(scenario: SimulationScenario, output_dir):
     idx = 0
@@ -228,8 +206,8 @@ def save_scenario_results(scenario: SimulationScenario, traces, safety_results, 
         print('redundant scenario')
         return
     fig = plot_results((scenario, traces, safety_results))
-    # with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
-    #     pickle.dump(traces, f)
+    with gzip.open(os.path.join(scenario_directory, 'traces.gzip'), 'wb') as f:
+        pickle.dump(traces, f)
     fig.write_image(os.path.join(scenario_directory, 'plot.png'))
     with open(os.path.join(scenario_directory, 'safety.txt'), 'w') as f:
         f.write(str(safety_results))
@@ -248,9 +226,9 @@ def save_scenario_runtime(scenario, output_dir, runtime):
     with open(os.path.join(log_dir, 'runtime.txt'), 'w') as f:
         f.write(str(runtime))
 
-def run_verification_scenario(scenario, output_dir):
+def run_verification_scenario(scenario, output_dir, num_simulations):
     start_time = time.time()
-    res = verify_multi_meal_scenario(scenario)
+    res = verify_multi_meal_scenario(scenario, params={'sim_trace_num': num_simulations})
     if res.type == ResultType.OK:
         traces = res.payload
         safety_results = evaluate_safety_constraint(traces, 'G', lambda glucose: AGP_safety(glucose))
@@ -264,8 +242,8 @@ def run_verification_scenario(scenario, output_dir):
 def sigint(signum, frame):
     os.kill(0, signal.SIGKILL)
 
-def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int):
-    run_func = partial(run_verification_scenario, output_dir=output_dir)
+def verify(scenarios: List[SimulationScenario], output_dir: str, pool_size: int, num_simulations: int):
+    run_func = partial(run_verification_scenario, output_dir=output_dir, num_simulations=num_simulations)
     with Pool(pool_size) as p:
         p.map(run_func, scenarios)
 
@@ -365,8 +343,8 @@ def debug_sim(output_dir, result_dir, sim_idx):
     fig = plot_variable(traces, 'G', show=False)
     fig.write_image(os.path.join(output_dir, result_dir, 'debug', f'sim_{sim_idx}', 'plot.png'))
 
-def get_scenarios_to_run(output_dir, node_count, node_idx):
-    scenarios = gen_verification_scenarios()
+def get_scenarios_to_run(output_dir, node_count, node_idx, config=None):
+    scenarios = gen_verification_scenarios(config)
     np.random.shuffle(scenarios)
     scenarios = [scenario for i, scenario in enumerate(scenarios) if i % node_count == node_idx]
     existing = set(load_scenarios(output_dir))
@@ -380,12 +358,14 @@ def verify_wrapper():
     parser.add_argument('-o', '--output-dir', default='results/verification', type=str)
     parser.add_argument('-n', '--node-count', default=1, type=int)
     parser.add_argument('-i', '--node-index', default=0, type=int)
+    parser.add_argument('-c', '--config', default=CONFIG_PATH, type=str)
     args = parser.parse_args()
     seed = args.seed
     processes = args.processes
     output_dir = args.output_dir
     node_count = args.node_count
     node_index = args.node_index
+    config = load_config(args.config)
 
     if (node_index > node_count):
         print('invalid node index!')
@@ -396,8 +376,8 @@ def verify_wrapper():
     np.random.seed(seed)
     random.seed(seed)
 
-    scenarios = get_scenarios_to_run(output_dir, node_count, node_index)
-    verify(scenarios, output_dir, pool_size=processes)  
+    scenarios = get_scenarios_to_run(output_dir, node_count, node_index, config)
+    verify(scenarios, output_dir, pool_size=processes, num_simulations=config['num_simulations'])  
 
 def compute_proof_statistics(results):
     totals = np.zeros((len(results[0][2]), 3), dtype=int)
