@@ -163,28 +163,30 @@ def gen_verification_scenarios(config: Optional[Dict] = None) -> List[Simulation
     return scenarios
 
 def get_scenario_directory(scenario: SimulationScenario, output_dir):
+    # exist_ok=True is safe under concurrent callers: the shared parent only
+    # needs to exist once, not be "claimed" by any particular worker
+    os.makedirs(output_dir, exist_ok=True)
     idx = 0
-    result = ''
     while True:
         attempt = os.path.join(output_dir, f'scenario_{idx}')
-        if not os.path.exists(attempt):
-            result = attempt
-            break
-        idx += 1
-    os.makedirs(result)
-    return result
+        try:
+            # single-level mkdir is atomic, so exactly one racing worker wins a given idx
+            os.mkdir(attempt)
+            return attempt
+        except FileExistsError:
+            idx += 1
 
 def get_log_directory(scenario: SimulationScenario, output_dir):
+    log_base = os.path.join(output_dir, 'logs')
+    os.makedirs(log_base, exist_ok=True)
     idx = 0
-    result = ''
     while True:
-        attempt = os.path.join(output_dir, 'logs', f'log_{idx}')
-        if not os.path.exists(attempt):
-            result = attempt
-            break
-        idx += 1
-    os.makedirs(result)
-    return result
+        attempt = os.path.join(log_base, f'log_{idx}')
+        try:
+            os.mkdir(attempt)
+            return attempt
+        except FileExistsError:
+            idx += 1
 
 def save_result_with_sims(result: Tuple[SimulationScenario, object, object], output_dir):
     scenario, traces, safety = result

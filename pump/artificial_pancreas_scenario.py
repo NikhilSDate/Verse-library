@@ -159,6 +159,11 @@ class SimulationScenario:
 
         # currently assumes that there are not multiple meals/boluses at the same time
         for bolus in boluses:
+            if bolus.time in self.boluses:
+                raise ValueError(
+                    f"Bolus time collision at t={bolus.time}: meal_index "
+                    f"{self.boluses[bolus.time].meal_index} and {bolus.meal_index}"
+                )
             self.boluses[bolus.time] = bolus
 
         for meal in meals:

@@ -75,16 +75,6 @@ def two_way_analysis(scenarios: List[Tuple[SimulationScenario, object, object]],
     plt.savefig('unsafe.png')
     return safe_map, unsafe_map
 
-def compute_proof_statistics(results: List[Tuple[SimulationScenario, object, object]]):
-    totals = np.zeros_like(results[0][2], dtype=int)
-    perfect = 0
-    perfectly_unsafe = 0
-    for result in tqdm(results):
-        totals += np.array(result[2], dtype=int)
-        perfect += np.min(np.array(result[2], dtype=int))
-        perfectly_unsafe += np.min(1 - np.array(result[2], dtype=int))
-    return totals / len(results), perfect / len(results), perfectly_unsafe / len(results)
-
 def save_results_by_scenario(all_scenarios: Dict[SimulationScenario, Tuple[str, str]], to_save: List[SimulationScenario], output_dir):
     for scenario in to_save:
         path = all_scenarios[scenario]

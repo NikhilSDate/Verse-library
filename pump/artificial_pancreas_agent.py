@@ -251,7 +251,7 @@ class ArtificialPancreasAgent(BaseAgent):
         trace = np.zeros((num_points + 1, 1 + len(init)))
         trace[1:, 0] = [round(i * time_step, 10) for i in range(num_points)]
         trace[0, 1:] = init
-        state_vec = init
+        state_vec = np.copy(init)
         self.reset_pump()
         basal_rate = init[state_indices['basal_rate']]
         self.pump.pump_emulator.set_settings(carb_ratio=self.scenario.settings[0]['carb_ratio'], correction_factor=self.scenario.settings[0]['correction_factor'], target_bg=self.scenario.settings[0]['target_bg'], max_bolus=self.scenario.settings[0]['max_bolus'], insulin_duration=self.scenario.settings[0]['insulin_duration'], basal_rate=basal_rate)
